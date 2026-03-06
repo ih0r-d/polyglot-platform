@@ -1,0 +1,85 @@
+name: Java+Python AOT Example
+
+on:
+  push:
+    paths:
+      - "examples/java-python-aot-adapter/**"
+      - "adapter/**"
+      - "tooling/**"
+      - ".github/workflows/java-python-aot-example.yml"
+  pull_request:
+    paths:
+      - "examples/java-python-aot-adapter/**"
+      - "adapter/**"
+      - "tooling/**"
+      - ".github/workflows/java-python-aot-example.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  jvm-fat-jar:
+    name: JVM Fat JAR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup GraalVM JDK 25
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: graalvm-community
+          java-version: "25"
+          cache: maven
+
+      - name: Install local platform artifacts
+        run: mvn -B -ntp -DskipTests install
+        working-directory: tooling
+
+      - name: Install adapter artifacts
+        run: mvn -B -ntp -DskipTests install
+        working-directory: adapter
+
+      - name: Build fat JAR
+        run: mvn -B -ntp clean package
+        working-directory: examples/java-python-aot-adapter
+
+      - name: Run fat JAR
+        run: java -jar target/java-python-aot-adapter-0.0.1-all.jar
+        working-directory: examples/java-python-aot-adapter
+
+  native-image:
+    name: Native Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup GraalVM JDK 25
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: graalvm-community
+          java-version: "25"
+          native-image-job-reports: "true"
+          cache: maven
+
+      - name: Install local platform artifacts
+        run: mvn -B -ntp -DskipTests install
+        working-directory: tooling
+
+      - name: Install adapter artifacts
+        run: mvn -B -ntp -DskipTests install
+        working-directory: adapter
+
+      - name: Build native image via script
+        run: |
+          chmod +x ./build-native.sh
+          ./build-native.sh
+        working-directory: examples/java-python-aot-adapter
+
+      - name: Run native image
+        run: ./target/java-python-aot-adapter
+        working-directory: examples/java-python-aot-adapter
