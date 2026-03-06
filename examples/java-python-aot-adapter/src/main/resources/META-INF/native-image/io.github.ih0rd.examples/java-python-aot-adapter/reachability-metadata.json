@@ -1,0 +1,16 @@
+{
+  "reflection": [
+    {
+      "type": "io.github.ih0rd.examples.aot.PricingRules",
+      "allPublicMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "io.github.ih0rd.examples.aot.QuoteApi"
+        ]
+      }
+    }
+  ]
+}
