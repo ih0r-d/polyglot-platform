@@ -1,0 +1,39 @@
+package io.github.ih0rd.polyglot.annotations.spring.config;
+
+import org.springframework.boot.actuate.info.InfoContributor;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.context.annotation.Bean;
+
+import io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors;
+import io.github.ih0rd.polyglot.annotations.spring.actuator.PolyglotHealthIndicator;
+import io.github.ih0rd.polyglot.annotations.spring.actuator.PolyglotInfoContributor;
+import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
+
+@AutoConfiguration
+@ConditionalOnClass(InfoContributor.class)
+@ConditionalOnProperty(prefix = "polyglot.actuator", name = "enabled", matchIfMissing = true)
+public class PolyglotActuatorAutoConfiguration {
+
+  @Bean
+  @ConditionalOnProperty(prefix = "polyglot.actuator.info", name = "enabled", matchIfMissing = true)
+  @ConditionalOnMissingBean
+  public InfoContributor polyglotInfoContributor(
+      PolyglotExecutors executors, PolyglotProperties properties) {
+    return new PolyglotInfoContributor(executors, properties);
+  }
+
+  @Bean
+  @ConditionalOnClass(HealthIndicator.class)
+  @ConditionalOnProperty(
+      prefix = "polyglot.actuator.health",
+      name = "enabled",
+      matchIfMissing = true)
+  public HealthIndicator polyglotHealthIndicator(
+      PolyglotExecutors executors, PolyglotProperties properties) {
+    return new PolyglotHealthIndicator(executors, properties);
+  }
+}

@@ -1,0 +1,38 @@
+package io.github.ih0rd.polyglot.annotations;
+
+import java.lang.annotation.*;
+
+import io.github.ih0rd.polyglot.Convention;
+import io.github.ih0rd.polyglot.SupportedLanguage;
+
+/**
+ * Marks a Java interface as a contract that should be backed by a polyglot runtime implementation.
+ *
+ * <p>The annotation is consumed by the Spring Boot starter when {@code @EnablePolyglotClients} is
+ * active.
+ *
+ * <p>Language resolution rules:
+ *
+ * <ul>
+ *   <li>if {@link #languages()} is empty, exactly one executor must be available
+ *   <li>if one language is specified, that executor is used
+ *   <li>if multiple languages are specified, client creation fails
+ * </ul>
+ *
+ * <p>Binding currently follows {@link Convention#DEFAULT}.
+ */
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface PolyglotClient {
+
+  /**
+   * Allowed guest languages for this client.
+   *
+   * <p>An empty array enables automatic resolution based on the executors available at runtime.
+   */
+  SupportedLanguage[] languages() default {};
+
+  /** Binding convention used by the adapter. */
+  Convention convention() default Convention.DEFAULT;
+}
