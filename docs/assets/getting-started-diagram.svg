@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-labelledby="title desc">
+  <title id="title">Getting started binding flow</title>
+  <desc id="desc">Java contract binds through the runtime adapter using a script source and GraalVM context to reach a guest implementation.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f4ee; }
+      .boxA { fill: #fff8e7; stroke: #1f2937; stroke-width: 2; }
+      .boxB { fill: #e9f5db; stroke: #1f2937; stroke-width: 2; }
+      .boxC { fill: #dceefb; stroke: #1f2937; stroke-width: 2; }
+      .boxD { fill: #fde2e4; stroke: #1f2937; stroke-width: 2; }
+      .txt { font-family: JetBrains Mono, monospace; font-size: 17px; fill: #111827; }
+      .sub { font-family: JetBrains Mono, monospace; font-size: 13px; fill: #374151; }
+      .lbl { font-family: JetBrains Mono, monospace; font-size: 13px; fill: #6b7280; }
+      .arrow { stroke: #1f2937; stroke-width: 2.2; fill: none; marker-end: url(#m); }
+    </style>
+    <marker id="m" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#1f2937"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1280" height="360" rx="16"/>
+  <rect class="boxA" x="36" y="64" width="230" height="88" rx="18"/>
+  <rect class="boxB" x="340" y="64" width="270" height="88" rx="18"/>
+  <rect class="boxC" x="690" y="42" width="240" height="88" rx="18"/>
+  <rect class="boxC" x="690" y="190" width="240" height="88" rx="18"/>
+  <rect class="boxD" x="1010" y="116" width="220" height="88" rx="18"/>
+  <text class="txt" x="151" y="96" text-anchor="middle">Java contract</text>
+  <text class="sub" x="151" y="122" text-anchor="middle">ForecastService</text>
+  <text class="txt" x="475" y="96" text-anchor="middle">Runtime adapter</text>
+  <text class="sub" x="475" y="122" text-anchor="middle">PyExecutor / JsExecutor</text>
+  <text class="txt" x="810" y="74" text-anchor="middle">GraalVM Context</text>
+  <text class="sub" x="810" y="100" text-anchor="middle">language setup</text>
+  <text class="sub" x="810" y="120" text-anchor="middle">and interop</text>
+  <text class="txt" x="810" y="222" text-anchor="middle">ScriptSource</text>
+  <text class="sub" x="810" y="248" text-anchor="middle">classpath, filesystem,</text>
+  <text class="sub" x="810" y="268" text-anchor="middle">or Spring resources</text>
+  <text class="txt" x="1120" y="148" text-anchor="middle">Guest code</text>
+  <text class="sub" x="1120" y="174" text-anchor="middle">Python / JavaScript</text>
+  <path class="arrow" d="M266 108 H328"/>
+  <path class="arrow" d="M610 96 H678"/>
+  <path class="arrow" d="M610 120 C650 120, 650 212, 678 228"/>
+  <path class="arrow" d="M930 88 C972 88, 976 138, 998 148"/>
+  <path class="arrow" d="M930 232 C972 232, 976 184, 998 174"/>
+  <text class="lbl" x="297" y="94" text-anchor="middle">bind(...)</text>
+  <text class="lbl" x="645" y="86" text-anchor="middle">uses</text>
+  <text class="lbl" x="650" y="203" text-anchor="middle">loads from</text>
+</svg>

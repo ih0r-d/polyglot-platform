@@ -1,9 +1,9 @@
-site_name: Polyglot Platform
-site_description: GraalVM-based polyglot runtime and tooling platform
-site_url: https://ih0r-d.github.io/polyglot-platform/
+site_name: polyglot-adapter
+site_description: Runtime adapter for dynamic languages on top of the GraalVM Polyglot API
+site_url: https://ih0r-d.github.io/polyglot-adapter/
 
-repo_url: https://github.com/ih0r-d/polyglot-platform
-repo_name: polyglot-platform
+repo_url: https://github.com/ih0r-d/polyglot-adapter
+repo_name: polyglot-adapter
 
 theme:
   name: material
@@ -26,10 +26,13 @@ theme:
 
 nav:
   - Home: index.md
+  - Overview: overview.md
+  - Getting Started: getting-started.md
+  - Concepts: concepts.md
   - Architecture: architecture.md
-  - Runtime Layer: runtime.md
-  - Tooling Layer: tooling.md
-  - Contract Model: contract-model.md
+  - Runtime: runtime.md
+  - Code Generation: codegen.md
+  - Examples: examples.md
   - Roadmap: roadmap.md
 
 markdown_extensions:

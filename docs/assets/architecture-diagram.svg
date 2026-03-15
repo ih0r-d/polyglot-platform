@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="260" viewBox="0 0 1280 260" role="img" aria-labelledby="title desc">
+  <title id="title">Repository architecture diagram</title>
+  <desc id="desc">API, runtime, and build-tools modules and their relationships.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f4ee; }
+      .api { fill: #fff8e7; stroke: #1f2937; stroke-width: 2; }
+      .rt { fill: #e9f5db; stroke: #1f2937; stroke-width: 2; }
+      .bt { fill: #dceefb; stroke: #1f2937; stroke-width: 2; }
+      .txt { font-family: JetBrains Mono, monospace; font-size: 19px; fill: #111827; }
+      .sub { font-family: JetBrains Mono, monospace; font-size: 13px; fill: #374151; }
+      .arrow { stroke: #1f2937; stroke-width: 2.2; fill: none; marker-end: url(#m); }
+    </style>
+    <marker id="m" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#1f2937"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1280" height="260" rx="16"/>
+  <rect class="api" x="34" y="40" width="300" height="180" rx="18"/>
+  <rect class="rt" x="490" y="30" width="300" height="200" rx="18"/>
+  <rect class="bt" x="946" y="40" width="300" height="180" rx="18"/>
+  <text class="txt" x="184" y="76" text-anchor="middle">api</text>
+  <text class="sub" x="184" y="106" text-anchor="middle">polyglot-annotations</text>
+  <text class="sub" x="184" y="128" text-anchor="middle">polyglot-model</text>
+  <text class="sub" x="184" y="150" text-anchor="middle">ScriptSource SPI</text>
+  <text class="txt" x="640" y="76" text-anchor="middle">runtime</text>
+  <text class="sub" x="640" y="106" text-anchor="middle">polyglot-adapter</text>
+  <text class="sub" x="640" y="128" text-anchor="middle">polyglot-spring-boot-starter</text>
+  <text class="sub" x="640" y="150" text-anchor="middle">polyglot-bom</text>
+  <text class="sub" x="640" y="172" text-anchor="middle">GraalVM integration layer</text>
+  <text class="txt" x="1096" y="76" text-anchor="middle">build-tools</text>
+  <text class="sub" x="1096" y="106" text-anchor="middle">polyglot-codegen</text>
+  <text class="sub" x="1096" y="128" text-anchor="middle">polyglot-codegen-maven-plugin</text>
+  <text class="sub" x="1096" y="150" text-anchor="middle">static parsing and generation</text>
+  <path class="arrow" d="M334 130 H478"/>
+  <path class="arrow" d="M946 145 H802"/>
+</svg>
