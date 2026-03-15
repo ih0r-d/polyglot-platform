@@ -1,84 +1,33 @@
 # Polyglot Platform
 
-![Build](https://img.shields.io/badge/build-maven-blue?logo=apache-maven)
-![Java](https://img.shields.io/badge/JDK-21%20%7C%2025-007396?logo=openjdk)
-![GraalVM](https://img.shields.io/badge/GraalVM-25.x-FF6F00?logo=oracle)
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.ih0r-d/polyglot-adapter.svg?label=Maven%20Central)](https://search.maven.org/artifact/io.github.ih0r-d/polyglot-adapter)
-![License](https://img.shields.io/badge/license-Apache--2.0-blue)
+Polyglot Platform provides runtime and build-time support for executing Python and JavaScript on the JVM through GraalVM Polyglot.
 
-A modular platform for running polyglot languages (Python, JavaScript)
-inside JVM applications via GraalVM Polyglot, with optional
-contract-based interface generation.
+The repository is organized into three layers:
 
-------------------------------------------------------------------------
-
-## Architecture Overview
-
-Polyglot Platform consists of two independent layers:
-
--   **Adapter** --- runtime execution layer (JDK 25)
--   **Tooling** --- contract and interface generation (JDK 21)
-
-------------------------------------------------------------------------
-
-## Repository Structure
-
-    .
-    ├── adapter/                (JDK 25 runtime)
-    │   ├── polyglot-adapter/
-    │   ├── polyglot-spring-boot-starter/
-    │   └── polyglot-bom/
-    │
-    ├── tooling/                (JDK 21 build-time tools)
-    │   ├── polyglot-contract-api/
-    │   ├── polyglot-codegen/
-    │   └── polyglot-codegen-maven-plugin/
-    │
-    ├── examples/
-    ├── scripts/
-    └── CHANGELOG.md
-
-------------------------------------------------------------------------
-
-## Components
-
-### Adapter (Runtime -- JDK 25)
-
--   **polyglot-adapter** --- framework-agnostic execution layer
--   **polyglot-spring-boot-starter** --- Spring Boot 4
-    autoconfiguration
--   **polyglot-bom** --- dependency management
-
-------------------------------------------------------------------------
-
-### Tooling (Build-time -- JDK 21)
-
--   **polyglot-contract-api** --- shared contract model
--   **polyglot-codegen** --- contract → Java interface generator
--   **polyglot-codegen-maven-plugin** --- Maven integration
-
-------------------------------------------------------------------------
+- `api`: shared annotations and contract model
+- `runtime`: core executor API, Spring Boot integration, and BOM
+- `build-tools`: contract parsing and Java interface generation
 
 ## Requirements
 
-### Runtime (adapter)
+- Runtime modules: JDK 25+, GraalVM 25.x+, Maven 3.9+
+- Tooling modules: JDK 21+, Maven 3.9+
 
--   JDK 25+
--   GraalVM 25.x+
--   Maven 3.9+
+## Modules
 
-### Tooling
+- `api/polyglot-annotations`: public annotations such as `@PolyglotClient`
+- `api/polyglot-model`: contract model, parser SPI, and configuration abstractions
+- `runtime/polyglot-adapter`: framework-neutral GraalVM execution layer
+- `runtime/polyglot-spring-boot-starter`: Spring Boot auto-configuration, client binding, health, and metrics
+- `runtime/polyglot-bom`: dependency management for runtime consumers
+- `build-tools/polyglot-codegen`: contract parser and Java source generator
+- `build-tools/polyglot-codegen-maven-plugin`: Maven integration for code generation
 
--   JDK 21+
--   Maven 3.9+
+## Runtime Quick Start
 
-------------------------------------------------------------------------
+Import the runtime BOM:
 
-## Quick Start (Runtime)
-
-### 1. Import BOM
-
-``` xml
+```xml
 <dependencyManagement>
   <dependencies>
     <dependency>
@@ -92,31 +41,27 @@ Polyglot Platform consists of two independent layers:
 </dependencyManagement>
 ```
 
-### 2. Add Adapter
+Add the core adapter:
 
-``` xml
+```xml
 <dependency>
   <groupId>io.github.ih0r-d</groupId>
   <artifactId>polyglot-adapter</artifactId>
 </dependency>
 ```
 
-### 3. Optional: Spring Boot Starter
+Add the Spring Boot starter if needed:
 
-``` xml
+```xml
 <dependency>
   <groupId>io.github.ih0r-d</groupId>
   <artifactId>polyglot-spring-boot-starter</artifactId>
 </dependency>
 ```
 
-------------------------------------------------------------------------
+Add only the language runtimes you enable:
 
-## Optional Language Runtimes
-
-### GraalPy
-
-``` xml
+```xml
 <dependency>
   <groupId>org.graalvm.python</groupId>
   <artifactId>python-embedding</artifactId>
@@ -125,11 +70,6 @@ Polyglot Platform consists of two independent layers:
   <groupId>org.graalvm.python</groupId>
   <artifactId>python-launcher</artifactId>
 </dependency>
-```
-
-### GraalJS
-
-``` xml
 <dependency>
   <groupId>org.graalvm.js</groupId>
   <artifactId>js</artifactId>
@@ -137,23 +77,28 @@ Polyglot Platform consists of two independent layers:
 </dependency>
 ```
 
-------------------------------------------------------------------------
+## Documentation
 
-## Development
+The project documentation is maintained in [`docs/`](docs/):
 
-Build everything:
+- [`docs/index.md`](docs/index.md)
+- [`docs/architecture.md`](docs/architecture.md)
+- [`docs/runtime.md`](docs/runtime.md)
+- [`docs/tooling.md`](docs/tooling.md)
+- [`docs/contract-model.md`](docs/contract-model.md)
+- [`docs/roadmap.md`](docs/roadmap.md)
 
-    task build
+## Build
 
-Build only adapter:
+Run the full build:
 
-    MODULE=polyglot-adapter task build
+```bash
+mvn clean verify
+```
 
-Build only tooling:
+## Samples
 
-    MODULE=polyglot-codegen task build
-
-------------------------------------------------------------------------
+The `samples/` directory contains example applications. Those modules are demonstrative only and are not the canonical source of documentation.
 
 ## License
 

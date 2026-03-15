@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="220" viewBox="0 0 1280 220" role="img" aria-labelledby="title desc">
+  <title id="title">polyglot-adapter overview diagram</title>
+  <desc id="desc">Java application flows through polyglot-adapter to GraalVM Polyglot API and dynamic languages.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f4ee; }
+      .box1 { fill: #fff8e7; stroke: #1f2937; stroke-width: 2; }
+      .box2 { fill: #e9f5db; stroke: #1f2937; stroke-width: 2; }
+      .box3 { fill: #dceefb; stroke: #1f2937; stroke-width: 2; }
+      .box4 { fill: #fde2e4; stroke: #1f2937; stroke-width: 2; }
+      .txt { font-family: JetBrains Mono, monospace; font-size: 17px; fill: #111827; }
+      .sub { font-family: JetBrains Mono, monospace; font-size: 13px; fill: #374151; }
+      .arrow { stroke: #1f2937; stroke-width: 2.2; fill: none; marker-end: url(#m); }
+    </style>
+    <marker id="m" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#1f2937"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1280" height="220" rx="16"/>
+  <rect class="box1" x="28" y="50" width="270" height="120" rx="18"/>
+  <rect class="box2" x="344" y="50" width="270" height="120" rx="18"/>
+  <rect class="box3" x="660" y="50" width="270" height="120" rx="18"/>
+  <rect class="box4" x="976" y="50" width="276" height="120" rx="18"/>
+  <text class="txt" x="163" y="93" text-anchor="middle">Java Application</text>
+  <text class="sub" x="163" y="119" text-anchor="middle">services, modules</text>
+  <text class="sub" x="163" y="139" text-anchor="middle">Spring beans, CLI</text>
+  <text class="txt" x="479" y="93" text-anchor="middle">polyglot-adapter</text>
+  <text class="sub" x="479" y="119" text-anchor="middle">runtime adapter</text>
+  <text class="sub" x="479" y="139" text-anchor="middle">adapter API</text>
+  <text class="txt" x="795" y="93" text-anchor="middle">GraalVM Polyglot API</text>
+  <text class="sub" x="795" y="119" text-anchor="middle">Context, Source, Value</text>
+  <text class="txt" x="1114" y="93" text-anchor="middle">Dynamic Languages</text>
+  <text class="sub" x="1114" y="119" text-anchor="middle">Python and JavaScript</text>
+  <text class="sub" x="1114" y="139" text-anchor="middle">guest runtimes</text>
+  <path class="arrow" d="M298 110 H334"/>
+  <path class="arrow" d="M614 110 H650"/>
+  <path class="arrow" d="M930 110 H966"/>
+</svg>

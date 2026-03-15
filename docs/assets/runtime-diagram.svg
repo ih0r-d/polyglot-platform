@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="320" viewBox="0 0 1320 320" role="img" aria-labelledby="title desc">
+  <title id="title">Runtime execution diagram</title>
+  <desc id="desc">Java method call flows through proxy and executors into GraalVM context, script source, and guest calls.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f4ee; }
+      .a { fill: #fff8e7; stroke: #1f2937; stroke-width: 2; }
+      .b { fill: #e9f5db; stroke: #1f2937; stroke-width: 2; }
+      .c { fill: #dceefb; stroke: #1f2937; stroke-width: 2; }
+      .d { fill: #fde2e4; stroke: #1f2937; stroke-width: 2; }
+      .txt { font-family: JetBrains Mono, monospace; font-size: 17px; fill: #111827; }
+      .sub { font-family: JetBrains Mono, monospace; font-size: 13px; fill: #374151; }
+      .lbl { font-family: JetBrains Mono, monospace; font-size: 13px; fill: #6b7280; }
+      .arrow { stroke: #1f2937; stroke-width: 2.2; fill: none; marker-end: url(#m); }
+    </style>
+    <marker id="m" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#1f2937"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1320" height="320" rx="16"/>
+  <rect class="a" x="24" y="60" width="230" height="90" rx="18"/>
+  <rect class="a" x="300" y="60" width="240" height="90" rx="18"/>
+  <rect class="b" x="586" y="60" width="250" height="90" rx="18"/>
+  <rect class="c" x="900" y="40" width="230" height="90" rx="18"/>
+  <rect class="d" x="900" y="180" width="230" height="90" rx="18"/>
+  <rect class="c" x="1176" y="110" width="110" height="90" rx="18"/>
+  <text class="txt" x="139" y="94" text-anchor="middle">Java method call</text>
+  <text class="sub" x="139" y="120" text-anchor="middle">service.forecast(...)</text>
+  <text class="txt" x="420" y="94" text-anchor="middle">Proxy from bind(...)</text>
+  <text class="sub" x="420" y="120" text-anchor="middle">contract invocation</text>
+  <text class="txt" x="711" y="94" text-anchor="middle">PyExecutor / JsExecutor</text>
+  <text class="sub" x="711" y="120" text-anchor="middle">resolve, validate, invoke</text>
+  <text class="txt" x="1015" y="74" text-anchor="middle">GraalVM Context</text>
+  <text class="sub" x="1015" y="100" text-anchor="middle">initialized runtime</text>
+  <text class="txt" x="1015" y="214" text-anchor="middle">ScriptSource</text>
+  <text class="sub" x="1015" y="240" text-anchor="middle">classpath, filesystem,</text>
+  <text class="sub" x="1015" y="260" text-anchor="middle">Spring, memory</text>
+  <text class="txt" x="1231" y="144" text-anchor="middle">Value</text>
+  <text class="sub" x="1231" y="170" text-anchor="middle">interop</text>
+  <path class="arrow" d="M254 105 H290"/>
+  <path class="arrow" d="M540 105 H576"/>
+  <path class="arrow" d="M836 95 H888"/>
+  <path class="arrow" d="M836 120 C874 120, 874 216, 888 225"/>
+  <path class="arrow" d="M1130 95 H1166"/>
+  <text class="lbl" x="860" y="208" text-anchor="middle">loads from</text>
+</svg>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.ih0r-d</groupId>
+        <artifactId>polyglot-aggregator</artifactId>
+        <version>0.2.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>polyglot-build-tools</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Polyglot Build Tools</name>
+    <description>Build tooling modules for the Polyglot Adapter</description>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+    </properties>
+
+    <modules>
+        <module>polyglot-codegen</module>
+        <module>polyglot-codegen-maven-plugin</module>
+    </modules>
+
+</project>
