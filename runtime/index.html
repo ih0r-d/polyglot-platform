@@ -1,0 +1,1021 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Runtime adapter for dynamic languages on top of the GraalVM Polyglot API">
+      
+      
+      
+        <link rel="canonical" href="https://ih0r-d.github.io/polyglot-adapter/runtime/">
+      
+      
+        <link rel="prev" href="../architecture/">
+      
+      
+        <link rel="next" href="../codegen/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+    
+    
+      
+        <title>Runtime - polyglot-adapter</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#runtime" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="polyglot-adapter" class="md-header__button md-logo" aria-label="polyglot-adapter" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            polyglot-adapter
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Runtime
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="indigo"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/ih0r-d/polyglot-adapter" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    polyglot-adapter
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="polyglot-adapter" class="md-nav__button md-logo" aria-label="polyglot-adapter" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    polyglot-adapter
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ih0r-d/polyglot-adapter" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    polyglot-adapter
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runtime
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-runtime-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Runtime Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Runtime Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#main-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Main Components
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-runtime-execution-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Runtime Execution Works
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How Runtime Execution Works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context-creation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context Creation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#script-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Script Resolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#binding-and-invocation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Binding and Invocation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python-runtime-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Runtime Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Python Runtime Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#expected-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Expected Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-export-styles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Export Styles
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#javascript-runtime-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JavaScript Runtime Details
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adapter-api-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapter API Surface
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#spring-boot-starter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spring Boot Starter
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Spring Boot Starter">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-provides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Provides
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-users-interact-with-the-runtime-adapter-in-spring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Users Interact With the Runtime Adapter in Spring
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#spring-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spring Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operational-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operational Behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-runtime-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Runtime Limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../codegen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Generation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="runtime">Runtime<a class="headerlink" href="#runtime" title="Permanent link">&para;</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>The runtime layer provides the adapter API on top of GraalVM Polyglot for Python and JavaScript execution.</p>
+<p>Its core purpose is simple: bind a Java interface to a guest-language implementation and call it as normal Java code.</p>
+<blockquote>
+<p>Note
+The runtime adapter is intended for trusted application embedding. It is not a sandboxing framework.</p>
+</blockquote>
+<h2 id="core-runtime-module">Core Runtime Module<a class="headerlink" href="#core-runtime-module" title="Permanent link">&para;</a></h2>
+<p><code>runtime/polyglot-adapter</code> is framework-neutral and contains the execution model used by every integration style.</p>
+<h3 id="main-components">Main Components<a class="headerlink" href="#main-components" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>AbstractPolyglotExecutor</code>: shared proxy binding, source caching, metadata, and common invocation helpers</li>
+<li><code>PyExecutor</code>: Python-specific script loading, export resolution, instance caching, and binding validation</li>
+<li><code>JsExecutor</code>: JavaScript-specific script loading, function lookup, and binding validation</li>
+<li><code>PolyglotHelper</code>: language-specific <code>Context</code> creation and initialization</li>
+<li><code>ScriptSource</code> implementations: classpath, filesystem, in-memory, and composite resolution</li>
+</ul>
+<h2 id="how-runtime-execution-works">How Runtime Execution Works<a class="headerlink" href="#how-runtime-execution-works" title="Permanent link">&para;</a></h2>
+<p><img alt="Runtime execution diagram" src="../assets/runtime-diagram.svg" /></p>
+<h3 id="context-creation">Context Creation<a class="headerlink" href="#context-creation" title="Permanent link">&para;</a></h3>
+<p><code>PolyglotHelper</code> creates a language-specific <code>Context.Builder</code>, applies an optional customizer, builds the context, and calls <code>context.initialize(languageId)</code>.</p>
+<p>Current defaults:</p>
+<ul>
+<li><code>allowAllAccess(true)</code></li>
+<li><code>allowExperimentalOptions(true)</code></li>
+<li>interpreter-only warnings disabled</li>
+<li>Python experimental feature warnings disabled</li>
+</ul>
+<p>For Python, context creation uses <code>GraalPyResources.contextBuilder(...)</code> with a virtual file system. For JavaScript, it uses the regular <code>Context.newBuilder(...)</code>.</p>
+<p>These defaults are designed for application embedding through the adapter, not for hostile multi-tenant sandboxing.</p>
+<h3 id="script-resolution">Script Resolution<a class="headerlink" href="#script-resolution" title="Permanent link">&para;</a></h3>
+<p>Executors never read the filesystem or classpath directly. They ask <code>ScriptSource</code> whether a logical script exists and open it through a <code>Reader</code>.</p>
+<p>Logical names are derived from interface names:</p>
+<ul>
+<li><code>StatsApi</code> -&gt; <code>stats_api</code></li>
+<li><code>ForecastService</code> -&gt; <code>forecast_service</code></li>
+</ul>
+<p>The actual physical path depends on the chosen <code>ScriptSource</code>.</p>
+<h3 id="binding-and-invocation">Binding and Invocation<a class="headerlink" href="#binding-and-invocation" title="Permanent link">&para;</a></h3>
+<p><code>bind(Class&lt;T&gt;)</code> creates a JDK dynamic proxy. Each interface method becomes a guest-language method call with the same method name.</p>
+<p>At invocation time:</p>
+<ul>
+<li>the proxy delegates to the executor</li>
+<li>the executor resolves or loads the guest script</li>
+<li>the guest function or object member is invoked through GraalVM <code>Value</code></li>
+<li>the result is converted back through <code>Value.as(returnType)</code></li>
+</ul>
+<p>If the guest result is <code>null</code>, the proxy returns <code>null</code>.</p>
+<h2 id="python-runtime-details">Python Runtime Details<a class="headerlink" href="#python-runtime-details" title="Permanent link">&para;</a></h2>
+<p><code>PyExecutor</code> is convention-driven.</p>
+<h3 id="expected-layout">Expected Layout<a class="headerlink" href="#expected-layout" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Java interface: <code>ForecastService</code></li>
+<li>script: <code>forecast_service.py</code></li>
+<li>export name: <code>ForecastService</code></li>
+</ul>
+<h3 id="supported-export-styles">Supported Export Styles<a class="headerlink" href="#supported-export-styles" title="Permanent link">&para;</a></h3>
+<p>Class-style export:</p>
+<pre><code class="language-python">polyglot.export_value(&quot;ForecastService&quot;, ForecastService)
+</code></pre>
+<p>Dictionary-style export:</p>
+<pre><code class="language-python">polyglot.export_value(
+    &quot;ForecastService&quot;,
+    {
+        &quot;forecast&quot;: forecast
+    }
+)
+</code></pre>
+<p>The executor:</p>
+<ul>
+<li>evaluates the script</li>
+<li>resolves the export from polyglot bindings first, then Python bindings</li>
+<li>instantiates callable exports</li>
+<li>reuses dictionary-style exports directly</li>
+<li>caches resolved targets per interface using weak references</li>
+</ul>
+<p><code>validateBinding(...)</code> resolves the instance eagerly, so it is useful at startup when applications want to fail early.</p>
+<h2 id="javascript-runtime-details">JavaScript Runtime Details<a class="headerlink" href="#javascript-runtime-details" title="Permanent link">&para;</a></h2>
+<p><code>JsExecutor</code> uses the same script naming convention but a different binding model.</p>
+<p>Expected layout:</p>
+<ul>
+<li>Java interface: <code>ForecastService</code></li>
+<li>script: <code>forecast_service.js</code></li>
+<li>functions in JS bindings: <code>forecast(...)</code></li>
+</ul>
+<p>When a Java interface is validated or called:</p>
+<ul>
+<li>the script is evaluated once and cached by interface</li>
+<li>each interface method must exist as an executable JavaScript function</li>
+<li>method calls are executed from language bindings</li>
+</ul>
+<p>The runtime does not currently define a separate JavaScript export object convention comparable to Python's class-style and dictionary-style exports.</p>
+<h2 id="adapter-api-surface">Adapter API Surface<a class="headerlink" href="#adapter-api-surface" title="Permanent link">&para;</a></h2>
+<p>Applications normally interact with the runtime through:</p>
+<ul>
+<li><code>PyExecutor.create(...)</code> or <code>PyExecutor.createWithContext(...)</code></li>
+<li><code>JsExecutor.create(...)</code> or <code>JsExecutor.createWithContext(...)</code></li>
+<li><code>bind(...)</code></li>
+<li><code>validateBinding(...)</code></li>
+<li><code>metadata()</code></li>
+</ul>
+<p><code>metadata()</code> returns a lightweight snapshot intended for diagnostics, actuator info, or metrics. It is not a stable serialization format.</p>
+<h2 id="spring-boot-starter">Spring Boot Starter<a class="headerlink" href="#spring-boot-starter" title="Permanent link">&para;</a></h2>
+<p><code>runtime/polyglot-spring-boot-starter</code> wraps the runtime adapter for Spring applications.</p>
+<h3 id="what-it-provides">What It Provides<a class="headerlink" href="#what-it-provides" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>PolyglotAutoConfiguration</code></li>
+<li><code>PolyglotPythonAutoConfiguration</code></li>
+<li><code>PolyglotJsAutoConfiguration</code></li>
+<li><code>SpringPolyglotContextFactory</code></li>
+<li><code>PolyglotExecutors</code></li>
+<li><code>@EnablePolyglotClients</code></li>
+<li><code>PolyglotClientRegistrar</code></li>
+<li><code>PolyglotClientFactoryBean</code></li>
+<li>actuator contributors</li>
+<li>Micrometer meter binder</li>
+<li>startup warmup lifecycle</li>
+</ul>
+<h3 id="how-users-interact-with-the-runtime-adapter-in-spring">How Users Interact With the Runtime Adapter in Spring<a class="headerlink" href="#how-users-interact-with-the-runtime-adapter-in-spring" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Add the starter and language runtime dependencies.</li>
+<li>Enable the desired languages under <code>polyglot.*</code>.</li>
+<li>Annotate interfaces with <code>@PolyglotClient</code>.</li>
+<li>Enable scanning with <code>@EnablePolyglotClients</code>.</li>
+<li>Inject the generated Spring beans as normal interfaces.</li>
+</ol>
+<p>Language resolution rules for <code>@PolyglotClient</code> are enforced by <code>PolyglotClientFactoryBean</code>:</p>
+<ul>
+<li>one explicit language: use that executor</li>
+<li>multiple explicit languages: fail</li>
+<li>no explicit language and exactly one executor available: use it</li>
+<li>no explicit language and multiple executors available: fail and require explicit configuration</li>
+</ul>
+<h2 id="spring-configuration">Spring Configuration<a class="headerlink" href="#spring-configuration" title="Permanent link">&para;</a></h2>
+<p>Current configuration properties live under <code>polyglot.*</code>.</p>
+<p>Actively used properties include:</p>
+<ul>
+<li><code>polyglot.core.enabled</code></li>
+<li><code>polyglot.core.fail-fast</code></li>
+<li><code>polyglot.python.enabled</code></li>
+<li><code>polyglot.python.resources-path</code></li>
+<li><code>polyglot.python.warmup-on-startup</code></li>
+<li><code>polyglot.js.enabled</code></li>
+<li><code>polyglot.js.resources-path</code></li>
+<li><code>polyglot.js.warmup-on-startup</code></li>
+<li><code>polyglot.metrics.enabled</code></li>
+<li><code>polyglot.actuator.info.enabled</code></li>
+<li><code>polyglot.actuator.health.enabled</code></li>
+</ul>
+<p>Properties currently modeled but not yet fully acted on by startup logic include:</p>
+<ul>
+<li><code>polyglot.core.log-metadata-on-startup</code></li>
+<li><code>polyglot.python.safe-defaults</code></li>
+<li><code>polyglot.python.preload-scripts</code></li>
+<li><code>polyglot.js.preload-scripts</code></li>
+</ul>
+<p>The startup lifecycle currently performs a lightweight no-op warmup only. It does not preload user scripts.</p>
+<h2 id="operational-behavior">Operational Behavior<a class="headerlink" href="#operational-behavior" title="Permanent link">&para;</a></h2>
+<p>If actuator is present, the starter can expose:</p>
+<ul>
+<li>a health indicator that reports whether at least one executor is available</li>
+<li>an info contributor with configuration and executor availability</li>
+</ul>
+<p>If Micrometer is present, the starter registers gauges for:</p>
+<ul>
+<li>executor enablement</li>
+<li>source cache size</li>
+<li>Python instance cache size</li>
+<li>count of Python bound interfaces</li>
+<li>count of JavaScript loaded interfaces</li>
+</ul>
+<h2 id="current-runtime-limits">Current Runtime Limits<a class="headerlink" href="#current-runtime-limits" title="Permanent link">&para;</a></h2>
+<ul>
+<li>The runtime is intended for trusted application embedding, not untrusted sandbox execution.</li>
+<li>JavaScript execution is supported, but JavaScript contract generation is not.</li>
+<li>Warmup initializes the engine but does not currently preload user contracts.</li>
+<li>The binding convention is currently opinionated and name-based; alternative conventions are not implemented yet.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2026 Ihor Didyk
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "toc.integrate", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "none"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
