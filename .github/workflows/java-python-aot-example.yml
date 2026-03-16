@@ -1,18 +1,6 @@
 name: Java+Python AOT Example
 
 on:
-  push:
-    paths:
-      - "../../samples/java-python-aot-adapter/**"
-      - "adapter/**"
-      - "tooling/**"
-      - ".github/workflows/java-python-aot-example.yml"
-  pull_request:
-    paths:
-      - "../../samples/java-python-aot-adapter/**"
-      - "adapter/**"
-      - "tooling/**"
-      - ".github/workflows/java-python-aot-example.yml"
   workflow_dispatch:
 
 permissions:

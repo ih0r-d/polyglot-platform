@@ -1,24 +1,29 @@
-name: 🚀 Release
+name: Release
 
 on:
   push:
     tags:
       - "v*"
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
 jobs:
   release:
+    name: Publish Release
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Setup JDK
+      - name: Set up Temurin JDK 25
         uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -27,10 +32,18 @@ jobs:
           server-id: central
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: GPG_PASSPHRASE
 
-      - name: Import GPG key
+      - name: Verify tag matches project version
         run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          project_version="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
+          release_version="${project_version%-SNAPSHOT}"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [ "$release_version" != "$tag_version" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match project version ${project_version}" >&2
+            exit 1
+          fi
 
       - name: Deploy to Maven Central
         env:
@@ -38,7 +51,7 @@ jobs:
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          mvn -B -ntp -DskipTests -Prelease deploy \
+          mvn -B -ntp -Prelease -DskipTests deploy \
             -Dgpg.passphrase="${GPG_PASSPHRASE}"
 
       - name: Create GitHub Release
@@ -46,3 +59,5 @@ jobs:
         with:
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
+          generateReleaseNotes: true
+          allowUpdates: true
