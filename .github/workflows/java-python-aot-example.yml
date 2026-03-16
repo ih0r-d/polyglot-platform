@@ -3,13 +3,13 @@ name: Java+Python AOT Example
 on:
   push:
     paths:
-      - "examples/java-python-aot-adapter/**"
+      - "../../samples/java-python-aot-adapter/**"
       - "adapter/**"
       - "tooling/**"
       - ".github/workflows/java-python-aot-example.yml"
   pull_request:
     paths:
-      - "examples/java-python-aot-adapter/**"
+      - "../../samples/java-python-aot-adapter/**"
       - "adapter/**"
       - "tooling/**"
       - ".github/workflows/java-python-aot-example.yml"
