@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.0</version>
+        <version>4.0.3</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>io.github.ih0rd.examples</groupId>
@@ -28,6 +28,7 @@
     </scm>
     <properties>
         <java.version>25</java.version>
+        <polyglot.platform.version>0.2.0-SNAPSHOT</polyglot.platform.version>
 
         <!-- Python packages for GraalPy -->
         <python.package.1>faker==26.0.0</python.package.1>
@@ -37,7 +38,6 @@
         <!-- GraalVM / GraalPy -->
         <graal.version>25.0.2</graal.version>
         <graalpy-plugin.version>25.0.2</graalpy-plugin.version>
-        <graalpy-plugin-snapshot.version>26.0.0-SNAPSHOT</graalpy-plugin-snapshot.version>
 
     </properties>
 
@@ -47,7 +47,7 @@
             <dependency>
                 <groupId>io.github.ih0r-d</groupId>
                 <artifactId>polyglot-bom</artifactId>
-                <version>0.0.21-SNAPSHOT</version>
+                <version>${polyglot.platform.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -72,20 +72,9 @@
             <version>${graal.version}</version>
         </dependency>
 
-        <!-- Crypto (transitive need from python-embedding)       -->
-        <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcpkix-jdk18on</artifactId>
-            <version>1.83</version>
-        </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-core</artifactId>
         </dependency>
 
         <dependency>
@@ -94,7 +83,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -108,7 +97,7 @@
             <plugin>
                 <groupId>org.graalvm.python</groupId>
                 <artifactId>graalpy-maven-plugin</artifactId>
-                <version>${graalpy-plugin-snapshot.version}</version>
+                <version>${graalpy-plugin.version}</version>
                 <configuration>
                     <requirementsFile>requirements.txt</requirementsFile>
                 </configuration>
@@ -122,23 +111,6 @@
                     </execution>
                 </executions>
             </plugin>
-<!--            <plugin>-->
-<!--                <groupId>org.graalvm.python</groupId>-->
-<!--                <artifactId>graalpy-maven-plugin</artifactId>-->
-<!--                <version>${graalpy-plugin-snapshot.version}</version>-->
-<!--                <configuration>-->
-<!--                    <requirementsFile>requirements.txt</requirementsFile>-->
-<!--                </configuration>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <id>generate-python-resources</id>-->
-<!--                        <phase>generate-resources</phase>-->
-<!--                        <goals>-->
-<!--                            <goal>process-graalpy-resources</goal>-->
-<!--                        </goals>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
         </plugins>
     </build>
 
