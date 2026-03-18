@@ -45,7 +45,7 @@
         <maven-deploy-plugin.version>3.1.2</maven-deploy-plugin.version>
         <maven-jar-plugin.version>3.4.1</maven-jar-plugin.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
-        <maven-plugin-api.version>3.9.12</maven-plugin-api.version>
+        <maven-plugin-api.version>3.9.14</maven-plugin-api.version>
         <jacoco.coverage.instruction.minimum>0.50</jacoco.coverage.instruction.minimum>
         <minimum-maven.version>3.9.0</minimum-maven.version>
         <minimum-java.version>21</minimum-java.version>
