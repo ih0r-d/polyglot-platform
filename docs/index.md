@@ -1,6 +1,6 @@
 # polyglot-adapter
 
-`polyglot-adapter` is a runtime adapter for dynamic languages built on top of the GraalVM Polyglot API.
+`polyglot-adapter` provides runtime and build-time support for dynamic-language integration on top of the GraalVM Polyglot API.
 
 It acts as:
 
@@ -15,6 +15,7 @@ Use this site in the following order:
 - [Getting Started](getting-started.md)
 - [Concepts](concepts.md)
 - [Architecture](architecture.md)
+- [Compatibility](compatibility.md)
 - [Runtime](runtime.md)
 - [Code Generation](codegen.md)
 - [Examples](examples.md)

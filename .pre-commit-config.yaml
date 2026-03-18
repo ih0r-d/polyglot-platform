@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: maven-quality-gate
+        name: Maven quality gate
+        entry: ./scripts/pre-commit-maven.sh
+        language: system
+        pass_filenames: false
+        require_serial: true

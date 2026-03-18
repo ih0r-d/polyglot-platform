@@ -72,6 +72,8 @@ jacoco.exec
 local/
 *.asc
 settings-local.xml
+.venv/
+docs/.venv/
 
 # ===============================
 # SDKMAN (if local overrides appear)

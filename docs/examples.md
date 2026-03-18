@@ -13,9 +13,9 @@ Examples are included here as supporting material after the main onboarding and 
 
 | Example                                                                        | What it demonstrates                                                                    | Integration style                 |
 |--------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|-----------------------------------|
-| [`samples/java-maven-example`](https://github.com/ih0r-d/polyglot-adapter/tree/main/samples/java-maven-example)                 | Direct use of `PyExecutor` and `JsExecutor` with explicit `ScriptSource` wiring         | Framework-neutral runtime adapter |
-| [`samples/java-maven-codegen-example`](https://github.com/ih0r-d/polyglot-adapter/tree/main/samples/java-maven-codegen-example) | Build-time Java interface generation from Python contracts, followed by runtime binding | Code generation + runtime adapter |
-| [`samples/spring-boot-example`](https://github.com/ih0r-d/polyglot-adapter/tree/main/samples/spring-boot-example)               | Spring Boot auto-configuration, `@PolyglotClient` registration, actuator, and metrics   | Spring Boot integration layer     |
+| [`samples/java-maven-example`](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/java-maven-example)                 | Direct use of `PyExecutor` and `JsExecutor` with explicit `ScriptSource` wiring         | Framework-neutral runtime adapter |
+| [`samples/java-maven-codegen-example`](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/java-maven-codegen-example) | Build-time Java interface generation from Python contracts, followed by runtime binding | Code generation + runtime adapter |
+| [`samples/spring-boot-example`](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/spring-boot-example)               | Spring Boot auto-configuration, `@PolyglotClient` registration, actuator, and metrics   | Spring Boot integration layer     |
 
 ## What Each Example Helps You Learn
 

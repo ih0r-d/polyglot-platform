@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide follows the structure of `README_EXAMPLE.md` and introduces the adapter using the same onboarding flow and terminology.
+This guide follows the repository sample flow and introduces the runtime adapter using the same onboarding terminology.
 
 This example shows how to integrate Python code into a Java application using `polyglot-adapter`.
 

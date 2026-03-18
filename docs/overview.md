@@ -1,6 +1,6 @@
 # Overview
 
-`polyglot-adapter` is a runtime adapter for dynamic languages built on top of the GraalVM Polyglot API.
+`polyglot-adapter` is a multi-module toolkit for dynamic-language integration built on top of the GraalVM Polyglot API.
 
 > Note
 > This project wraps the GraalVM Polyglot API to simplify runtime integration. It does not replace GraalVM or introduce a separate execution runtime.
@@ -30,7 +30,7 @@ The raw GraalVM Polyglot API is powerful, but once an application grows beyond a
 - converting repeated `Value` lookups into maintainable Java APIs
 - integrating polyglot execution into Spring applications
 
-`polyglot-adapter` addresses those problems without replacing GraalVM. It remains a thin runtime adapter on top of the GraalVM Polyglot API.
+`polyglot-adapter` addresses those problems without replacing GraalVM. It keeps the runtime layer thin while adding reusable build and integration tooling around it.
 
 ## Repository Layout
 
@@ -47,6 +47,7 @@ See:
 - [Getting Started](getting-started.md)
 - [Concepts](concepts.md)
 - [Architecture](architecture.md)
+- [Compatibility](compatibility.md)
 - [Runtime](runtime.md)
 - [Code Generation](codegen.md)
 - [Examples](examples.md)

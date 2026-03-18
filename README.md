@@ -1,6 +1,6 @@
-# Polyglot Platform
+# polyglot-adapter
 
-Polyglot Platform provides runtime and build-time support for executing Python and JavaScript on the JVM through GraalVM Polyglot.
+`polyglot-adapter` provides runtime and build-time support for executing Python and JavaScript on the JVM through GraalVM Polyglot.
 
 The repository is organized into three layers:
 
@@ -10,8 +10,9 @@ The repository is organized into three layers:
 
 ## Requirements
 
+- Build tooling modules: JDK 21+, Maven 3.9+
 - Runtime modules: JDK 25+, GraalVM 25.x+, Maven 3.9+
-- Tooling modules: JDK 21+, Maven 3.9+
+- CI and local quality checks assume the Maven wrapper: `./mvnw`
 
 ## Modules
 
@@ -82,10 +83,13 @@ Add only the language runtimes you enable:
 The project documentation is maintained in [`docs/`](docs/):
 
 - [`docs/index.md`](docs/index.md)
+- [`docs/overview.md`](docs/overview.md)
 - [`docs/architecture.md`](docs/architecture.md)
+- [`docs/compatibility.md`](docs/compatibility.md)
 - [`docs/runtime.md`](docs/runtime.md)
-- [`docs/tooling.md`](docs/tooling.md)
-- [`docs/contract-model.md`](docs/contract-model.md)
+- [`docs/codegen.md`](docs/codegen.md)
+- [`docs/concepts.md`](docs/concepts.md)
+- [`docs/release-process.md`](docs/release-process.md)
 - [`docs/roadmap.md`](docs/roadmap.md)
 
 ## Build
@@ -93,12 +97,25 @@ The project documentation is maintained in [`docs/`](docs/):
 Run the full build:
 
 ```bash
-mvn clean verify
+./mvnw clean verify
+```
+
+Run the stricter local quality gate:
+
+```bash
+./mvnw -B -ntp -Pquality verify
 ```
 
 ## Samples
 
 The `samples/` directory contains example applications. Those modules are demonstrative only and are not the canonical source of documentation.
+
+## OSS Project Policies
+
+- Contribution guide: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Security policy: [`SECURITY.md`](SECURITY.md)
+- Changelog: [`CHANGELOG.md`](CHANGELOG.md)
+- Code of conduct: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
 
 ## License
 

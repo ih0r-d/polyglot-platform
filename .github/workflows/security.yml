@@ -22,6 +22,20 @@ permissions:
   security-events: write
 
 jobs:
+  dependency-review:
+    name: Dependency Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
   codeql:
     name: CodeQL
     runs-on: ubuntu-latest
@@ -69,7 +83,9 @@ jobs:
         run: mvn -B -ntp -DskipTests verify
 
       - name: OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@main
+        uses: dependency-check/Dependency-Check_Action@1.1.0
+        env:
+          JAVA_HOME: /opt/jdk
         with:
           project: polyglot-platform
           path: .
@@ -87,3 +103,45 @@ jobs:
           name: dependency-check-report
           path: dependency-check-report
           if-no-files-found: ignore
+
+  snyk:
+    name: Snyk Open Source Scan
+    runs-on: ubuntu-latest
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && secrets.SNYK_TOKEN != ''
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Temurin JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Install Snyk CLI
+        uses: snyk/actions/setup@v1.0.0
+
+      - name: Run Snyk test
+        id: snyk-test
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test --all-projects --severity-threshold=high --sarif-file-output=snyk.sarif
+
+      - name: Upload Snyk SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: snyk.sarif
+
+      - name: Update Snyk project snapshot
+        if: github.event_name != 'pull_request'
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk monitor --all-projects --target-reference="${{ github.ref_name }}"
+
+      - name: Fail when Snyk finds high severity issues
+        if: steps.snyk-test.outcome == 'failure'
+        run: exit 1

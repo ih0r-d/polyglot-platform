@@ -1,91 +1,90 @@
-# Contributing to polyglot-adapter-core
+# Contributing to polyglot-adapter
 
-We welcome all contributions — bug fixes, improvements, and new features.  
-Please follow these simple guidelines to keep the process consistent and efficient.
+`polyglot-adapter` is a multi-module OSS library for GraalVM-based polyglot execution, Spring Boot integration, and Java code generation. Contributions are expected to preserve API clarity, compatibility discipline, and build reproducibility.
 
----
+## Before You Start
 
-## 🧩 Getting Started
-
-1. **Fork** the repository on GitHub.
-2. **Clone** your fork locally:
+1. Fork the repository and clone your fork:
    ```bash
-   git clone https://github.com/ih0r-d/polyglot-adapter-core.git
-   cd polyglot-adapter-core
+   git clone https://github.com/ih0r-d/polyglot-platform.git
+   cd polyglot-platform
    ```
-3. **Set up Maven Wrapper** (already included):
+2. Build the repository with the Maven wrapper:
    ```bash
-   ./mvnw clean package
+   ./mvnw clean verify
    ```
-4. Verify everything builds correctly before making changes.
+3. Install local pre-commit checks if you use them:
+   ```bash
+   pip install pre-commit
+   pre-commit install
+   ```
 
----
+## Toolchain Baseline
 
-## 🧱 Development Workflow
+- Maven: 3.9+
+- Build tooling modules: JDK 21+
+- Runtime modules: JDK 25+
+- GraalVM runtime integrations: GraalVM 25.x
 
-The project uses [Taskfile](https://taskfile.dev) for unified commands.
+If you change the supported matrix, update [`README.md`](README.md), [`docs/compatibility.md`](docs/compatibility.md), and CI workflows in the same change.
 
-| Command                      | Description                  |
-|------------------------------|------------------------------|
-| `task clean`                 | Clean Maven & temp resources |
-| `task build`                 | Build JARs                   |
-| `task test`                  | Run all tests                |
-| `task bump`                  | Increment version            |
-| `task release VERSION=X.Y.Z` | Tag release                  |
-| `task format`                | Format code (Spotless)       |
+## Repository Layout
 
----
+- `api/`: annotations, contracts, and public model types
+- `runtime/`: execution/runtime modules and the runtime BOM
+- `build-tools/`: code generation libraries and Maven plugin integration
+- `samples/`: reference examples and smoke-test applications
+- `docs/`: user-facing documentation
+- `.dev/`: maintainer scripts and local automation helpers
 
-## 🧪 Tests
+## Development Workflow
 
-- Unit tests use **JUnit 5**.
-- Run all tests before opening a PR:
-  ```bash
-  task test
-  ```
-- Add tests for any new functionality or bug fix.
+Prefer the Maven wrapper for all contributor-facing commands:
 
----
+```bash
+./mvnw clean verify
+./mvnw -B -ntp -Pquality verify
+./mvnw spotless:apply
+```
 
-## 🧭 Commit & Branch Rules
+Optional maintainer conveniences live in `.dev/`, including release and pre-commit helper scripts.
 
-- Branch naming: `feature/...`, `fix/...`, `chore/...`
-- Use clear commit messages (imperative style):
-  ```text
-  feat(core): add PolyglotAdapterFactory
-  fix(python): correct resource path resolution
-  chore(deps): update GraalVM SDK version
-  ```
-- Keep commits atomic and logically grouped.
+## Change Expectations
 
----
+- Keep public API modules minimal and stable.
+- Do not introduce cyclic module dependencies.
+- Add or update tests for each behavioral change.
+- Update documentation when changing public API, configuration, build flow, or compatibility guarantees.
+- Avoid mixing refactors with unrelated behavior changes in the same PR.
 
-## 🧰 Pull Requests
+## Pull Requests
 
-1. Make sure the build and tests pass locally.
-2. Update docs or README if relevant.
-3. Open a PR to the `main` branch.
-4. Describe the intent of your change clearly.
-5. Maintainers will review and provide feedback quickly.
+Before opening a pull request:
 
----
+1. Run `./mvnw clean verify`.
+2. Run `./mvnw -B -ntp -Pquality verify` for changes that affect runtime, build tooling, or release logic.
+3. Update docs, samples, or changelog entries when the change affects users.
+4. Describe the motivation, scope, and compatibility impact in the PR.
 
-## 🧑‍⚖️ Code Style
+PRs should target `main` unless you are asked to contribute to a release branch.
 
-- Java 25+ syntax, Maven 3.9+
-- Linting: `./mvnw spotless:apply`
-- Follow existing conventions for naming and structure.
+## Commit Guidance
 
----
+Use clear, imperative commit messages. Conventional-style prefixes are preferred:
 
-## 🔒 License
+```text
+feat(runtime): add script source caching hook
+fix(codegen): preserve generic return types in generated client
+docs(readme): clarify JDK and GraalVM requirements
+```
 
-By contributing, you agree that your contributions are licensed under the **Apache License 2.0**, the same as the main project.
+Keep commits logically grouped and reviewable.
 
----
+## Reporting Bugs and Security Issues
 
-## 💬 Questions?
+- Bug reports and feature requests: use GitHub Issues
+- Security reports: follow [`SECURITY.md`](SECURITY.md) and do not open public issues for undisclosed vulnerabilities
 
-For general questions, open a [GitHub Discussion](https://github.com/ih0rd/polyglot-adapter-core/discussions).  
-For issues or bugs, create a [GitHub Issue](https://github.com/ih0rd/polyglot-adapter-core/issues).
+## License
 
+By contributing, you agree that your contributions are licensed under the Apache License 2.0.

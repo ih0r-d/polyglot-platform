@@ -98,7 +98,17 @@ jobs:
           restore-keys: sonar-${{ runner.os }}-
 
       - name: Build project and generate coverage
-        run: mvn -B -ntp verify
+        run: mvn -B -ntp -Pquality verify
+
+      - name: Upload SpotBugs reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotbugs-reports
+          path: |
+            **/target/spotbugsXml.xml
+            **/target/site/spotbugs.html
+          if-no-files-found: ignore
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
