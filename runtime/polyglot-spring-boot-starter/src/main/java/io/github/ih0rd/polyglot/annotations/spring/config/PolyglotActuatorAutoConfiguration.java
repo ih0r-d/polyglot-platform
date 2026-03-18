@@ -13,11 +13,24 @@ import io.github.ih0rd.polyglot.annotations.spring.actuator.PolyglotHealthIndica
 import io.github.ih0rd.polyglot.annotations.spring.actuator.PolyglotInfoContributor;
 import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 
+/**
+ * Auto-configuration for actuator integrations exposed by the polyglot starter.
+ *
+ * <p>The configuration contributes optional {@code /actuator/info} and health integration when the
+ * relevant Spring Boot actuator types are on the classpath.
+ */
 @AutoConfiguration
 @ConditionalOnClass(InfoContributor.class)
 @ConditionalOnProperty(prefix = "polyglot.actuator", name = "enabled", matchIfMissing = true)
 public class PolyglotActuatorAutoConfiguration {
 
+  /**
+   * Creates the actuator info contributor.
+   *
+   * @param executors available executors
+   * @param properties starter properties
+   * @return info contributor
+   */
   @Bean
   @ConditionalOnProperty(prefix = "polyglot.actuator.info", name = "enabled", matchIfMissing = true)
   @ConditionalOnMissingBean
@@ -26,6 +39,13 @@ public class PolyglotActuatorAutoConfiguration {
     return new PolyglotInfoContributor(executors, properties);
   }
 
+  /**
+   * Creates the health indicator for the polyglot runtime.
+   *
+   * @param executors available executors
+   * @param properties starter properties
+   * @return health indicator
+   */
   @Bean
   @ConditionalOnClass(HealthIndicator.class)
   @ConditionalOnProperty(

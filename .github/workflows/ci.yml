@@ -9,6 +9,7 @@ on:
     branches:
       - main
       - release/*
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -19,18 +20,12 @@ permissions:
 
 jobs:
   build:
-    name: Build and Test (${{ matrix.name }}, JDK ${{ matrix.java }})
+    name: Verify (JDK ${{ matrix.java }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - java: "21"
-            name: API and build tooling
-            modules: api/polyglot-annotations,api/polyglot-model,build-tools/polyglot-codegen,build-tools/polyglot-codegen-maven-plugin
-          - java: "25"
-            name: Runtime modules
-            modules: runtime/polyglot-adapter,runtime/polyglot-spring-boot-starter
+        java: ["21", "25"]
 
     steps:
       - name: Checkout repository
@@ -44,10 +39,10 @@ jobs:
           cache: maven
 
       - name: Spotless formatting check
-        run: mvn -B -ntp -pl "${{ matrix.modules }}" -am spotless:check
+        run: ./mvnw -B -ntp spotless:check
 
       - name: Build project and run tests
-        run: mvn -B -ntp -pl "${{ matrix.modules }}" -am verify
+        run: ./mvnw -B -ntp clean verify
 
       - name: Upload test reports
         if: always()
@@ -73,7 +68,7 @@ jobs:
     name: Coverage and SonarCloud
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'push'
     permissions:
       contents: read
 
@@ -98,7 +93,7 @@ jobs:
           restore-keys: sonar-${{ runner.os }}-
 
       - name: Build project and generate coverage
-        run: mvn -B -ntp -Pquality verify
+        run: ./mvnw -B -ntp -Pquality clean verify
 
       - name: Upload SpotBugs reports
         if: always()
@@ -111,6 +106,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload coverage to Codecov
+        if: secrets.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -119,6 +115,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Run SonarCloud analysis
+        if: secrets.SONAR_TOKEN != ''
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B -ntp sonar:sonar -Dsonar.token="${SONAR_TOKEN}"
+        run: ./mvnw -B -ntp org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar -Dsonar.token="${SONAR_TOKEN}"

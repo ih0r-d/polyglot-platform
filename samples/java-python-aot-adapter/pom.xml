@@ -9,6 +9,8 @@
 
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
+        <maven.compiler.plugin.version>3.15.0</maven.compiler.plugin.version>
+        <maven.shade.plugin.version>3.6.1</maven.shade.plugin.version>
         <polyglot.platform.version>0.2.0-SNAPSHOT</polyglot.platform.version>
         <graal.version>25.0.2</graal.version>
         <graalpy.plugin.version>25.0.2</graalpy.plugin.version>
@@ -44,7 +46,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.15.0</version>
+                <version>${maven.compiler.plugin.version}</version>
                 <configuration>
                     <release>${maven.compiler.release}</release>
                 </configuration>
@@ -57,7 +59,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.0</version>
+                <version>${maven.shade.plugin.version}</version>
                 <executions>
                     <execution>
                         <phase>package</phase>

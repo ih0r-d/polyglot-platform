@@ -30,31 +30,45 @@ public final class PolyglotExecutors {
     this.js = js;
   }
 
-  /// Returns the Python executor, if present.
+  /** Returns the Python executor when the Python runtime integration is enabled. */
   public Optional<PyExecutor> python() {
     return Optional.ofNullable(python);
   }
 
-  /// Returns the JavaScript executor, if present.
+  /** Returns the JavaScript executor when the JavaScript runtime integration is enabled. */
   public Optional<JsExecutor> js() {
     return Optional.ofNullable(js);
   }
 
-  /// Returns the Python executor or fails.
+  /**
+   * Returns the Python executor or throws when Python support is not available.
+   *
+   * @return configured Python executor
+   * @throws IllegalStateException if Python support is disabled
+   */
   public PyExecutor requirePython() {
     return Optional.ofNullable(python)
         .orElseThrow(
             () -> new IllegalStateException("Python executor is not enabled or not configured"));
   }
 
-  /// Returns the JavaScript executor or fails.
+  /**
+   * Returns the JavaScript executor or throws when JavaScript support is not available.
+   *
+   * @return configured JavaScript executor
+   * @throws IllegalStateException if JavaScript support is disabled
+   */
   public JsExecutor requireJs() {
     return Optional.ofNullable(js)
         .orElseThrow(
             () -> new IllegalStateException("JS executor is not enabled or not configured"));
   }
 
-  /** Returns aggregated metadata from all available executors. */
+  /**
+   * Returns immutable metadata contributed by all available executors.
+   *
+   * @return executor metadata keyed by language id
+   */
   public Map<String, Object> metadata() {
     Map<String, Object> result = new HashMap<>();
     if (python != null) {
@@ -66,10 +80,12 @@ public final class PolyglotExecutors {
     return Map.copyOf(result);
   }
 
+  /** Returns whether the Python executor bean is currently available. */
   public boolean isPythonEnabled() {
     return python != null;
   }
 
+  /** Returns whether the JavaScript executor bean is currently available. */
   public boolean isJsEnabled() {
     return js != null;
   }

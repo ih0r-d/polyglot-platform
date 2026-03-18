@@ -12,11 +12,19 @@ import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.polyglot.annotations.spring.metrics.PolyglotMetricsBinder;
 import io.micrometer.core.instrument.MeterRegistry;
 
+/** Auto-configuration that registers Micrometer meters for the configured polyglot executors. */
 @AutoConfiguration
 @ConditionalOnClass(MeterRegistry.class)
 @ConditionalOnProperty(prefix = "polyglot.metrics", name = "enabled", matchIfMissing = true)
 public class PolyglotMetricsAutoConfiguration {
 
+  /**
+   * Creates the metrics binder.
+   *
+   * @param py optional Python executor
+   * @param js optional JavaScript executor
+   * @return metrics binder
+   */
   @Bean
   @ConditionalOnMissingBean
   public PolyglotMetricsBinder polyglotMetricsBinder(

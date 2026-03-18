@@ -15,20 +15,24 @@ import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties
 import io.github.ih0rd.polyglot.annotations.spring.script.SpringResourceScriptSource;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
-/// # PolyglotJsAutoConfiguration
-///
-/// Spring Boot autoconfiguration for {@link JsExecutor}.
-///
-/// Responsibilities:
-/// - Create language-bound {@link ScriptSource} for JavaScript
-/// - Create {@link JsExecutor} using {@link SpringPolyglotContextFactory}
-/// - No warmup or lifecycle orchestration (handled internally)
-///
+/**
+ * Spring Boot auto-configuration for the JavaScript executor integration.
+ *
+ * <p>This configuration binds a JavaScript-specific {@link ScriptSource} and creates a {@link
+ * JsExecutor} backed by a context from {@link SpringPolyglotContextFactory}.
+ */
 @AutoConfiguration
 @ConditionalOnClass(JsExecutor.class)
 @ConditionalOnProperty(prefix = "polyglot.js", name = "enabled", havingValue = "true")
 public class PolyglotJsAutoConfiguration {
 
+  /**
+   * Creates the JavaScript script source backed by Spring resources.
+   *
+   * @param resourceLoader Spring resource loader
+   * @param properties starter properties
+   * @return JavaScript script source
+   */
   @Bean
   @ConditionalOnMissingBean(name = "jsScriptSource")
   public ScriptSource jsScriptSource(ResourceLoader resourceLoader, PolyglotProperties properties) {
@@ -37,6 +41,13 @@ public class PolyglotJsAutoConfiguration {
         resourceLoader, SupportedLanguage.JS, properties.js().resourcesPath());
   }
 
+  /**
+   * Creates the JavaScript executor.
+   *
+   * @param contextFactory context factory used to build the GraalVM context
+   * @param jsScriptSource resolved JavaScript script source
+   * @return JavaScript executor
+   */
   @Bean
   @ConditionalOnMissingBean
   public JsExecutor jsExecutor(

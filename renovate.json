@@ -1,42 +1,62 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
-
-  "labels": ["dependencies"],
+  "labels": ["dependencies", "renovate"],
   "dependencyDashboard": true,
-
+  "rangeStrategy": "replace",
+  "rebaseWhen": "conflicted",
+  "prConcurrentLimit": 8,
+  "prHourlyLimit": 2,
+  "stabilityDays": 3,
   "ignorePaths": [
-    "examples/**",
+    "samples/**",
     ".local/**",
+    ".dev/**",
     "docs/**"
   ],
-
   "packageRules": [
     {
       "matchManagers": ["maven"],
-      "matchPaths": [
-        "adapter/**",
-        "tooling/**"
-      ],
-      "groupName": "Maven dependencies",
-      "automerge": false
-    },
-    {
-      "matchManagers": ["maven"],
-      "matchDepTypes": ["plugin"],
+      "matchPackageNames": ["org.apache.maven.plugins:*", "org.codehaus.mojo:*", "org.sonatype.central:central-publishing-maven-plugin", "org.sonarsource.scanner.maven:sonar-maven-plugin", "com.diffplug.spotless:spotless-maven-plugin", "com.github.spotbugs:spotbugs-maven-plugin", "org.jacoco:jacoco-maven-plugin"],
       "groupName": "Maven plugins",
-      "separateMinorPatch": true,
-      "automerge": false
+      "groupSlug": "maven-plugins",
+      "separateMajorMinor": false,
+      "automerge": false,
+      "matchUpdateTypes": ["patch", "minor"]
     },
     {
       "matchManagers": ["maven"],
-      "matchUpdateTypes": ["major"],
-      "labels": ["breaking-change"],
-      "automerge": false
+      "matchPackageNames": ["org.graalvm.*:*"],
+      "groupName": "GraalVM stack",
+      "groupSlug": "graalvm-stack"
+    },
+    {
+      "matchManagers": ["maven"],
+      "matchPackageNames": ["org.junit.jupiter:*", "org.mockito:*", "org.assertj:*"],
+      "groupName": "Test dependencies",
+      "groupSlug": "test-dependencies",
+      "automerge": false,
+      "matchUpdateTypes": ["patch", "minor"]
+    },
+    {
+      "matchManagers": ["maven"],
+      "excludePackageNames": ["org.apache.maven.plugins:*", "org.codehaus.mojo:*", "org.sonatype.central:central-publishing-maven-plugin", "org.sonarsource.scanner.maven:sonar-maven-plugin", "com.diffplug.spotless:spotless-maven-plugin", "com.github.spotbugs:spotbugs-maven-plugin", "org.jacoco:jacoco-maven-plugin", "org.graalvm.*:*", "org.junit.jupiter:*", "org.mockito:*", "org.assertj:*"],
+      "groupName": "Maven dependencies",
+      "groupSlug": "maven-dependencies",
+      "automerge": false,
+      "matchUpdateTypes": ["patch", "minor"]
     },
     {
       "matchManagers": ["github-actions"],
       "groupName": "GitHub Actions",
+      "groupSlug": "github-actions",
+      "automerge": false,
+      "matchUpdateTypes": ["patch", "minor", "digest"]
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "breaking-change"],
+      "separateMajorMinor": true,
       "automerge": false
     }
   ]

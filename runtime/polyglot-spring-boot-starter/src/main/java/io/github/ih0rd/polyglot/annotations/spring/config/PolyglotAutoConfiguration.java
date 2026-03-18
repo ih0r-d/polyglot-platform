@@ -15,6 +15,12 @@ import io.github.ih0rd.polyglot.annotations.spring.context.SpringPolyglotContext
 import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotStartupLifecycle;
 import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 
+/**
+ * Core Spring Boot auto-configuration for the polyglot starter.
+ *
+ * <p>This configuration exposes the shared executor facade, the context factory, and the startup
+ * lifecycle hooks used by the language-specific auto-configurations.
+ */
 @AutoConfiguration
 @EnableConfigurationProperties(PolyglotProperties.class)
 @ConditionalOnProperty(
@@ -24,6 +30,13 @@ import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties
     matchIfMissing = true)
 public class PolyglotAutoConfiguration {
 
+  /**
+   * Creates the facade that exposes whichever executors were configured for the application.
+   *
+   * @param py optional Python executor
+   * @param js optional JavaScript executor
+   * @return facade wrapping the available executors
+   */
   @Bean
   @ConditionalOnMissingBean
   public PolyglotExecutors polyglotExecutors(
@@ -32,6 +45,12 @@ public class PolyglotAutoConfiguration {
     return new PolyglotExecutors(py.getIfAvailable(), js.getIfAvailable());
   }
 
+  /**
+   * Creates the Spring-aware context factory used by the starter.
+   *
+   * @param customizers ordered customizer provider
+   * @return context factory
+   */
   @Bean
   @ConditionalOnMissingBean
   public SpringPolyglotContextFactory polyglotContextFactory(
@@ -40,6 +59,14 @@ public class PolyglotAutoConfiguration {
     return new SpringPolyglotContextFactory(customizers);
   }
 
+  /**
+   * Creates the internal lifecycle bean that performs warmup and startup logging.
+   *
+   * @param properties starter properties
+   * @param pyExecutor optional Python executor
+   * @param jsExecutor optional JavaScript executor
+   * @return startup lifecycle bean
+   */
   @Bean
   @ConditionalOnMissingBean
   PolyglotStartupLifecycle polyglotStartupLifecycle(

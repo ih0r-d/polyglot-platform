@@ -19,6 +19,7 @@ public interface PolyglotContextCustomizer extends Ordered {
    */
   void customize(SupportedLanguage language, Context.Builder builder);
 
+  /** Returns the customizer order; lower values run first. */
   @Override
   default int getOrder() {
     return 0;

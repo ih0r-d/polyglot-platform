@@ -18,10 +18,6 @@
     <name>polyglot-adapter-parent</name>
     <description>Runtime layer of the Polyglot Adapter (GraalVM execution)</description>
 
-    <properties>
-        <maven.compiler.release>25</maven.compiler.release>
-    </properties>
-
     <modules>
         <module>polyglot-bom</module>
         <module>polyglot-adapter</module>

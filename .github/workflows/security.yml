@@ -58,7 +58,7 @@ jobs:
           build-mode: manual
 
       - name: Build project for CodeQL
-        run: mvn -B -ntp -DskipTests verify
+        run: ./mvnw -B -ntp -DskipTests verify
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v4
@@ -66,7 +66,7 @@ jobs:
   dependency-check:
     name: Dependency Vulnerability Scan
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'push' && secrets.NVD_API_KEY != ''
 
     steps:
       - name: Checkout repository
@@ -80,7 +80,7 @@ jobs:
           cache: maven
 
       - name: Build project
-        run: mvn -B -ntp -DskipTests verify
+        run: ./mvnw -B -ntp -DskipTests verify
 
       - name: OWASP Dependency-Check
         uses: dependency-check/Dependency-Check_Action@1.1.0
@@ -107,7 +107,7 @@ jobs:
   snyk:
     name: Snyk Open Source Scan
     runs-on: ubuntu-latest
-    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && secrets.SNYK_TOKEN != ''
+    if: github.event_name == 'push' && secrets.SNYK_TOKEN != ''
 
     steps:
       - name: Checkout repository

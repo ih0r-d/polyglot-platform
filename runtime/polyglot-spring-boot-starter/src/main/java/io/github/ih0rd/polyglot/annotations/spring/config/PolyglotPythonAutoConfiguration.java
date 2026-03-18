@@ -15,20 +15,24 @@ import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties
 import io.github.ih0rd.polyglot.annotations.spring.script.SpringResourceScriptSource;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
-/// # PolyglotPythonAutoConfiguration
-///
-/// Spring Boot autoconfiguration for {@link PyExecutor}.
-///
-/// Responsibilities:
-/// - Create language-bound {@link ScriptSource} for Python
-/// - Create {@link PyExecutor} with externally managed {@link Context}
-/// - Delegate warmup and lifecycle handling to internal components
-///
+/**
+ * Spring Boot auto-configuration for the Python executor integration.
+ *
+ * <p>This configuration binds a Python-specific {@link ScriptSource} and creates a {@link
+ * PyExecutor} backed by a GraalVM {@link Context} produced by the starter's shared context factory.
+ */
 @AutoConfiguration
 @ConditionalOnClass(PyExecutor.class)
 @ConditionalOnProperty(prefix = "polyglot.python", name = "enabled", havingValue = "true")
 public class PolyglotPythonAutoConfiguration {
 
+  /**
+   * Creates the Python script source backed by Spring resources.
+   *
+   * @param resourceLoader Spring resource loader
+   * @param properties starter properties
+   * @return Python script source
+   */
   @Bean
   @ConditionalOnMissingBean(name = "pyScriptSource")
   public ScriptSource pyScriptSource(ResourceLoader resourceLoader, PolyglotProperties properties) {
@@ -37,6 +41,13 @@ public class PolyglotPythonAutoConfiguration {
         resourceLoader, SupportedLanguage.PYTHON, properties.python().resourcesPath());
   }
 
+  /**
+   * Creates the Python executor.
+   *
+   * @param contextFactory context factory used to build the GraalVM context
+   * @param pyScriptSource resolved Python script source
+   * @return Python executor
+   */
   @Bean
   @ConditionalOnMissingBean
   public PyExecutor pyExecutor(

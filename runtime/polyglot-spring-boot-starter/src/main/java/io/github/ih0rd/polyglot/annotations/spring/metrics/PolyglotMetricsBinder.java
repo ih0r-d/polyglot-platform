@@ -16,6 +16,11 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.binder.MeterBinder;
 
+/**
+ * Micrometer binder that exposes coarse-grained adapter metrics for the configured executors.
+ *
+ * <p>The binder is intentionally read-only and derives all values from executor metadata snapshots.
+ */
 public class PolyglotMetricsBinder implements MeterBinder {
 
   private static final Logger log = LoggerFactory.getLogger(PolyglotMetricsBinder.class);
@@ -23,12 +28,19 @@ public class PolyglotMetricsBinder implements MeterBinder {
   private final ObjectProvider<PyExecutor> pyExecutor;
   private final ObjectProvider<JsExecutor> jsExecutor;
 
+  /**
+   * Creates the binder.
+   *
+   * @param pyExecutor provider for the optional Python executor
+   * @param jsExecutor provider for the optional JavaScript executor
+   */
   public PolyglotMetricsBinder(
       ObjectProvider<PyExecutor> pyExecutor, ObjectProvider<JsExecutor> jsExecutor) {
     this.pyExecutor = pyExecutor;
     this.jsExecutor = jsExecutor;
   }
 
+  /** Registers all applicable meters against the given registry. */
   @Override
   public void bindTo(@NonNull MeterRegistry registry) {
     pyExecutor.ifAvailable(py -> bindPython(registry, py));

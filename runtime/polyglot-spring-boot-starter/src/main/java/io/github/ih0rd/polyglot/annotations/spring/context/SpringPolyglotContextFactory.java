@@ -16,6 +16,11 @@ public final class SpringPolyglotContextFactory {
 
   private final ObjectProvider<PolyglotContextCustomizer> customizers;
 
+  /**
+   * Creates a factory backed by the ordered Spring customizer stream.
+   *
+   * @param customizers ordered customizer provider
+   */
   public SpringPolyglotContextFactory(ObjectProvider<PolyglotContextCustomizer> customizers) {
     this.customizers = customizers;
   }
