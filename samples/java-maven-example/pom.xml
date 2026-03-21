@@ -31,11 +31,6 @@
             <version>${polyglot-adapter.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.github.ih0r-d</groupId>
-            <artifactId>polyglot-contract-api</artifactId>
-            <version>${polyglot-adapter.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.graalvm.python</groupId>
             <artifactId>python-launcher</artifactId>
             <version>${graal.version}</version>

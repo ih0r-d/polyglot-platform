@@ -49,10 +49,7 @@ Without `polyglot.export_value`, the adapter would have nothing named `QuoteApi`
     ```
     From the root directory, run:
     ```bash
-    cd tooling
-    mvn -DskipTests install
-    cd ../adapter
-    mvn -DskipTests -Dmaven.compiler.source=25 -Dmaven.compiler.target=25 install -rf :polyglot-adapter
+    ./mvnw -DskipTests install
     ```
     It builds and installs platform artifacts into your local Maven repo (_~/.m2_) so the application can resolve them.
 
@@ -60,7 +57,7 @@ Without `polyglot.export_value`, the adapter would have nothing named `QuoteApi`
 
 Navigate to the demo directory and package the application:
 ```bash
-cd examples/java-python-aot-adapter
+cd samples/java-python-aot-adapter
 ```
 ```bash
 mvn clean package

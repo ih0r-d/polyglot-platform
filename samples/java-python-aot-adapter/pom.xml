@@ -25,14 +25,8 @@
         </dependency>
         <dependency>
             <groupId>io.github.ih0r-d</groupId>
-            <artifactId>polyglot-contract-api</artifactId>
+            <artifactId>polyglot-annotations</artifactId>
             <version>${polyglot.platform.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.graalvm.python</groupId>
-            <artifactId>python-embedding</artifactId>
-            <version>${graal.version}</version>
         </dependency>
         <dependency>
             <groupId>org.graalvm.python</groupId>
