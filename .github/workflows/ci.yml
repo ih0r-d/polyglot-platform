@@ -92,6 +92,9 @@ jobs:
     if: github.event_name == 'push'
     permissions:
       contents: read
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -127,16 +130,20 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload coverage to Codecov
-        if: secrets.CODECOV_TOKEN != ''
+        if: env.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@v5
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           files: ./build-tools/polyglot-codegen/target/site/jacoco/jacoco.xml,./runtime/polyglot-adapter/target/site/jacoco/jacoco.xml,./runtime/polyglot-spring-boot-starter/target/site/jacoco/jacoco.xml
           fail_ci_if_error: false
 
       - name: Run SonarCloud analysis
-        if: secrets.SONAR_TOKEN != ''
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        if: env.SONAR_TOKEN != ''
         run: ./mvnw -B -ntp org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar -Dsonar.token="${SONAR_TOKEN}"
+
+      - name: Skip Codecov upload when token is unavailable
+        if: env.CODECOV_TOKEN == ''
+        run: echo "Skipping Codecov upload because CODECOV_TOKEN is not configured."
+
+      - name: Skip SonarCloud analysis when token is unavailable
+        if: env.SONAR_TOKEN == ''
+        run: echo "Skipping SonarCloud analysis because SONAR_TOKEN is not configured."
