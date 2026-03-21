@@ -58,7 +58,7 @@
         <mockito.version>5.22.0</mockito.version>
         <assertj.version>3.27.7</assertj.version>
         <bcpg.version>1.83</bcpg.version>
-        <spring-boot.version>4.0.3</spring-boot.version>
+        <spring-boot.version>4.0.4</spring-boot.version>
 
         <gpg-passphrase>${env.GPG_PASSPHRASE}</gpg-passphrase>
 
@@ -158,7 +158,13 @@
                 <version>${graal.version}</version>
             </dependency>
 
-            <dependency>
+          <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.83</version>
+          </dependency>
+
+          <dependency>
                 <groupId>org.graalvm.js</groupId>
                 <artifactId>js</artifactId>
                 <version>${graal.version}</version>
