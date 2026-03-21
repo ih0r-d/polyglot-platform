@@ -7,4 +7,8 @@ import java.util.Map;
  *
  * @param fields field names and their types
  */
-public record PolyObject(Map<String, PolyType> fields) implements PolyType {}
+public record PolyObject(Map<String, PolyType> fields) implements PolyType {
+  public PolyObject {
+    fields = Map.copyOf(fields);
+  }
+}

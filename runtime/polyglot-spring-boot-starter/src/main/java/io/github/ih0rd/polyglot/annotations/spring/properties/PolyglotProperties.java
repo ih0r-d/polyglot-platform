@@ -75,7 +75,7 @@ public record PolyglotProperties(
       List<String> preloadScripts) {
 
     public PythonProperties {
-      preloadScripts = (preloadScripts != null) ? preloadScripts : List.of();
+      preloadScripts = (preloadScripts != null) ? List.copyOf(preloadScripts) : List.of();
     }
 
     public static PythonProperties defaults() {
@@ -98,7 +98,7 @@ public record PolyglotProperties(
       boolean enabled, String resourcesPath, boolean warmupOnStartup, List<String> preloadScripts) {
 
     public JsProperties {
-      preloadScripts = (preloadScripts != null) ? preloadScripts : List.of();
+      preloadScripts = (preloadScripts != null) ? List.copyOf(preloadScripts) : List.of();
     }
 
     public static JsProperties defaults() {

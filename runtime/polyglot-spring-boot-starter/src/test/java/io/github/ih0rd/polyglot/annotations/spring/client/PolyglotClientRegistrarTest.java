@@ -1,6 +1,5 @@
 package io.github.ih0rd.polyglot.annotations.spring.client;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -69,13 +68,5 @@ class PolyglotClientRegistrarTest {
             throw new RuntimeException(e.getCause());
           }
         });
-  }
-
-  @Test
-  void setEnvironmentAcceptsNonNullEnvironment() {
-    PolyglotClientRegistrar registrar = new PolyglotClientRegistrar();
-
-    assertDoesNotThrow(
-        () -> registrar.setEnvironment(new org.springframework.mock.env.MockEnvironment()));
   }
 }

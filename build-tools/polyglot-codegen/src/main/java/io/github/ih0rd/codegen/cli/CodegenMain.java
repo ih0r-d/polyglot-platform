@@ -3,6 +3,7 @@ package io.github.ih0rd.codegen.cli;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 import io.github.ih0rd.codegen.ContractGenerator;
@@ -113,7 +114,10 @@ public final class CodegenMain {
 
       ScriptDescriptor descriptor =
           new ScriptDescriptor(
-              SupportedLanguage.PYTHON, source, scriptPath.getFileName().toString());
+              SupportedLanguage.PYTHON,
+              source,
+              Objects.requireNonNull(scriptPath.getFileName(), "Script path must have a file name")
+                  .toString());
 
       ContractModel model = generator.generate(descriptor, cli.config());
 

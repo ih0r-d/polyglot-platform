@@ -7,10 +7,8 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
-import org.springframework.core.env.Environment;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.util.ClassUtils;
@@ -28,16 +26,7 @@ import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotCli
  * <p>Validation rules are intentionally strict: only Java interfaces are accepted as polyglot
  * clients.
  */
-public final class PolyglotClientRegistrar
-    implements ImportBeanDefinitionRegistrar, EnvironmentAware {
-
-  private Environment environment;
-
-  /** Receives the Spring {@link Environment} during registrar initialization. */
-  @Override
-  public void setEnvironment(@NonNull Environment environment) {
-    this.environment = environment;
-  }
+public final class PolyglotClientRegistrar implements ImportBeanDefinitionRegistrar {
 
   /**
    * Registers {@link PolyglotClientFactoryBean} definitions for each discovered client interface.

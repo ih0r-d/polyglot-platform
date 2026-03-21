@@ -45,7 +45,7 @@ public final class JavaTypeRenderer {
 
   /** Returns the imports collected while rendering the current interface. */
   public Set<String> getImports() {
-    return imports;
+    return Set.copyOf(imports);
   }
 
   /** Clears collected imports before rendering the next contract. */

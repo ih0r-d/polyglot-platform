@@ -3,6 +3,7 @@ package io.github.ih0rd.codegen;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 import org.apache.maven.plugin.AbstractMojo;
@@ -166,11 +167,11 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
 
     try {
       String source = Files.readString(script);
+      String scriptFileName = Objects.requireNonNull(script.getFileName()).toString();
 
-      SupportedLanguage language = SupportedLanguage.fromFileName(script.getFileName().toString());
+      SupportedLanguage language = SupportedLanguage.fromFileName(scriptFileName);
 
-      ScriptDescriptor descriptor =
-          new ScriptDescriptor(language, source, script.getFileName().toString());
+      ScriptDescriptor descriptor = new ScriptDescriptor(language, source, scriptFileName);
 
       ContractModel model = generator.generate(descriptor, new CodegenConfig(false));
 
@@ -183,7 +184,8 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
                 .resolve(effectivePackage.replace('.', '/'))
                 .resolve(contract.name() + ".java");
 
-        Files.createDirectories(target.getParent());
+        Path targetDirectory = Objects.requireNonNull(target.getParent());
+        Files.createDirectories(targetDirectory);
         Files.writeString(target, javaSource);
 
         getLog().info("Generated: " + target);

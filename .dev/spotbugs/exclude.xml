@@ -1,3 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FindBugsFilter>
+  <!--
+    TODO: Revisit if executor initialization is refactored behind a factory or lazy startup.
+    Current constructor fail-fast behavior is intentional and keeps the runtime contract explicit.
+  -->
+  <Match>
+    <Class name="io.github.ih0rd.adapter.context.AbstractPolyglotExecutor"/>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+  <!--
+    Spring DI holder for runtime executors. EI_EXPOSE_REP2 here is framework-driven and not
+    a useful mutable-state warning. No refactor planned unless this class starts owning mutable
+    configuration/collections instead of injected service references.
+  -->
+  <Match>
+    <Class name="io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+  <!--
+    Spring lifecycle/orchestration bean with injected dependencies. Keep excluded unless the
+    class is redesigned to hold mutable data rather than framework-managed service references.
+  -->
+  <Match>
+    <Class name="io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotStartupLifecycle"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
 </FindBugsFilter>

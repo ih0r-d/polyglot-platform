@@ -658,6 +658,9 @@ public final class PythonContractParser implements LanguageParser {
         case '}' -> brackets[1]--;
         case '(' -> brackets[2]++;
         case ')' -> brackets[2]--;
+        default -> {
+          // No state change for other characters.
+        }
       }
     }
   }
