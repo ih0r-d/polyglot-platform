@@ -5,10 +5,32 @@ on:
     branches:
       - main
       - release/*
+    paths:
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/release.yaml"
+      - ".github/workflows/security.yml"
+      - ".mvn/**"
+      - "mvnw"
+      - "mvnw.cmd"
+      - "pom.xml"
+      - "api/**"
+      - "runtime/**"
+      - "build-tools/**"
   push:
     branches:
       - main
       - release/*
+    paths:
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/release.yaml"
+      - ".github/workflows/security.yml"
+      - ".mvn/**"
+      - "mvnw"
+      - "mvnw.cmd"
+      - "pom.xml"
+      - "api/**"
+      - "runtime/**"
+      - "build-tools/**"
   workflow_dispatch:
 
 concurrency:

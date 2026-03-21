@@ -5,10 +5,30 @@ on:
     branches:
       - main
       - release/*
+    paths:
+      - ".github/workflows/security.yml"
+      - ".github/workflows/ci.yml"
+      - ".mvn/**"
+      - "mvnw"
+      - "mvnw.cmd"
+      - "pom.xml"
+      - "api/**"
+      - "runtime/**"
+      - "build-tools/**"
   push:
     branches:
       - main
       - release/*
+    paths:
+      - ".github/workflows/security.yml"
+      - ".github/workflows/ci.yml"
+      - ".mvn/**"
+      - "mvnw"
+      - "mvnw.cmd"
+      - "pom.xml"
+      - "api/**"
+      - "runtime/**"
+      - "build-tools/**"
   schedule:
     - cron: "0 3 * * 1"
   workflow_dispatch:
@@ -66,7 +86,9 @@ jobs:
   dependency-check:
     name: Dependency Vulnerability Scan
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && secrets.NVD_API_KEY != ''
+    if: github.event_name == 'push'
+    env:
+      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 
     steps:
       - name: Checkout repository
@@ -80,9 +102,11 @@ jobs:
           cache: maven
 
       - name: Build project
+        if: env.NVD_API_KEY != ''
         run: ./mvnw -B -ntp -DskipTests verify
 
       - name: OWASP Dependency-Check
+        if: env.NVD_API_KEY != ''
         uses: dependency-check/Dependency-Check_Action@1.1.0
         env:
           JAVA_HOME: /opt/jdk
@@ -94,20 +118,26 @@ jobs:
           args: >
             --failOnCVSS 7
             --enableRetired
-            --nvdApiKey ${{ secrets.NVD_API_KEY }}
+            --nvdApiKey ${{ env.NVD_API_KEY }}
 
       - name: Upload dependency scan report
-        if: always()
+        if: always() && env.NVD_API_KEY != ''
         uses: actions/upload-artifact@v4
         with:
           name: dependency-check-report
           path: dependency-check-report
           if-no-files-found: ignore
 
+      - name: Skip dependency scan when NVD key is unavailable
+        if: env.NVD_API_KEY == ''
+        run: echo "Skipping dependency-check because NVD_API_KEY is not configured."
+
   snyk:
     name: Snyk Open Source Scan
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && secrets.SNYK_TOKEN != ''
+    if: github.event_name == 'push'
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -121,27 +151,29 @@ jobs:
           cache: maven
 
       - name: Install Snyk CLI
+        if: env.SNYK_TOKEN != ''
         uses: snyk/actions/setup@v1.0.0
 
       - name: Run Snyk test
+        if: env.SNYK_TOKEN != ''
         id: snyk-test
         continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk test --all-projects --severity-threshold=high --sarif-file-output=snyk.sarif
 
       - name: Upload Snyk SARIF
-        if: always()
+        if: always() && env.SNYK_TOKEN != ''
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: snyk.sarif
 
       - name: Update Snyk project snapshot
-        if: github.event_name != 'pull_request'
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        if: env.SNYK_TOKEN != ''
         run: snyk monitor --all-projects --target-reference="${{ github.ref_name }}"
 
       - name: Fail when Snyk finds high severity issues
-        if: steps.snyk-test.outcome == 'failure'
+        if: env.SNYK_TOKEN != '' && steps.snyk-test.outcome == 'failure'
         run: exit 1
+
+      - name: Skip Snyk scan when token is unavailable
+        if: env.SNYK_TOKEN == ''
+        run: echo "Skipping Snyk because SNYK_TOKEN is not configured."
