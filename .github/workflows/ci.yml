@@ -1,4 +1,4 @@
-name: CI
+name: Checks / Main
 
 on:
   pull_request:
@@ -8,7 +8,6 @@ on:
     paths:
       - ".github/workflows/ci.yml"
       - ".github/workflows/release.yaml"
-      - ".github/workflows/security.yml"
       - ".mvn/**"
       - "mvnw"
       - "mvnw.cmd"
@@ -23,7 +22,6 @@ on:
     paths:
       - ".github/workflows/ci.yml"
       - ".github/workflows/release.yaml"
-      - ".github/workflows/security.yml"
       - ".mvn/**"
       - "mvnw"
       - "mvnw.cmd"
@@ -39,24 +37,37 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
+  security-events: write
 
 jobs:
-  build:
-    name: Verify (JDK ${{ matrix.java }})
+  dependency-review:
+    name: Dependency Review
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: ["25"]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Set up Temurin JDK ${{ matrix.java }}
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Temurin JDK 25
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: ${{ matrix.java }}
+          java-version: "25"
           cache: maven
 
       - name: Spotless formatting check
@@ -69,7 +80,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports-jdk-${{ matrix.java }}
+          name: test-reports
           path: |
             **/target/surefire-reports/*.xml
             **/target/failsafe-reports/*.xml
@@ -79,22 +90,153 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jacoco-reports-jdk-${{ matrix.java }}
+          name: jacoco-reports
           path: |
             **/target/site/jacoco/jacoco.xml
             **/target/site/jacoco/index.html
           if-no-files-found: ignore
 
-  analysis:
-    name: Coverage and SonarCloud
+  quality:
+    name: Quality Profile
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push'
-    permissions:
-      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Temurin JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Run quality profile
+        run: ./mvnw -B -ntp -Pquality clean verify
+
+      - name: Upload SpotBugs reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotbugs-reports
+          path: |
+            **/target/spotbugsXml.xml
+            **/target/site/spotbugs.html
+          if-no-files-found: ignore
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Temurin JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java-kotlin
+          build-mode: manual
+
+      - name: Build project for CodeQL
+        run: ./mvnw -B -ntp -DskipTests verify
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+
+  snyk:
+    name: Snyk
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push'
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Temurin JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Install Snyk CLI
+        if: env.SNYK_TOKEN != ''
+        uses: snyk/actions/setup@v1.0.0
+
+      - name: Run Snyk Maven scan
+        if: env.SNYK_TOKEN != ''
+        run: |
+          set +e
+          snyk test --maven-aggregate-project --severity-threshold=high --sarif-file-output=snyk.sarif -- -Dmaven.plugin.skipErrorNoDescriptorsFound=true
+          exit_code=$?
+          printf '%s\n' "$exit_code" > .snyk-exit-code
+          exit 0
+
+      - name: Detect Snyk SARIF output
+        id: snyk-sarif
+        if: always()
+        run: |
+          if [ -f snyk.sarif ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload Snyk SARIF
+        if: always() && steps.snyk-sarif.outputs.exists == 'true'
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: snyk.sarif
+
+      - name: Update Snyk project snapshot
+        if: env.SNYK_TOKEN != ''
+        run: |
+          if [ -f .snyk-exit-code ] && [ "$(cat .snyk-exit-code)" = "0" ]; then
+            snyk monitor --maven-aggregate-project --target-reference="${{ github.ref_name }}" -- -Dmaven.plugin.skipErrorNoDescriptorsFound=true
+          else
+            echo "Skipping snyk monitor because the scan did not succeed."
+          fi
+
+      - name: Fail when Snyk finds high severity issues
+        if: always() && env.SNYK_TOKEN != ''
+        run: |
+          if [ ! -f .snyk-exit-code ]; then
+            echo "Snyk scan did not produce an exit code marker."
+            exit 1
+          fi
+          exit_code="$(cat .snyk-exit-code)"
+          if [ "$exit_code" != "0" ]; then
+            echo "Snyk reported vulnerabilities or scan errors. Exit code: $exit_code"
+            exit 1
+          fi
+
+      - name: Skip Snyk scan when token is unavailable
+        if: env.SNYK_TOKEN == ''
+        run: echo "Skipping Snyk because SNYK_TOKEN is not configured."
+
+  analysis:
+    name: Coverage and SonarCloud
+    runs-on: ubuntu-latest
+    needs: quality
+    if: github.event_name == 'push'
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: https://sonarcloud.io
 
     steps:
       - name: Checkout repository
@@ -119,15 +261,24 @@ jobs:
       - name: Build project and generate coverage
         run: ./mvnw -B -ntp -Pquality clean verify
 
-      - name: Upload SpotBugs reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: spotbugs-reports
-          path: |
-            **/target/spotbugsXml.xml
-            **/target/site/spotbugs.html
-          if-no-files-found: ignore
+      - name: Resolve SonarCloud project key
+        id: sonar-project
+        if: env.SONAR_TOKEN != ''
+        run: |
+          echo "project_key=$(./mvnw -q -ntp -DforceStdout help:evaluate -Dexpression=sonar.projectKey)" >> "$GITHUB_OUTPUT"
+
+      - name: Check SonarCloud project availability
+        id: sonar-availability
+        if: env.SONAR_TOKEN != ''
+        run: |
+          if curl -fsS \
+            -H "Authorization: Bearer ${SONAR_TOKEN}" \
+            "${SONAR_HOST_URL}/api/components/show?component=${{ steps.sonar-project.outputs.project_key }}" \
+            >/dev/null; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upload coverage to Codecov
         if: env.CODECOV_TOKEN != ''
@@ -137,7 +288,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Run SonarCloud analysis
-        if: env.SONAR_TOKEN != ''
+        if: env.SONAR_TOKEN != '' && steps.sonar-availability.outputs.available == 'true'
         run: ./mvnw -B -ntp org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar -Dsonar.token="${SONAR_TOKEN}"
 
       - name: Skip Codecov upload when token is unavailable
@@ -147,3 +298,7 @@ jobs:
       - name: Skip SonarCloud analysis when token is unavailable
         if: env.SONAR_TOKEN == ''
         run: echo "Skipping SonarCloud analysis because SONAR_TOKEN is not configured."
+
+      - name: Skip SonarCloud analysis when project is unavailable
+        if: env.SONAR_TOKEN != '' && steps.sonar-availability.outputs.available == 'false'
+        run: echo "Skipping SonarCloud analysis because the configured project is not available on SonarCloud yet."

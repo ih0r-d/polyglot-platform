@@ -1,4 +1,4 @@
-name: Java+Python AOT Example
+name: Examples / Java+Python AOT
 
 on:
   workflow_dispatch:
