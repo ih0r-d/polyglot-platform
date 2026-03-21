@@ -4,9 +4,17 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".github/workflows/docs.yml"
   push:
     branches:
       - main
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".github/workflows/docs.yml"
   workflow_dispatch:
 
 concurrency:
@@ -23,7 +31,6 @@ jobs:
 
     permissions:
       contents: read
-      pages: write
 
     steps:
       - name: Checkout repository

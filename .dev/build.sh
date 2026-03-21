@@ -1,40 +1,28 @@
 #!/usr/bin/env bash
-set -eo pipefail
+set -euo pipefail
 
-export SDKMAN_DIR="$HOME/.sdkman"
-source "$SDKMAN_DIR/bin/sdkman-init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-log() {
-  echo "[INFO] $1"
-}
+MODULE="${MODULE:-}"
+SKIP_TESTS="${SKIP_TESTS:-false}"
 
-build_module () {
-  local DIR="$1"
+cd "$REPO_ROOT"
+JAVA_HOME="$(cd "$(dirname "$(command -v java)")/.." && pwd -P)"
+export JAVA_HOME
 
-  log "Building module: $DIR"
-  pushd "$DIR" >/dev/null
+args=(-B -ntp clean install -Djacoco.skip=true)
 
-  sdk env >/dev/null
+if [ "$SKIP_TESTS" = "true" ]; then
+  args+=(-DskipTests)
+fi
 
-  log "JDK: $(java -version 2>&1 | head -n 1)"
+if [ -n "$MODULE" ]; then
+  echo "[INFO] Building module: $MODULE"
+  args+=(-pl "$MODULE" -am)
+else
+  echo "[INFO] Building full project"
+fi
 
-  if ../mvnw -q -ntp clean install -Djacoco.skip=true  ; then
-    echo "[OK] $DIR build successful"
-  else
-    echo "[FAIL] $DIR build failed"
-    exit 1
-  fi
-
-  popd >/dev/null
-}
-
-echo "========================================"
-echo " Polyglot Platform Build"
-echo "========================================"
-
-build_module adapter
-build_module tooling
-
-echo "========================================"
-echo "[OK] Platform build completed"
-echo "========================================"
+echo "[INFO] JDK: $(java -version 2>&1 | head -n 1)"
+./mvnw "${args[@]}"

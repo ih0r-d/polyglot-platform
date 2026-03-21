@@ -23,20 +23,15 @@ jobs:
           cache: maven
 
       - name: Install local platform artifacts
-        run: mvn -B -ntp -DskipTests install
-        working-directory: tooling
-
-      - name: Install adapter artifacts
-        run: mvn -B -ntp -DskipTests install
-        working-directory: adapter
+        run: ./mvnw -B -ntp -DskipTests install
 
       - name: Build fat JAR
         run: mvn -B -ntp clean package
-        working-directory: examples/java-python-aot-adapter
+        working-directory: samples/java-python-aot-adapter
 
       - name: Run fat JAR
         run: java -jar target/java-python-aot-adapter-0.0.1-all.jar
-        working-directory: examples/java-python-aot-adapter
+        working-directory: samples/java-python-aot-adapter
 
   native-image:
     name: Native Image
@@ -55,19 +50,14 @@ jobs:
           cache: maven
 
       - name: Install local platform artifacts
-        run: mvn -B -ntp -DskipTests install
-        working-directory: tooling
-
-      - name: Install adapter artifacts
-        run: mvn -B -ntp -DskipTests install
-        working-directory: adapter
+        run: ./mvnw -B -ntp -DskipTests install
 
       - name: Build native image via script
         run: |
           chmod +x ./build-native.sh
           ./build-native.sh
-        working-directory: examples/java-python-aot-adapter
+        working-directory: samples/java-python-aot-adapter
 
       - name: Run native image
         run: ./target/java-python-aot-adapter
-        working-directory: examples/java-python-aot-adapter
+        working-directory: samples/java-python-aot-adapter

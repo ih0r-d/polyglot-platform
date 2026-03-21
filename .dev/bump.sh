@@ -2,27 +2,14 @@
 set -euo pipefail
 
 TYPE=${1:-patch}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-source "$HOME/.sdkman/bin/sdkman-init.sh" >/dev/null 2>&1
+cd "$REPO_ROOT"
+JAVA_HOME="$(cd "$(dirname "$(command -v java)")/.." && pwd -P)"
+export JAVA_HOME
 
-get_version() {
-  cd "$1"
-  sdk env >/dev/null 2>&1
-  ./mvnw -q help:evaluate -Dexpression=project.version -DforceStdout
-  cd - >/dev/null
-}
-
-set_version() {
-  cd "$1"
-  sdk env >/dev/null 2>&1
-  ./mvnw -q -B -ntp versions:set \
-    -DnewVersion="$2" \
-    -DprocessAllModules=true \
-    -DgenerateBackupPoms=false
-  cd - >/dev/null
-}
-
-CURRENT="$(get_version adapter)"
+CURRENT="$(./mvnw -q -Dexpression=project.version -DforceStdout help:evaluate)"
 BASE="${CURRENT/-SNAPSHOT/}"
 
 IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE"
@@ -36,10 +23,12 @@ esac
 
 NEXT="$MAJOR.$MINOR.$PATCH-SNAPSHOT"
 
-set_version adapter "$NEXT"
-set_version tooling "$NEXT"
+./mvnw -B -ntp versions:set \
+  -DnewVersion="$NEXT" \
+  -DprocessAllModules=true \
+  -DgenerateBackupPoms=false
 
-git add adapter/**/pom.xml tooling/**/pom.xml
+git add pom.xml api/**/pom.xml runtime/**/pom.xml build-tools/**/pom.xml
 git commit -m "Bump version: $CURRENT → $NEXT" || true
 
 echo "✅ Bumped: $CURRENT → $NEXT"
