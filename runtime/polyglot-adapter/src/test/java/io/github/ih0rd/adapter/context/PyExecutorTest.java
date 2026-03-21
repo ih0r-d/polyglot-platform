@@ -7,11 +7,14 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Context.Builder;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 import io.github.ih0rd.adapter.exceptions.BindingException;
 import io.github.ih0rd.adapter.exceptions.InvocationException;
@@ -234,6 +237,27 @@ class PyExecutorTest {
   }
 
   @Test
+  void invokeMember_rejectsMissingTargetInstance() {
+    PyExecutor exec = new PyExecutor(mock(Context.class), mock(ScriptSource.class));
+
+    assertThrows(BindingException.class, () -> callInvokeMember(exec, null, "hello"));
+  }
+
+  @Test
+  void invokeMember_rejectsNonExecutableMembers() throws Exception {
+    PyExecutor exec = newExec(mock(Context.class));
+    Value target = mock(Value.class);
+    Value member = mock(Value.class);
+
+    when(target.isNull()).thenReturn(false);
+    when(target.hasMember("hello")).thenReturn(true);
+    when(target.getMember("hello")).thenReturn(member);
+    when(member.canExecute()).thenReturn(false);
+
+    assertThrows(BindingException.class, () -> callInvokeMember(exec, target, "hello"));
+  }
+
+  @Test
   void clearAllCachesClearsInstanceAndSourceCaches() throws Exception {
     PyExecutor exec = newExec(mock(Context.class));
 
@@ -249,5 +273,137 @@ class PyExecutorTest {
 
     assertEquals(0, instanceCache.size());
     assertEquals(0, exec.sourceCache.size());
+  }
+
+  @Test
+  void evaluateWithoutArgsUsesResolvedInstance() throws Exception {
+    Context ctx = mock(Context.class);
+    PyExecutor exec = newExec(ctx);
+
+    Value instance = mock(Value.class);
+    Value member = mock(Value.class);
+    Value result = mock(Value.class);
+
+    when(instance.isNull()).thenReturn(false);
+    when(instance.hasMember("hello")).thenReturn(true);
+    when(instance.getMember("hello")).thenReturn(member);
+    when(member.canExecute()).thenReturn(true);
+    when(member.execute(new Object[0])).thenReturn(result);
+
+    Field f = PyExecutor.class.getDeclaredField("instanceCache");
+    f.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Map<Class<?>, WeakReference<Value>> cache = (Map<Class<?>, WeakReference<Value>>) f.get(exec);
+    cache.put(Api.class, new WeakReference<>(instance));
+
+    assertSame(result, exec.evaluate("hello", Api.class));
+  }
+
+  @Test
+  void resolveInstance_executesCallableExports() throws Exception {
+    Context ctx = mock(Context.class);
+    PyExecutor exec = spy(newExec(ctx));
+    Source source = mock(Source.class);
+    Value exported = mock(Value.class);
+    Value instance = mock(Value.class);
+    Value bindings = mock(Value.class);
+
+    doReturn(source).when(exec).loadScript(SupportedLanguage.PYTHON, "api");
+    when(ctx.eval(source)).thenReturn(mock(Value.class));
+    when(ctx.getPolyglotBindings()).thenReturn(bindings);
+    when(bindings.getMember("Api")).thenReturn(exported);
+    when(exported.canExecute()).thenReturn(true);
+    when(exported.execute()).thenReturn(instance);
+    when(instance.isNull()).thenReturn(false);
+
+    callResolveInstance(exec);
+
+    verify(exported).execute();
+  }
+
+  @Test
+  void invokeMember_wrapsExecutionFailures() throws Exception {
+    PyExecutor exec = newExec(mock(Context.class));
+    Value target = mock(Value.class);
+    Value member = mock(Value.class);
+
+    when(target.isNull()).thenReturn(false);
+    when(target.hasMember("hello")).thenReturn(true);
+    when(target.getMember("hello")).thenReturn(member);
+    when(member.canExecute()).thenReturn(true);
+    when(member.execute("x")).thenThrow(new RuntimeException("err"));
+
+    assertThrows(InvocationException.class, () -> callInvokeMember(exec, target, "hello", "x"));
+  }
+
+  @Test
+  void validateBindingRejectsNullInterface() {
+    PyExecutor exec = new PyExecutor(mock(Context.class), mock(ScriptSource.class));
+
+    assertThrows(IllegalArgumentException.class, () -> exec.validateBinding(null));
+  }
+
+  @Test
+  void validateBindingResolvesInterface() throws Exception {
+    Context ctx = mock(Context.class);
+    PyExecutor exec = spy(newExec(ctx));
+    Source source = mock(Source.class);
+    Value exported = mock(Value.class);
+    Value bindings = mock(Value.class);
+
+    doReturn(source).when(exec).loadScript(SupportedLanguage.PYTHON, "api");
+    when(ctx.eval(source)).thenReturn(mock(Value.class));
+    when(ctx.getPolyglotBindings()).thenReturn(bindings);
+    when(bindings.getMember("Api")).thenReturn(exported);
+    when(exported.canExecute()).thenReturn(false);
+    when(exported.isNull()).thenReturn(false);
+
+    exec.validateBinding(Api.class);
+
+    verify(ctx).eval(source);
+  }
+
+  @Test
+  void metadataIncludesCachedInterfaces() throws Exception {
+    PyExecutor exec = newExec(mock(Context.class));
+
+    Field f = PyExecutor.class.getDeclaredField("instanceCache");
+    f.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Map<Class<?>, WeakReference<Value>> cache = (Map<Class<?>, WeakReference<Value>>) f.get(exec);
+    cache.put(Api.class, new WeakReference<>(mock(Value.class)));
+
+    assertEquals(1, exec.metadata().get("instanceCacheSize"));
+    assertEquals(1, ((java.util.List<?>) exec.metadata().get("cachedInterfaces")).size());
+  }
+
+  @Test
+  void createUsesPolyglotHelperContext() {
+    Context createdContext = mock(Context.class);
+    ScriptSource createdScriptSource = mock(ScriptSource.class);
+    @SuppressWarnings("unchecked")
+    Consumer<Builder> customizer = mock(Consumer.class);
+
+    try (MockedStatic<PolyglotHelper> polyglotHelper = mockStatic(PolyglotHelper.class)) {
+      polyglotHelper
+          .when(() -> PolyglotHelper.newContext(SupportedLanguage.PYTHON, customizer))
+          .thenReturn(createdContext);
+
+      PyExecutor created = PyExecutor.create(createdScriptSource, customizer);
+
+      assertSame(createdContext, created.context);
+      assertSame(createdScriptSource, created.scriptSource);
+    }
+  }
+
+  @Test
+  void createWithContextUsesProvidedContext() {
+    Context createdContext = mock(Context.class);
+    ScriptSource createdScriptSource = mock(ScriptSource.class);
+
+    PyExecutor created = PyExecutor.createWithContext(createdContext, createdScriptSource);
+
+    assertSame(createdContext, created.context);
+    assertSame(createdScriptSource, created.scriptSource);
   }
 }

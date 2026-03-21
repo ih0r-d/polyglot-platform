@@ -53,6 +53,22 @@ class ClasspathScriptSourceTest {
   }
 
   @Test
+  void defaultConstructorUsesThreadContextClassLoader() throws Exception {
+    ClassLoader previous = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(classLoader);
+      when(classLoader.getResource("python/default_demo.py"))
+          .thenReturn(new URL("file:/tmp/default_demo.py"));
+
+      ClasspathScriptSource defaultSource = new ClasspathScriptSource();
+
+      assertTrue(defaultSource.exists(SupportedLanguage.PYTHON, "default_demo"));
+    } finally {
+      Thread.currentThread().setContextClassLoader(previous);
+    }
+  }
+
+  @Test
   void openReturnsUtf8ReaderForResolvedResource() throws Exception {
     when(classLoader.getResourceAsStream("python/demo.py"))
         .thenReturn(new ByteArrayInputStream("print('ok')".getBytes(StandardCharsets.UTF_8)));

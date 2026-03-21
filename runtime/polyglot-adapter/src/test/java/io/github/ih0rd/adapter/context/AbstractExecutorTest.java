@@ -90,6 +90,34 @@ class AbstractExecutorTest {
   }
 
   @Test
+  void bindUsesEmptyArgumentsForNoArgMethods() {
+    Context ctx = mock(Context.class);
+    TestExecutor exec = spy(new TestExecutor(ctx));
+
+    interface Api {
+      String hello();
+    }
+
+    Api api = exec.bind(Api.class);
+
+    assertEquals("ok", api.hello());
+  }
+
+  @Test
+  void bindDelegatesObjectMethodsToExecutorInstance() {
+    Context ctx = mock(Context.class);
+    TestExecutor exec = new TestExecutor(ctx);
+
+    interface Api {
+      String hello();
+    }
+
+    Api api = exec.bind(Api.class);
+
+    assertTrue(api.toString().contains(TestExecutor.class.getSimpleName()));
+  }
+
+  @Test
   void callFunctionExecutes() {
     Context ctx = mock(Context.class);
     Value bindings = mock(Value.class);
@@ -127,6 +155,17 @@ class AbstractExecutorTest {
     when(ctx.eval(any(Source.class))).thenThrow(new RuntimeException("boom"));
 
     assertThrows(InvocationException.class, () -> exec.evaluate("x=1"));
+  }
+
+  @Test
+  void evaluateInlineReturnsContextResult() {
+    Context ctx = mock(Context.class);
+    TestExecutor exec = new TestExecutor(ctx);
+    Value value = mock(Value.class);
+
+    when(ctx.eval(any(Source.class))).thenReturn(value);
+
+    assertSame(value, exec.evaluate("x=1"));
   }
 
   @Test

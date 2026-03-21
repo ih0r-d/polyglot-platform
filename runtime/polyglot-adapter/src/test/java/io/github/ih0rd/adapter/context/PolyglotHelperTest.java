@@ -45,6 +45,8 @@ class PolyglotHelperTest {
 
       verify(ctxBuilder).build();
       verify(ctx).initialize(SupportedLanguage.PYTHON.id());
+      verify(ctxBuilder).option("engine.WarnInterpreterOnly", "false");
+      verify(ctxBuilder).option("python.WarnExperimentalFeatures", "false");
     }
   }
 
@@ -63,6 +65,7 @@ class PolyglotHelperTest {
 
       verify(builder).build();
       verify(ctx).initialize(SupportedLanguage.JS.id());
+      verify(builder).option("engine.WarnInterpreterOnly", "false");
     }
   }
 
