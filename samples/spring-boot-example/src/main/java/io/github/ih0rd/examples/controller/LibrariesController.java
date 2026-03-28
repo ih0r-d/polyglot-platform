@@ -1,6 +1,5 @@
 package io.github.ih0rd.examples.controller;
 
-
 import io.github.ih0rd.examples.contracts.LibrariesApi;
 import java.util.List;
 import java.util.Map;

@@ -3,17 +3,18 @@ package io.github.ih0rd.demo;
 import io.github.ih0rd.adapter.context.PolyglotHelper;
 import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.adapter.spi.ClasspathScriptSource;
-import io.github.ih0rd.contract.SupportedLanguage;
+import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.demo.polyglot.KeywordExtractor;
 import io.github.ih0rd.demo.polyglot.LanguageDetector;
 import io.github.ih0rd.demo.polyglot.SentimentAnalyzer;
 import io.github.ih0rd.demo.polyglot.SummaryService;
 import io.github.ih0rd.demo.polyglot.TextCleaner;
 
-public class DemoApplication {
+public final class DemoApplication {
+
+    private DemoApplication() {}
 
     public static void main(String[] args) {
-
         var scriptSource = new ClasspathScriptSource();
 
         try (var ctx = PolyglotHelper.newContext(SupportedLanguage.PYTHON);

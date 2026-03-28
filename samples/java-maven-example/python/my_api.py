@@ -3,7 +3,7 @@ class MyApi:
         return a + b
 
     def ping(self) -> None:
-        print("from python, via graalvm pong")
+        return None
 
 import polyglot
-polyglot.export_value('MyApi', MyApi)
+polyglot.export_value("MyApi", MyApi)

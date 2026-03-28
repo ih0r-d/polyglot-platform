@@ -1,7 +1,7 @@
 package io.github.ih0rd.examples.contracts;
 
-import io.github.ih0rd.adapter.context.SupportedLanguage;
-import io.github.ih0rd.polyglot.spring.client.PolyglotClient;
+import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.annotations.PolyglotClient;
 import java.util.List;
 import java.util.Map;
 

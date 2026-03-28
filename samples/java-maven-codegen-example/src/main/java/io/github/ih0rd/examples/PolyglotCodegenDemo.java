@@ -3,17 +3,21 @@ package io.github.ih0rd.examples;
 import io.github.ih0rd.adapter.context.PolyglotHelper;
 import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.adapter.spi.ClasspathScriptSource;
-import io.github.ih0rd.contract.ScriptSource;
-import io.github.ih0rd.contract.SupportedLanguage;
 import io.github.ih0rd.examples.polyglot.Libraries;
 import io.github.ih0rd.examples.polyglot.LibrariesModule;
+import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
 public final class PolyglotCodegenDemo {
-    void main() {
+
+    private PolyglotCodegenDemo() {}
+
+    public static void main(String[] args) {
         ScriptSource source = new ClasspathScriptSource();
         runClassBased(source);
         runModuleBased(source);
     }
+
     private static void runClassBased(ScriptSource source) {
         try (var ctx = PolyglotHelper.newContext(SupportedLanguage.PYTHON);
                 var executor = new PyExecutor(ctx, source)) {

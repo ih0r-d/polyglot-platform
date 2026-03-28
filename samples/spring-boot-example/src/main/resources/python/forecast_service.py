@@ -1,6 +1,7 @@
 import numpy as np
 import polyglot
 
+
 class ForecastService:
     """
     Combined trend + seasonality forecaster using NumPy.
@@ -20,9 +21,15 @@ class ForecastService:
         :param season_period: assumed period of seasonality (e.g. 4 for quarterly)
         :return: dict {forecast, slope, intercept, season_amp, season_period}
         """
-        print("PYTHON STARTED FORECAST_SERVICE")
+        if steps <= 0:
+            raise ValueError("steps must be positive")
+        if season_period <= 0:
+            raise ValueError("season_period must be positive")
 
         y = np.array(y, dtype=float)
+        if y.size < 2:
+            raise ValueError("y must contain at least two values")
+
         n = len(y)
         x = np.arange(n)
 
@@ -54,5 +61,4 @@ class ForecastService:
         }
 
 
-# Export class for Java interop
-polyglot.export_value('ForecastService', ForecastService)
+polyglot.export_value("ForecastService", ForecastService)

@@ -1,15 +1,17 @@
 package io.github.ih0rd.demo;
 
-import io.github.ih0rd.demo.polyglot.TextCleaner;
-import io.github.ih0rd.demo.polyglot.LanguageDetector;
-import io.github.ih0rd.demo.polyglot.SentimentAnalyzer;
 import io.github.ih0rd.demo.polyglot.KeywordExtractor;
+import io.github.ih0rd.demo.polyglot.LanguageDetector;
 import io.github.ih0rd.demo.polyglot.SummaryService;
-import io.github.ih0rd.demo.DocumentAnalysisResult;
+import io.github.ih0rd.demo.polyglot.SentimentAnalyzer;
+import io.github.ih0rd.demo.polyglot.TextCleaner;
 
 import java.util.List;
 
-public class ReviewPipelineService {
+public final class ReviewPipelineService {
+
+    private static final System.Logger LOGGER =
+            System.getLogger(ReviewPipelineService.class.getName());
 
     private final TextCleaner cleaner;
     private final LanguageDetector languageDetector;
@@ -32,27 +34,23 @@ public class ReviewPipelineService {
     }
 
     public DocumentAnalysisResult process(String document) {
-
-        System.out.println("Starting document analysis pipeline...");
-        System.out.println();
+        LOGGER.log(System.Logger.Level.INFO, "Starting document analysis pipeline...");
 
         String cleaned = cleaner.clean(document);
-        System.out.println("Cleaned text: " + cleaned);
+        LOGGER.log(System.Logger.Level.INFO, "Cleaned text: {0}", cleaned);
 
         String language = languageDetector.detect(cleaned);
-        System.out.println("Language: " + language);
+        LOGGER.log(System.Logger.Level.INFO, "Language: {0}", language);
 
         double sentiment = sentimentAnalyzer.analyze(cleaned);
-        System.out.println("Sentiment score: " + sentiment);
+        LOGGER.log(System.Logger.Level.INFO, "Sentiment score: {0}", sentiment);
 
         List<String> keywords = keywordExtractor.extract(cleaned);
-        System.out.println("Keywords: " + keywords);
+        LOGGER.log(System.Logger.Level.INFO, "Keywords: {0}", keywords);
 
         String summary = summaryService.summarize(cleaned);
-        System.out.println("Summary: " + summary);
-
-        System.out.println();
-        System.out.println("Pipeline finished.");
+        LOGGER.log(System.Logger.Level.INFO, "Summary: {0}", summary);
+        LOGGER.log(System.Logger.Level.INFO, "Pipeline finished.");
 
         return new DocumentAnalysisResult(
                 cleaned,

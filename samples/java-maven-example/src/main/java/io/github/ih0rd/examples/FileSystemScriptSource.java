@@ -8,11 +8,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-public class FileSystemScriptSource implements ScriptSource {
+public final class FileSystemScriptSource implements ScriptSource {
 
     private final Path baseDir;
 
-    FileSystemScriptSource(Path baseDir) {
+    public FileSystemScriptSource(Path baseDir) {
         this.baseDir = baseDir;
     }
 

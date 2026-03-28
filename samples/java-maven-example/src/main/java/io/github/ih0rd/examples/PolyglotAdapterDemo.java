@@ -57,7 +57,7 @@ public final class PolyglotAdapterDemo {
         printSeparator();
 
         IO.println("[STEP 6] Executors metadata");
-        step6PrintMetadata(jsScriptSource,pyScriptSource);
+        step6PrintMetadata(jsScriptSource, pyScriptSource);
 
         IO.println("=== Demo Completed ===");
     }
@@ -123,19 +123,12 @@ public final class PolyglotAdapterDemo {
         try (var ctx = PolyglotHelper.newContext(SupportedLanguage.PYTHON);
                 var py = new PyExecutor(ctx, scriptSource)) {
 
-            try {
-                py.validateBinding(ForecastService.class);
-                IO.println("[PY] ForecastService binding OK");
-            } catch (Exception e) {
-                IO.println("[PY] ForecastService FAILED (unexpected): " + e.getMessage());
-            }
-
-            try {
-                py.validateBinding(BrokenForecastService.class);
-                IO.println("[PY] BrokenForecastService UNEXPECTED OK");
-            } catch (Exception e) {
-                IO.println("[PY] BrokenForecastService FAILED (expected): " + e.getMessage());
-            }
+            reportValidation("[PY] ForecastService", () -> py.validateBinding(ForecastService.class), false);
+            reportValidation(
+                    "[PY] BrokenForecastService",
+                    () -> py.validateBinding(BrokenForecastService.class),
+                    true
+            );
         }
     }
 
@@ -143,23 +136,16 @@ public final class PolyglotAdapterDemo {
         try (var ctx = PolyglotHelper.newContext(SupportedLanguage.JS);
                 var js = new JsExecutor(ctx, scriptSource)) {
 
-            try {
-                js.validateBinding(ForecastService.class);
-                IO.println("[JS] ForecastService binding OK");
-            } catch (Exception e) {
-                IO.println("[JS] ForecastService FAILED (unexpected): " + e.getMessage());
-            }
-
-            try {
-                js.validateBinding(BrokenForecastService.class);
-                IO.println("[JS] BrokenForecastService UNEXPECTED OK");
-            } catch (Exception e) {
-                IO.println("[JS] BrokenForecastService FAILED (expected): " + e.getMessage());
-            }
+            reportValidation("[JS] ForecastService", () -> js.validateBinding(ForecastService.class), false);
+            reportValidation(
+                    "[JS] BrokenForecastService",
+                    () -> js.validateBinding(BrokenForecastService.class),
+                    true
+            );
         }
     }
 
-    private void step6PrintMetadata(ScriptSource jsScriptSource,ScriptSource pyScriptSource) {
+    private void step6PrintMetadata(ScriptSource jsScriptSource, ScriptSource pyScriptSource) {
         IO.println("[STEP 6] Executor metadata snapshot");
 
         try (var pyCtx = PolyglotHelper.newContext(SupportedLanguage.PYTHON);
@@ -172,6 +158,16 @@ public final class PolyglotAdapterDemo {
 
             IO.println("[PY] metadata -> " + py.metadata());
             IO.println("[JS] metadata -> " + js.metadata());
+        }
+    }
+
+    private void reportValidation(String label, Runnable validation, boolean failureExpected) {
+        try {
+            validation.run();
+            IO.println(label + (failureExpected ? " UNEXPECTED OK" : " binding OK"));
+        } catch (RuntimeException exception) {
+            String outcome = failureExpected ? " FAILED (expected): " : " FAILED (unexpected): ";
+            IO.println(label + outcome + exception.getMessage());
         }
     }
 }

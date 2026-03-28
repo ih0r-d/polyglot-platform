@@ -14,7 +14,6 @@
 
         <python.package.1>pandas</python.package.1>
         <python.package.2>numpy</python.package.2>
-<!--        <python.package.3>rake-nltk</python.package.3>-->
 
         <graal.version>25.0.2</graal.version>
         <graalpy-plugin.version>25.0.2</graalpy-plugin.version>
@@ -101,7 +100,6 @@
                             <packages>
                                 <package>${python.package.1}</package>
                                 <package>${python.package.2}</package>
-<!--                                <package>${python.package.3}</package>-->
                             </packages>
                         </configuration>
                         <executions>
