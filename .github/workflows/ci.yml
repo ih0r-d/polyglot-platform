@@ -267,12 +267,6 @@ jobs:
         run: |
           echo "project_key=$(./mvnw -q -ntp -DforceStdout help:evaluate -Dexpression=sonar.projectKey)" >> "$GITHUB_OUTPUT"
 
-      - name: Define module SonarCloud project keys
-        id: sonar-module-projects
-        if: env.SONAR_TOKEN != ''
-        run: |
-          echo "polyglot_adapter=ih0r-d_polyglot-adapter" >> "$GITHUB_OUTPUT"
-
       - name: Check SonarCloud project availability
         id: sonar-availability
         if: env.SONAR_TOKEN != ''
@@ -280,19 +274,6 @@ jobs:
           if curl -fsS \
             -H "Authorization: Bearer ${SONAR_TOKEN}" \
             "${SONAR_HOST_URL}/api/components/show?component=${{ steps.sonar-project.outputs.project_key }}" \
-            >/dev/null; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Check polyglot-adapter SonarCloud project availability
-        id: sonar-adapter-availability
-        if: env.SONAR_TOKEN != ''
-        run: |
-          if curl -fsS \
-            -H "Authorization: Bearer ${SONAR_TOKEN}" \
-            "${SONAR_HOST_URL}/api/components/show?component=${{ steps.sonar-module-projects.outputs.polyglot_adapter }}" \
             >/dev/null; then
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
@@ -308,18 +289,11 @@ jobs:
 
       - name: Run SonarCloud analysis
         if: env.SONAR_TOKEN != '' && steps.sonar-availability.outputs.available == 'true'
-        run: ./mvnw -B -ntp org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar -Dsonar.token="${SONAR_TOKEN}"
-
-      - name: Run polyglot-adapter SonarCloud analysis
-        if: env.SONAR_TOKEN != '' && steps.sonar-adapter-availability.outputs.available == 'true'
         run: >
-          ./mvnw -B -ntp -f runtime/polyglot-adapter/pom.xml
+          ./mvnw -B -ntp
           org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar
           -Dsonar.token="${SONAR_TOKEN}"
-          -Dsonar.projectKey="${{ steps.sonar-module-projects.outputs.polyglot_adapter }}"
-          -Dsonar.organization=ih0r-d
-          -Dsonar.host.url="${SONAR_HOST_URL}"
-          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+          -Dsonar.coverage.exclusions="samples/**"
 
       - name: Skip Codecov upload when token is unavailable
         if: env.CODECOV_TOKEN == ''
@@ -332,7 +306,3 @@ jobs:
       - name: Skip SonarCloud analysis when project is unavailable
         if: env.SONAR_TOKEN != '' && steps.sonar-availability.outputs.available == 'false'
         run: echo "Skipping SonarCloud analysis because the configured project is not available on SonarCloud yet."
-
-      - name: Skip polyglot-adapter SonarCloud analysis when project is unavailable
-        if: env.SONAR_TOKEN != '' && steps.sonar-adapter-availability.outputs.available == 'false'
-        run: echo "Skipping polyglot-adapter SonarCloud analysis because the configured project is not available on SonarCloud yet."
