@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.boot.actuate.info.Info;
 
+import io.github.ih0rd.adapter.context.JsExecutor;
 import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors;
 import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
@@ -20,6 +21,7 @@ import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties
 class PolyglotInfoContributorTest {
 
   @Mock private PyExecutor pyExecutor;
+  @Mock private JsExecutor jsExecutor;
 
   private AutoCloseable mocks;
 
@@ -57,5 +59,31 @@ class PolyglotInfoContributorTest {
     assertEquals(true, python.get("available"));
     assertEquals(true, python.get("safeDefaults"));
     assertEquals(java.util.List.of("demo"), python.get("preloadScripts"));
+  }
+
+  @Test
+  void contributeAddsJsSectionWhenEnabled() {
+    PolyglotProperties properties =
+        new PolyglotProperties(
+            null,
+            new PolyglotProperties.PythonProperties(
+                false, "classpath:/python", true, true, java.util.List.of()),
+            new PolyglotProperties.JsProperties(
+                true, "classpath:/js", true, java.util.List.of("client")),
+            null,
+            null);
+
+    PolyglotInfoContributor contributor =
+        new PolyglotInfoContributor(new PolyglotExecutors(null, jsExecutor), properties);
+    Info.Builder builder = new Info.Builder();
+
+    contributor.contribute(builder);
+    Map<String, Object> details = builder.build().getDetails();
+    Map<?, ?> js = (Map<?, ?>) details.get("js");
+
+    assertFalse(details.containsKey("python"));
+    assertEquals(true, js.get("enabled"));
+    assertEquals(true, js.get("available"));
+    assertEquals(java.util.List.of("client"), js.get("preloadScripts"));
   }
 }

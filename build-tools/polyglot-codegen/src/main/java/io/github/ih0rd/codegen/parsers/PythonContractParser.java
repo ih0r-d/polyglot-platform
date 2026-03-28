@@ -38,9 +38,6 @@ public final class PythonContractParser implements LanguageParser {
 
   private static final Pattern DEF_START = Pattern.compile("^" + S + "def" + S + "(" + W + ")");
 
-  private static final Pattern PARAM_PATTERN =
-      Pattern.compile("^(" + W + ")(?:" + S + ":" + S + "([^=]+))?(?:" + S + "=.*)?$");
-
   private final PythonTypeMapper mapper = new PythonTypeMapper();
 
   @Override
@@ -293,15 +290,51 @@ public final class PythonContractParser implements LanguageParser {
         continue;
       }
 
-      Matcher matcher = PARAM_PATTERN.matcher(trimmed);
-      if (matcher.find()) {
-        String name = matcher.group(1);
-        String typeHint = matcher.group(2);
-        PolyType type = (typeHint != null) ? mapper.mapPrimitive(typeHint) : new PolyUnknown();
-        params.add(new ContractParam(name, type));
+      ParsedParam parsed = parseParam(trimmed);
+      if (parsed != null) {
+        PolyType type =
+            (parsed.typeHint() != null && !parsed.typeHint().isBlank())
+                ? mapper.mapPrimitive(parsed.typeHint())
+                : new PolyUnknown();
+        params.add(new ContractParam(parsed.name(), type));
       }
     }
     return params;
+  }
+
+  private record ParsedParam(String name, String typeHint) {}
+
+  private ParsedParam parseParam(String rawParam) {
+    int equalsIndex = indexOfTopLevel(rawParam, '=');
+    String declaration =
+        (equalsIndex >= 0) ? rawParam.substring(0, equalsIndex).trim() : rawParam.trim();
+    if (declaration.isBlank()) {
+      return null;
+    }
+
+    int colonIndex = indexOfTopLevel(declaration, ':');
+    String name = (colonIndex >= 0) ? declaration.substring(0, colonIndex).trim() : declaration;
+    if (!isIdentifier(name)) {
+      return null;
+    }
+
+    String typeHint = (colonIndex >= 0) ? declaration.substring(colonIndex + 1).trim() : null;
+    return new ParsedParam(name, typeHint);
+  }
+
+  private boolean isIdentifier(String value) {
+    if (value == null || value.isBlank()) {
+      return false;
+    }
+    if (!Character.isJavaIdentifierStart(value.charAt(0))) {
+      return false;
+    }
+    for (int i = 1; i < value.length(); i++) {
+      if (!Character.isJavaIdentifierPart(value.charAt(i))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private PolyType inferReturnType(String[] lines, int start, int methodIndent) {

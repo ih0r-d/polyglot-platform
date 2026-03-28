@@ -250,6 +250,22 @@ class C:
     assertInstanceOf(PolyUnknown.class, ((PolyMap) t).valueType());
   }
 
+  @Test
+  void parseParam_ShouldRejectBlankAndInvalidIdentifiers() throws Exception {
+    PythonContractParser pythonContractParser = new PythonContractParser();
+    var parseParam = PythonContractParser.class.getDeclaredMethod("parseParam", String.class);
+    parseParam.setAccessible(true);
+    var isIdentifier = PythonContractParser.class.getDeclaredMethod("isIdentifier", String.class);
+    isIdentifier.setAccessible(true);
+
+    assertNull(parseParam.invoke(pythonContractParser, "   "));
+    assertNull(parseParam.invoke(pythonContractParser, "1abc: int"));
+    assertNull(parseParam.invoke(pythonContractParser, "ab-c: int"));
+    assertEquals(false, isIdentifier.invoke(parser, ""));
+    assertEquals(false, isIdentifier.invoke(parser, "1abc"));
+    assertEquals(false, isIdentifier.invoke(parser, "ab-c"));
+  }
+
   private PolyType getReturnType(String returnStmt) {
     String source =
 """
@@ -259,7 +275,7 @@ class C:
         %s
 """
             .formatted(returnStmt);
-    return parse(source).classes().get(0).methods().get(0).returnType();
+    return parse(source).classes().getFirst().methods().getFirst().returnType();
   }
 
   private void assertReturnType(String stmt, PolyType expected) {

@@ -145,6 +145,61 @@ class PolyglotStartupLifecycleTest {
     verifyNoInteractions(beanFactory);
   }
 
+  @Test
+  void startSupportsTraceConfiguredLogging() {
+    PolyglotStartupLifecycle lifecycle =
+        new PolyglotStartupLifecycle(
+            new PolyglotProperties(
+                new PolyglotProperties.CoreProperties(true, true, true, "trace"),
+                new PolyglotProperties.PythonProperties(
+                    true, "classpath:/python", true, false, java.util.List.of()),
+                new PolyglotProperties.JsProperties(
+                    true, "classpath:/js", false, java.util.List.of()),
+                null,
+                null),
+            beanFactory,
+            pyExecutor,
+            jsExecutor);
+
+    assertDoesNotThrow(lifecycle::start);
+  }
+
+  @Test
+  void startSupportsWarnConfiguredLogging() {
+    PolyglotStartupLifecycle lifecycle =
+        new PolyglotStartupLifecycle(
+            new PolyglotProperties(
+                new PolyglotProperties.CoreProperties(true, true, true, "warn"),
+                new PolyglotProperties.PythonProperties(
+                    true, "classpath:/python", true, false, java.util.List.of()),
+                null,
+                null,
+                null),
+            beanFactory,
+            pyExecutor,
+            null);
+
+    assertDoesNotThrow(lifecycle::start);
+  }
+
+  @Test
+  void startSupportsErrorConfiguredLogging() {
+    PolyglotStartupLifecycle lifecycle =
+        new PolyglotStartupLifecycle(
+            new PolyglotProperties(
+                new PolyglotProperties.CoreProperties(true, true, true, "error"),
+                new PolyglotProperties.PythonProperties(
+                    true, "classpath:/python", true, false, java.util.List.of()),
+                null,
+                null,
+                null),
+            beanFactory,
+            pyExecutor,
+            null);
+
+    assertDoesNotThrow(lifecycle::start);
+  }
+
   private static PolyglotProperties enabledProperties(
       boolean coreEnabled, boolean pyWarmup, boolean jsWarmup) {
     return new PolyglotProperties(

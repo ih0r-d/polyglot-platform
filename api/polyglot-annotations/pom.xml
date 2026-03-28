@@ -11,4 +11,12 @@
     <artifactId>polyglot-annotations</artifactId>
     <packaging>jar</packaging>
     <name>polyglot-annotations</name>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

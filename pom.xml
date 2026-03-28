@@ -362,7 +362,7 @@
               </googleJavaFormat>
               <removeUnusedImports/>
               <importOrder>
-                <order>java,javax,org,com</order>
+                <order>java,javax,org,com,,#</order>
               </importOrder>
             </java>
           </configuration>
