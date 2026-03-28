@@ -12,6 +12,7 @@ import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
 import io.github.ih0rd.adapter.exceptions.BindingException;
+import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
@@ -40,38 +41,28 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
 
   /** Ensures the script is loaded, then invokes a function from JavaScript bindings. */
   @Override
-  protected <T> Value evaluate(String methodName, Class<T> memberTargetType, Object... args) {
-
+  protected <T> Value evaluate(
+      Convention convention, String methodName, Class<T> memberTargetType, Object... args) {
+    requireSupportedConvention(convention);
     ensureModuleLoaded(memberTargetType);
     return callFunction(methodName, args);
-  }
-
-  /** No-argument variant of JavaScript method invocation. */
-  @Override
-  protected <T> Value evaluate(String methodName, Class<T> memberTargetType) {
-
-    ensureModuleLoaded(memberTargetType);
-    return callFunction(methodName);
   }
 
   /**
    * Validates that each Java contract method has a corresponding executable JavaScript function.
    */
   @Override
-  public <T> void validateBinding(Class<T> iface) {
+  public <T> void validateBinding(Class<T> iface, Convention convention) {
     if (iface == null) {
       throw new IllegalArgumentException("Interface type must not be null");
     }
+    requireSupportedConvention(convention);
 
     ensureModuleLoaded(iface);
 
     Value bindings = context.getBindings(languageId());
 
-    for (Method method : iface.getMethods()) {
-      if (method.getDeclaringClass() == Object.class) {
-        continue;
-      }
-
+    for (Method method : contractMethods(iface)) {
       String name = method.getName();
       Value fn = bindings.getMember(name);
 
@@ -121,5 +112,14 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
           context.eval(src);
           return src;
         });
+  }
+
+  private Convention requireSupportedConvention(Convention convention) {
+    Convention effectiveConvention = requireConvention(convention);
+    if (effectiveConvention == Convention.BY_INTERFACE_EXPORT) {
+      throw new BindingException(
+          "Convention BY_INTERFACE_EXPORT is not supported for JavaScript");
+    }
+    return effectiveConvention;
   }
 }

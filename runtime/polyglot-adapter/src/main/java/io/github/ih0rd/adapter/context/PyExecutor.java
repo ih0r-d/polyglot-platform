@@ -3,6 +3,7 @@ package io.github.ih0rd.adapter.context;
 import static io.github.ih0rd.adapter.utils.StringCaseConverter.camelToSnake;
 
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,6 +15,7 @@ import org.graalvm.polyglot.Value;
 
 import io.github.ih0rd.adapter.exceptions.BindingException;
 import io.github.ih0rd.adapter.exceptions.InvocationException;
+import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
@@ -48,24 +50,28 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   }
 
   @Override
-  protected <T> Value evaluate(String methodName, Class<T> memberTargetType, Object... args) {
-    Value instance = resolveInstance(memberTargetType);
-    return invokeMember(instance, methodName, args);
-  }
-
-  @Override
-  protected <T> Value evaluate(String methodName, Class<T> memberTargetType) {
-    Value instance = resolveInstance(memberTargetType);
-    return invokeMember(instance, methodName);
+  protected <T> Value evaluate(
+      Convention convention, String methodName, Class<T> memberTargetType, Object... args) {
+    return switch (requireConvention(convention)) {
+      case DEFAULT, BY_INTERFACE_EXPORT -> {
+        Value instance = resolveInstance(memberTargetType);
+        yield invokeMember(instance, methodName, args);
+      }
+      case BY_METHOD_NAME -> invokeByMethodName(memberTargetType, methodName, args);
+    };
   }
 
   /** Eagerly resolves the Python export to verify that the contract can be bound. */
   @Override
-  public <T> void validateBinding(Class<T> iface) {
+  public <T> void validateBinding(Class<T> iface, Convention convention) {
     if (iface == null) {
       throw new IllegalArgumentException("Interface type must not be null");
     }
-    resolveInstance(iface);
+
+    switch (requireConvention(convention)) {
+      case DEFAULT, BY_INTERFACE_EXPORT -> validateInterfaceExportBinding(iface);
+      case BY_METHOD_NAME -> validateMethodNameBinding(iface);
+    }
   }
 
   /** Adds Python-specific cache details to the executor metadata snapshot. */
@@ -210,6 +216,72 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   /** Clears cached Python instances resolved for bound contract types. */
   public void clearInstanceCache() {
     instanceCache.clear();
+  }
+
+  private <T> void validateInterfaceExportBinding(Class<T> iface) {
+    Value instance = resolveInstance(iface);
+
+    for (Method method : contractMethods(iface)) {
+      resolveMember(instance, method.getName());
+    }
+  }
+
+  private <T> void validateMethodNameBinding(Class<T> iface) {
+    ensureModuleLoaded(iface);
+
+    for (Method method : contractMethods(iface)) {
+      resolveBindingFunction(method.getName());
+    }
+  }
+
+  private <T> void ensureModuleLoaded(Class<T> iface) {
+    Source source = resolveSource(iface);
+    context.eval(source);
+  }
+
+  private <T> Value invokeByMethodName(Class<T> iface, String methodName, Object... args) {
+    ensureModuleLoaded(iface);
+    try {
+      return resolveBindingFunction(methodName).execute(args);
+    } catch (Exception e) {
+      throw new InvocationException(
+          "Error executing Python method '%s'".formatted(methodName), e);
+    }
+  }
+
+  private Value resolveBindingFunction(String methodName) {
+    Value polyglotBindings = context.getPolyglotBindings();
+    Value exported = polyglotBindings.getMember(methodName);
+    if (exported != null && exported.canExecute()) {
+      return exported;
+    }
+
+    Value pyBindings = context.getBindings(languageId());
+    Value fromBindings = pyBindings.getMember(methodName);
+    if (fromBindings != null && fromBindings.canExecute()) {
+      return fromBindings;
+    }
+
+    throw new BindingException(
+        "Python function '%s' not found or not executable in polyglot or language bindings"
+            .formatted(methodName));
+  }
+
+  private Value resolveMember(Value target, String methodName) {
+    Value member = null;
+
+    if (target.hasMember(methodName)) {
+      member = target.getMember(methodName);
+    } else if (target.hasHashEntries()) {
+      member = target.getHashValue(methodName);
+    }
+
+    if (member == null || !member.canExecute()) {
+      throw new BindingException(
+          "Python method '%s' not found or not executable".formatted(methodName));
+    }
+
+    return member;
   }
 
   /** Clears both the source cache and the Python instance cache. */

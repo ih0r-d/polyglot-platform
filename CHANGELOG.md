@@ -37,6 +37,10 @@ All notable changes to **polyglot-adapter** are documented in this file.
 ## [Unreleased]
 
 
+### ⚙️ Changed
+- make `@PolyglotClient.convention()` active in runtime binding and validation; add `BY_METHOD_NAME`, keep `DEFAULT` backward-compatible for invocation, and fail explicitly for unsupported JavaScript `BY_INTERFACE_EXPORT`
+
+
 ### ✅ Fixed
 - update dependency org.bouncycastle:bcpg-jdk18on to v1.82 (6dcd747)
 - stabilize library logic with small refactoring (67899d8)

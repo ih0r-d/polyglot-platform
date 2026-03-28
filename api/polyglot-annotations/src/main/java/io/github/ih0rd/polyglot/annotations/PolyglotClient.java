@@ -33,6 +33,14 @@ public @interface PolyglotClient {
    */
   SupportedLanguage[] languages() default {};
 
-  /** Binding convention used by the adapter. */
+  /**
+   * Binding convention used by the adapter.
+   *
+   * <p>{@link Convention#DEFAULT} preserves the historical repository behavior.
+   *
+   * <p>For Python, {@link Convention#DEFAULT} and {@link Convention#BY_INTERFACE_EXPORT} currently
+   * use the same export-based invocation path, but {@code BY_INTERFACE_EXPORT} is the explicit
+   * convention name while {@code DEFAULT} remains the backward-compatible default.
+   */
   Convention convention() default Convention.DEFAULT;
 }

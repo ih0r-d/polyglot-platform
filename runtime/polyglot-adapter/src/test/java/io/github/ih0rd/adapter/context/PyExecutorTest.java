@@ -18,6 +18,7 @@ import org.mockito.MockedStatic;
 
 import io.github.ih0rd.adapter.exceptions.BindingException;
 import io.github.ih0rd.adapter.exceptions.InvocationException;
+import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
@@ -105,8 +106,27 @@ class PyExecutorTest {
     Map<Class<?>, WeakReference<Value>> cache = (Map<Class<?>, WeakReference<Value>>) f.get(exec);
     cache.put(Api.class, new WeakReference<>(instance));
 
-    Value out = exec.evaluate("hello", Api.class, "x");
+    Value out = exec.evaluate(Convention.DEFAULT, "hello", Api.class, "x");
     assertSame(result, out);
+  }
+
+  @Test
+  void evaluateByMethodNameUsesBindingsDirectly() throws Exception {
+    Context ctx = mock(Context.class);
+    PyExecutor exec = spy(newExec(ctx));
+    Source source = mock(Source.class);
+    Value polyBindings = mock(Value.class);
+    Value fn = mock(Value.class);
+    Value result = mock(Value.class);
+
+    doReturn(source).when(exec).loadScript(SupportedLanguage.PYTHON, "api");
+    when(ctx.eval(source)).thenReturn(mock(Value.class));
+    when(ctx.getPolyglotBindings()).thenReturn(polyBindings);
+    when(polyBindings.getMember("hello")).thenReturn(fn);
+    when(fn.canExecute()).thenReturn(true);
+    when(fn.execute("x")).thenReturn(result);
+
+    assertSame(result, exec.evaluate(Convention.BY_METHOD_NAME, "hello", Api.class, "x"));
   }
 
   @Test
@@ -296,7 +316,7 @@ class PyExecutorTest {
     Map<Class<?>, WeakReference<Value>> cache = (Map<Class<?>, WeakReference<Value>>) f.get(exec);
     cache.put(Api.class, new WeakReference<>(instance));
 
-    assertSame(result, exec.evaluate("hello", Api.class));
+    assertSame(result, exec.evaluate(Convention.DEFAULT, "hello", Api.class));
   }
 
   @Test
@@ -344,12 +364,31 @@ class PyExecutorTest {
   }
 
   @Test
+  void validateBindingByMethodNameRejectsMissingBindingFunction() throws Exception {
+    Context ctx = mock(Context.class);
+    PyExecutor exec = spy(newExec(ctx));
+    Source source = mock(Source.class);
+    Value polyBindings = mock(Value.class);
+    Value pyBindings = mock(Value.class);
+
+    doReturn(source).when(exec).loadScript(SupportedLanguage.PYTHON, "api");
+    when(ctx.eval(source)).thenReturn(mock(Value.class));
+    when(ctx.getPolyglotBindings()).thenReturn(polyBindings);
+    when(polyBindings.getMember("hello")).thenReturn(null);
+    when(ctx.getBindings("python")).thenReturn(pyBindings);
+    when(pyBindings.getMember("hello")).thenReturn(null);
+
+    assertThrows(BindingException.class, () -> exec.validateBinding(Api.class, Convention.BY_METHOD_NAME));
+  }
+
+  @Test
   void validateBindingResolvesInterface() throws Exception {
     Context ctx = mock(Context.class);
     PyExecutor exec = spy(newExec(ctx));
     Source source = mock(Source.class);
     Value exported = mock(Value.class);
     Value bindings = mock(Value.class);
+    Value member = mock(Value.class);
 
     doReturn(source).when(exec).loadScript(SupportedLanguage.PYTHON, "api");
     when(ctx.eval(source)).thenReturn(mock(Value.class));
@@ -357,6 +396,9 @@ class PyExecutorTest {
     when(bindings.getMember("Api")).thenReturn(exported);
     when(exported.canExecute()).thenReturn(false);
     when(exported.isNull()).thenReturn(false);
+    when(exported.hasMember("hello")).thenReturn(true);
+    when(exported.getMember("hello")).thenReturn(member);
+    when(member.canExecute()).thenReturn(true);
 
     exec.validateBinding(Api.class);
 

@@ -16,6 +16,7 @@ import io.github.ih0rd.adapter.exceptions.BindingException;
 import io.github.ih0rd.adapter.exceptions.EvaluationException;
 import io.github.ih0rd.adapter.exceptions.InvocationException;
 import io.github.ih0rd.adapter.exceptions.ScriptNotFoundException;
+import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
@@ -40,18 +41,11 @@ class AbstractExecutorTest {
     }
 
     @Override
-    protected <T> Value evaluate(String methodName, Class<T> target, Object... args) {
+    protected <T> Value evaluate(
+        Convention convention, String methodName, Class<T> target, Object... args) {
       Value v = mock(Value.class);
       when(v.isNull()).thenReturn(false);
       when(v.as(any(Class.class))).thenAnswer(inv -> "ok");
-      return v;
-    }
-
-    @Override
-    protected <T> Value evaluate(String methodName, Class<T> target) {
-      Value v = mock(Value.class);
-      when(v.isNull()).thenReturn(false);
-      when(v.as(any(Class.class))).thenAnswer(inv -> "noargs");
       return v;
     }
   }
@@ -68,7 +62,7 @@ class AbstractExecutorTest {
     Api api = exec.bind(Api.class);
     assertEquals("ok", api.hello());
 
-    verify(exec).evaluate(eq("hello"), eq(Api.class), any(Object[].class));
+    verify(exec).evaluate(eq(Convention.DEFAULT), eq("hello"), eq(Api.class), any(Object[].class));
   }
 
   @Test
@@ -79,7 +73,9 @@ class AbstractExecutorTest {
     Value nullValue = mock(Value.class);
     when(nullValue.isNull()).thenReturn(true);
 
-    doReturn(nullValue).when(exec).evaluate(eq("hello"), any(), any(Object[].class));
+    doReturn(nullValue)
+        .when(exec)
+        .evaluate(eq(Convention.DEFAULT), eq("hello"), any(), any(Object[].class));
 
     interface Api {
       Object hello();
@@ -101,6 +97,22 @@ class AbstractExecutorTest {
     Api api = exec.bind(Api.class);
 
     assertEquals("ok", api.hello());
+  }
+
+  @Test
+  void bindUsesProvidedConvention() {
+    Context ctx = mock(Context.class);
+    TestExecutor exec = spy(new TestExecutor(ctx));
+
+    interface Api {
+      String hello();
+    }
+
+    Api api = exec.bind(Api.class, Convention.BY_METHOD_NAME);
+
+    assertEquals("ok", api.hello());
+    verify(exec)
+        .evaluate(eq(Convention.BY_METHOD_NAME), eq("hello"), eq(Api.class), any(Object[].class));
   }
 
   @Test
@@ -194,12 +206,7 @@ class AbstractExecutorTest {
 
               @Override
               protected <T> Value evaluate(
-                  String methodName, Class<T> memberTargetType, Object... args) {
-                return mock(Value.class);
-              }
-
-              @Override
-              protected <T> Value evaluate(String methodName, Class<T> memberTargetType) {
+                  Convention convention, String methodName, Class<T> memberTargetType, Object... args) {
                 return mock(Value.class);
               }
             });
@@ -217,6 +224,14 @@ class AbstractExecutorTest {
     TestExecutor exec = new TestExecutor(mock(Context.class));
 
     assertThrows(IllegalArgumentException.class, () -> exec.validateBinding(null));
+    assertThrows(NullPointerException.class, () -> exec.validateBinding(Runnable.class, null));
+  }
+
+  @Test
+  void bindRejectsNullConvention() {
+    TestExecutor exec = new TestExecutor(mock(Context.class));
+
+    assertThrows(NullPointerException.class, () -> exec.bind(Runnable.class, null));
   }
 
   @Test
@@ -224,6 +239,9 @@ class AbstractExecutorTest {
     TestExecutor exec = new TestExecutor(mock(Context.class));
 
     assertThrows(UnsupportedOperationException.class, () -> exec.validateBinding(Runnable.class));
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> exec.validateBinding(Runnable.class, Convention.BY_METHOD_NAME));
   }
 
   @Test
@@ -258,12 +276,7 @@ class AbstractExecutorTest {
 
           @Override
           protected <T> Value evaluate(
-              String methodName, Class<T> memberTargetType, Object... args) {
-            return mock(Value.class);
-          }
-
-          @Override
-          protected <T> Value evaluate(String methodName, Class<T> memberTargetType) {
+              Convention convention, String methodName, Class<T> memberTargetType, Object... args) {
             return mock(Value.class);
           }
         };
@@ -289,12 +302,7 @@ class AbstractExecutorTest {
 
           @Override
           protected <T> Value evaluate(
-              String methodName, Class<T> memberTargetType, Object... args) {
-            return mock(Value.class);
-          }
-
-          @Override
-          protected <T> Value evaluate(String methodName, Class<T> memberTargetType) {
+              Convention convention, String methodName, Class<T> memberTargetType, Object... args) {
             return mock(Value.class);
           }
         };
@@ -320,12 +328,7 @@ class AbstractExecutorTest {
 
           @Override
           protected <T> Value evaluate(
-              String methodName, Class<T> memberTargetType, Object... args) {
-            return mock(Value.class);
-          }
-
-          @Override
-          protected <T> Value evaluate(String methodName, Class<T> memberTargetType) {
+              Convention convention, String methodName, Class<T> memberTargetType, Object... args) {
             return mock(Value.class);
           }
         };

@@ -62,6 +62,8 @@ The runtime layer is the actual GraalVM polyglot integration layer. It adapts Ja
 - `ScriptSource` implementations for classpath, filesystem, memory, and delegation
 - runtime exception types
 
+`AbstractPolyglotExecutor` is a shared runtime base class used by the repository implementation. It should not be treated as a stable external subclassing SPI.
+
 `polyglot-spring-boot-starter` adds:
 
 - auto-configuration for Python and JavaScript executors

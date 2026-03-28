@@ -3,6 +3,7 @@ package io.github.ih0rd.polyglot.annotations.spring.client;
 import org.springframework.beans.factory.FactoryBean;
 
 import io.github.ih0rd.adapter.context.AbstractPolyglotExecutor;
+import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.annotations.PolyglotClient;
 import io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors;
@@ -51,12 +52,13 @@ public final class PolyglotClientFactoryBean<T> implements FactoryBean<T> {
     }
 
     SupportedLanguage language = resolveLanguage(annotation);
+    Convention convention = annotation.convention();
     @SuppressWarnings("resource")
     AbstractPolyglotExecutor executor = resolveExecutor(language);
 
     try {
-      executor.validateBinding(clientType);
-      return executor.bind(clientType);
+      executor.validateBinding(clientType, convention);
+      return executor.bind(clientType, convention);
     } catch (RuntimeException ex) {
       throw new PolyglotClientBindingException(clientType.getName(), language.id(), ex);
     }

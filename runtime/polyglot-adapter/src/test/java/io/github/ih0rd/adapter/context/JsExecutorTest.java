@@ -27,6 +27,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
 import io.github.ih0rd.adapter.exceptions.BindingException;
+import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
@@ -70,8 +71,8 @@ class JsExecutorTest {
     when(function.canExecute()).thenReturn(true);
     when(function.execute()).thenReturn(result);
 
-    assertSame(result, executor.evaluate("hello", JsApi.class));
-    assertSame(result, executor.evaluate("hello", JsApi.class));
+    assertSame(result, executor.evaluate(Convention.DEFAULT, "hello", JsApi.class));
+    assertSame(result, executor.evaluate(Convention.DEFAULT, "hello", JsApi.class));
 
     verify(context).eval(source);
     verify(executor).loadScript(SupportedLanguage.JS, "js_api");
@@ -85,7 +86,7 @@ class JsExecutorTest {
     when(function.canExecute()).thenReturn(true);
     when(function.execute("world")).thenReturn(result);
 
-    assertSame(result, executor.evaluate("hello", JsApi.class, "world"));
+    assertSame(result, executor.evaluate(Convention.DEFAULT, "hello", JsApi.class, "world"));
   }
 
   @Test
@@ -115,6 +116,16 @@ class JsExecutorTest {
   }
 
   @Test
+  void byInterfaceExportConventionIsRejected() {
+    assertThrows(
+        BindingException.class,
+        () -> executor.validateBinding(JsApi.class, Convention.BY_INTERFACE_EXPORT));
+    assertThrows(
+        BindingException.class,
+        () -> executor.evaluate(Convention.BY_INTERFACE_EXPORT, "hello", JsApi.class));
+  }
+
+  @Test
   void metadataIncludesLoadedInterfaces() {
     doReturn(source).when(executor).loadScript(eq(SupportedLanguage.JS), any());
     when(context.getBindings("js")).thenReturn(bindings);
@@ -122,7 +133,7 @@ class JsExecutorTest {
     when(function.canExecute()).thenReturn(true);
     when(function.execute()).thenReturn(result);
 
-    executor.evaluate("hello", JsApi.class);
+    executor.evaluate(Convention.DEFAULT, "hello", JsApi.class);
 
     assertEquals(1, ((java.util.List<?>) executor.metadata().get("loadedInterfaces")).size());
   }

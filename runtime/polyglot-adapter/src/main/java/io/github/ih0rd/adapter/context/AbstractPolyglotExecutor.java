@@ -2,9 +2,11 @@ package io.github.ih0rd.adapter.context;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.graalvm.polyglot.Context;
@@ -15,6 +17,7 @@ import io.github.ih0rd.adapter.exceptions.BindingException;
 import io.github.ih0rd.adapter.exceptions.EvaluationException;
 import io.github.ih0rd.adapter.exceptions.InvocationException;
 import io.github.ih0rd.adapter.exceptions.ScriptNotFoundException;
+import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
@@ -29,6 +32,9 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  *   <li>dynamic proxy binding to Java interfaces
  *   <li>common source caching and metadata
  * </ul>
+ *
+ * <p>This type is part of the runtime implementation and is not intended as a stable third-party
+ * subclassing surface.
  */
 public abstract class AbstractPolyglotExecutor implements AutoCloseable {
 
@@ -71,17 +77,7 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
    * @return raw polyglot value
    */
   protected abstract <T> Value evaluate(
-      String methodName, Class<T> memberTargetType, Object... args);
-
-  /**
-   * No-argument variant of guest method execution.
-   *
-   * @param methodName method name on the Java interface
-   * @param memberTargetType bound contract type
-   * @param <T> contract type
-   * @return raw polyglot value
-   */
-  protected abstract <T> Value evaluate(String methodName, Class<T> memberTargetType);
+      Convention convention, String methodName, Class<T> memberTargetType, Object... args);
 
   /**
    * Evaluates inline guest-language code in this context.
@@ -113,9 +109,23 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
    */
   @SuppressWarnings("unchecked")
   public <T> T bind(Class<T> iface) {
+    return bind(iface, Convention.DEFAULT);
+  }
+
+  /**
+   * Binds a Java interface to a guest-language implementation using a specific convention.
+   *
+   * @param iface interface to bind
+   * @param convention binding convention
+   * @param <T> interface type
+   * @return proxy backed by guest-language code
+   */
+  @SuppressWarnings("unchecked")
+  public <T> T bind(Class<T> iface, Convention convention) {
     if (iface == null) {
       throw new IllegalArgumentException("Interface type must not be null");
     }
+    Convention effectiveConvention = requireConvention(convention);
 
     return (T)
         Proxy.newProxyInstance(
@@ -127,7 +137,7 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
               }
               String methodName = method.getName();
               Object[] safeArgs = (args != null ? args : new Object[0]);
-              Value result = evaluate(methodName, iface, safeArgs);
+              Value result = evaluate(effectiveConvention, methodName, iface, safeArgs);
               if (result == null || result.isNull()) {
                 return null;
               }
@@ -144,11 +154,33 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
    * @param <T> interface type
    */
   public <T> void validateBinding(Class<T> iface) {
+    validateBinding(iface, Convention.DEFAULT);
+  }
+
+  /**
+   * Validates that a contract can be bound successfully using a specific convention.
+   *
+   * @param iface contract type
+   * @param convention binding convention
+   * @param <T> interface type
+   */
+  public <T> void validateBinding(Class<T> iface, Convention convention) {
     if (iface == null) {
       throw new IllegalArgumentException("Interface type must not be null");
     }
+    requireConvention(convention);
     throw new UnsupportedOperationException(
         "Binding validation is not implemented for executor: " + getClass().getSimpleName());
+  }
+
+  protected final Convention requireConvention(Convention convention) {
+    return Objects.requireNonNull(convention, "Convention must not be null");
+  }
+
+  protected final Method[] contractMethods(Class<?> iface) {
+    return java.util.Arrays.stream(iface.getMethods())
+        .filter(method -> method.getDeclaringClass() != Object.class)
+        .toArray(Method[]::new);
   }
 
   /**

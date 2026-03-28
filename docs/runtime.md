@@ -128,10 +128,36 @@ Applications normally interact with the runtime through:
 - `PyExecutor.create(...)` or `PyExecutor.createWithContext(...)`
 - `JsExecutor.create(...)` or `JsExecutor.createWithContext(...)`
 - `bind(...)`
+- `bind(..., convention)`
 - `validateBinding(...)`
+- `validateBinding(..., convention)`
 - `metadata()`
 
 `metadata()` returns a lightweight snapshot intended for diagnostics, actuator info, or metrics. It is not a stable serialization format.
+
+## Binding Conventions
+
+The runtime currently exposes three convention values:
+
+- `DEFAULT`
+- `BY_INTERFACE_EXPORT`
+- `BY_METHOD_NAME`
+
+Current behavior:
+
+- Python:
+  - `DEFAULT`: backward-compatible export-based binding
+  - `BY_INTERFACE_EXPORT`: explicit export-object/class convention
+  - `BY_METHOD_NAME`: direct function lookup from bindings by Java method name
+- JavaScript:
+  - `DEFAULT`: function lookup by method name
+  - `BY_METHOD_NAME`: same runtime path as `DEFAULT`
+  - `BY_INTERFACE_EXPORT`: rejected explicitly
+
+Important compatibility note:
+
+- Python invocation behavior under `DEFAULT` remains aligned with the historical export-based path.
+- Python validation under `DEFAULT` is now stricter: if the exported contract exists but required Java methods are missing or not executable, `validateBinding(...)` fails earlier than before.
 
 ## Spring Boot Starter
 
