@@ -31,7 +31,7 @@
 If you raise or lower any supported version:
 
 1. Update the root `pom.xml` properties and enforcer rules.
-2. Update [`README.md`](../README.md).
+2. Update `README.md`.
 3. Update CI workflows under `.github/workflows/`.
 4. Update sample applications affected by the change.
 5. Call out the compatibility change in release notes and changelog entries.

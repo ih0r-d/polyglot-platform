@@ -24,6 +24,12 @@
         <module>polyglot-spring-boot-starter</module>
     </modules>
 
+    <properties>
+        <mockito.agent.argLine>
+            -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar
+        </mockito.agent.argLine>
+    </properties>
+
     <build>
         <plugins>
             <plugin>
