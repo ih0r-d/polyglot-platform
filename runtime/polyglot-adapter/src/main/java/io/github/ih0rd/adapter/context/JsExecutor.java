@@ -114,6 +114,9 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
    * Resolves and evaluates a JavaScript script by logical name without binding it to a Java
    * contract.
    *
+   * <p>This is raw script evaluation only. It does not populate the per-interface source cache or
+   * prebind a Java contract, so later contract binding can still evaluate the same script again.
+   *
    * @param scriptName logical script name resolved through {@link ScriptSource}
    */
   public void preloadScript(String scriptName) {
@@ -137,8 +140,7 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
   private Convention requireSupportedConvention(Convention convention) {
     Convention effectiveConvention = requireConvention(convention);
     if (effectiveConvention == Convention.BY_INTERFACE_EXPORT) {
-      throw new BindingException(
-          "Convention BY_INTERFACE_EXPORT is not supported for JavaScript");
+      throw new BindingException("Convention BY_INTERFACE_EXPORT is not supported for JavaScript");
     }
     return effectiveConvention;
   }

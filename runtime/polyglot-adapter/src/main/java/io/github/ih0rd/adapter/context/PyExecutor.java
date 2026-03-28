@@ -117,6 +117,9 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   /**
    * Resolves and evaluates a Python script by logical name without binding it to a Java contract.
    *
+   * <p>This is raw script evaluation only. It does not populate the per-interface source cache or
+   * prebind a Java contract, so later contract binding can still evaluate the same script again.
+   *
    * @param scriptName logical script name resolved through {@link ScriptSource}
    */
   public void preloadScript(String scriptName) {
@@ -262,8 +265,7 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
     try {
       return resolveBindingFunction(methodName).execute(args);
     } catch (Exception e) {
-      throw new InvocationException(
-          "Error executing Python method '%s'".formatted(methodName), e);
+      throw new InvocationException("Error executing Python method '%s'".formatted(methodName), e);
     }
   }
 

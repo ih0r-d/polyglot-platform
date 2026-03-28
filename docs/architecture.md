@@ -66,12 +66,15 @@ The runtime layer is the actual GraalVM polyglot integration layer. It adapts Ja
 
 `polyglot-spring-boot-starter` adds:
 
-- auto-configuration for Python and JavaScript executors
+- autoconfiguration for Python and JavaScript executors
 - one `ScriptSource` bean per enabled language
 - `@EnablePolyglotClients` scanning
 - `PolyglotClientFactoryBean`
 - optional actuator health/info and Micrometer metrics integration
 - startup warmup, optional script preload, and fail-fast client validation
+
+Current fail-fast validation in the Spring starter works by eagerly instantiating discovered client
+beans during startup, not by a separate metadata-only validation pass.
 
 `polyglot-bom` is a consumption aid. It aligns runtime module versions with GraalVM dependencies for applications using the adapter.
 
@@ -118,6 +121,8 @@ It supports:
 
 Resolved Python targets are cached per Java interface using weak references. Source caching is also
 per Java interface, and there is no automatic hot reload when scripts change after startup.
+The startup preload path is separate raw script evaluation and does not populate those interface
+caches.
 
 ### JavaScript Path
 

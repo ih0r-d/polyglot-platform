@@ -117,7 +117,9 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
   }
 
   private void preloadJs() {
-    if (jsExecutor == null || !properties.js().enabled() || properties.js().preloadScripts().isEmpty()) {
+    if (jsExecutor == null
+        || !properties.js().enabled()
+        || properties.js().preloadScripts().isEmpty()) {
       return;
     }
 

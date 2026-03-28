@@ -236,7 +236,8 @@ Starter behavior:
   `polyglot.core.log-level`.
 - `polyglot.python.preload-scripts` and `polyglot.js.preload-scripts` evaluate the listed logical
   scripts during startup after warmup. These names are resolved through the configured
-  `ScriptSource`; they are not interface names.
+  `ScriptSource`; they are not interface names, they do not populate interface caches, and repeated
+  evaluation or repeated script side effects remain possible on later contract binding.
 - `polyglot.python.safe-defaults=true` applies the starter's recommended GraalPy defaults. When
   disabled, the starter creates a more minimal Python context and expects applications to provide
   their own `PolyglotContextCustomizer` beans if they need additional options.
@@ -261,6 +262,7 @@ If Micrometer is present, the starter registers gauges for:
 - The runtime is intended for trusted application embedding, not untrusted sandbox execution.
 - JavaScript execution is supported, but JavaScript contract generation is not.
 - Startup preloading evaluates named scripts but does not provide hot reload or source versioning.
+- Startup preloading is raw script evaluation, not true contract prebinding.
 - The binding convention is currently opinionated and name-based; alternative conventions are not implemented yet.
 - Starter-managed executors are shared singleton beans that serialize access to the underlying
   GraalVM `Context`. They are intended for concurrent Spring application use, but contract loading

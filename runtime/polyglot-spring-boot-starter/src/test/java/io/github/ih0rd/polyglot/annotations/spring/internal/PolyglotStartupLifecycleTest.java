@@ -6,8 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -107,8 +107,10 @@ class PolyglotStartupLifecycleTest {
 
   @Test
   void startEagerlyValidatesRegisteredPolyglotClientsWhenFailFastIsEnabled() {
-    org.mockito.Mockito.when(beanFactory.getBeanDefinitionNames()).thenReturn(new String[] {"demo"});
-    org.mockito.Mockito.when(beanFactory.getBeanDefinition("demo")).thenReturn(clientBeanDefinition);
+    org.mockito.Mockito.when(beanFactory.getBeanDefinitionNames())
+        .thenReturn(new String[] {"demo"});
+    org.mockito.Mockito.when(beanFactory.getBeanDefinition("demo"))
+        .thenReturn(clientBeanDefinition);
     org.mockito.Mockito.when(clientBeanDefinition.getBeanClassName())
         .thenReturn(PolyglotClientFactoryBean.class.getName());
 

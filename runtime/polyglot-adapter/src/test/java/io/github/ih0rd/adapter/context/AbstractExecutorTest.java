@@ -206,7 +206,10 @@ class AbstractExecutorTest {
 
               @Override
               protected <T> Value evaluate(
-                  Convention convention, String methodName, Class<T> memberTargetType, Object... args) {
+                  Convention convention,
+                  String methodName,
+                  Class<T> memberTargetType,
+                  Object... args) {
                 return mock(Value.class);
               }
             });

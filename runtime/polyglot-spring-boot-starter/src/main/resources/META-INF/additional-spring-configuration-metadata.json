@@ -27,12 +27,12 @@
     {
       "name": "polyglot.python.preload-scripts",
       "type": "java.util.List<java.lang.String>",
-      "description": "Logical Python script names to evaluate during startup after warmup. Names are resolved through the configured ScriptSource."
+      "description": "Logical Python script names to evaluate during startup after warmup. Names are resolved through the configured ScriptSource. This is raw script evaluation only and does not populate interface caches or prebind Java contracts."
     },
     {
       "name": "polyglot.js.preload-scripts",
       "type": "java.util.List<java.lang.String>",
-      "description": "Logical JavaScript script names to evaluate during startup after warmup. Names are resolved through the configured ScriptSource."
+      "description": "Logical JavaScript script names to evaluate during startup after warmup. Names are resolved through the configured ScriptSource. This is raw script evaluation only and does not populate interface caches or prebind Java contracts."
     },
     {
       "name": "polyglot.actuator.enabled",

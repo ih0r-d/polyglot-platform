@@ -40,6 +40,7 @@ All notable changes to **polyglot-adapter** are documented in this file.
 ### ⚙️ Changed
 - make `@PolyglotClient.convention()` active in runtime binding and validation; add `BY_METHOD_NAME`, keep `DEFAULT` backward-compatible for invocation, and fail explicitly for unsupported JavaScript `BY_INTERFACE_EXPORT`
 - make Spring starter properties real for `0.2.0`: support startup preload, eager fail-fast client validation, package-default client scanning, configurable startup logging, and explicit actuator enablement
+- clarify startup preload semantics as raw script evaluation rather than contract prebinding, and add Spring/concurrency stabilization tests
 
 
 ### ✅ Fixed

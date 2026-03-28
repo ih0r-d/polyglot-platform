@@ -2,15 +2,22 @@ package io.github.ih0rd.polyglot.annotations.spring.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.graalvm.polyglot.Context;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.springframework.boot.actuate.info.InfoContributor;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import io.github.ih0rd.adapter.context.JsExecutor;
+import io.github.ih0rd.adapter.context.PolyglotHelper;
 import io.github.ih0rd.adapter.context.PyExecutor;
+import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors;
+import io.github.ih0rd.polyglot.annotations.spring.context.SpringPolyglotContextFactory;
 import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotStartupLifecycle;
 import io.github.ih0rd.polyglot.annotations.spring.metrics.PolyglotMetricsBinder;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -88,5 +95,34 @@ class PolyglotAutoConfigurationTest {
                 PolyglotAutoConfiguration.class, PolyglotActuatorAutoConfiguration.class))
         .withPropertyValues("polyglot.core.enabled=true", "polyglot.actuator.enabled=false")
         .run(context -> assertThat(context).doesNotHaveBean(InfoContributor.class));
+  }
+
+  @Test
+  void safeDefaultsFalseChangesSpringPythonContextCreation() {
+    AtomicBoolean recommendedDefaults = new AtomicBoolean(true);
+    Context createdContext = Mockito.mock(Context.class);
+
+    try (MockedStatic<PolyglotHelper> polyglotHelper = Mockito.mockStatic(PolyglotHelper.class)) {
+      polyglotHelper
+          .when(
+              () ->
+                  PolyglotHelper.newContext(
+                      Mockito.eq(SupportedLanguage.PYTHON), Mockito.anyBoolean(), Mockito.any()))
+          .thenAnswer(
+              invocation -> {
+                recommendedDefaults.set(invocation.getArgument(1, Boolean.class));
+                return createdContext;
+              });
+
+      contextRunner
+          .withPropertyValues("polyglot.python.safe-defaults=false")
+          .run(
+              context -> {
+                SpringPolyglotContextFactory factory =
+                    context.getBean(SpringPolyglotContextFactory.class);
+                assertThat(factory.create(SupportedLanguage.PYTHON)).isSameAs(createdContext);
+                assertThat(recommendedDefaults.get()).isFalse();
+              });
+    }
   }
 }

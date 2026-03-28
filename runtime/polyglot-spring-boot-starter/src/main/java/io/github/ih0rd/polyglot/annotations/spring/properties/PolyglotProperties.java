@@ -67,7 +67,8 @@ public record PolyglotProperties(
    *     starter creates a more minimal Python context and expects callers to customize it
    * @param warmupOnStartup performs lightweight warmup during application startup
    * @param preloadScripts optional list of logical script names to evaluate during startup after
-   *     warmup
+   *     warmup; this does not populate interface caches or prebind Java contracts, so repeated
+   *     evaluation and repeated script side effects remain possible
    */
   public record PythonProperties(
       boolean enabled,
@@ -95,7 +96,8 @@ public record PolyglotProperties(
    *     classpath:/js/}, {@code file:./js/})
    * @param warmupOnStartup performs lightweight warmup during application startup
    * @param preloadScripts optional list of logical script names to evaluate during startup after
-   *     warmup
+   *     warmup; this does not populate interface caches or prebind Java contracts, so repeated
+   *     evaluation and repeated script side effects remain possible
    */
   public record JsProperties(
       boolean enabled, String resourcesPath, boolean warmupOnStartup, List<String> preloadScripts) {

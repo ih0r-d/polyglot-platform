@@ -166,4 +166,14 @@ class JsExecutorTest {
     assertSame(createdContext, created.context);
     assertSame(createdScriptSource, created.scriptSource);
   }
+
+  @Test
+  void preloadScriptDoesNotPopulateInterfaceSourceCache() {
+    doReturn(source).when(executor).loadScript(SupportedLanguage.JS, "bootstrap");
+
+    executor.preloadScript("bootstrap");
+
+    assertEquals(0, executor.sourceCache.size());
+    verify(context).eval(source);
+  }
 }

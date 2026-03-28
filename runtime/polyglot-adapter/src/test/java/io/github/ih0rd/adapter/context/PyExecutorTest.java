@@ -7,6 +7,13 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.graalvm.polyglot.Context;
@@ -378,7 +385,8 @@ class PyExecutorTest {
     when(ctx.getBindings("python")).thenReturn(pyBindings);
     when(pyBindings.getMember("hello")).thenReturn(null);
 
-    assertThrows(BindingException.class, () -> exec.validateBinding(Api.class, Convention.BY_METHOD_NAME));
+    assertThrows(
+        BindingException.class, () -> exec.validateBinding(Api.class, Convention.BY_METHOD_NAME));
   }
 
   @Test
@@ -447,5 +455,135 @@ class PyExecutorTest {
 
     assertSame(createdContext, created.context);
     assertSame(createdScriptSource, created.scriptSource);
+  }
+
+  @Test
+  void preloadScriptDoesNotPopulateInterfaceSourceCache() throws Exception {
+    Context ctx = mock(Context.class);
+    PyExecutor exec = spy(newExec(ctx));
+    Source source = mock(Source.class);
+
+    doReturn(source).when(exec).loadScript(SupportedLanguage.PYTHON, "bootstrap");
+
+    exec.preloadScript("bootstrap");
+
+    assertEquals(0, exec.sourceCache.size());
+    verify(ctx).eval(source);
+  }
+
+  @Test
+  void concurrentInvocationIsSerializedBySharedExecutorLock() throws Exception {
+    Context ctx = mock(Context.class);
+    PyExecutor exec = newExec(ctx);
+
+    Value instance = mock(Value.class);
+    Value member = mock(Value.class);
+
+    when(instance.isNull()).thenReturn(false);
+    when(instance.hasMember("hello")).thenReturn(true);
+    when(instance.getMember("hello")).thenReturn(member);
+    when(member.canExecute()).thenReturn(true);
+
+    Field field = PyExecutor.class.getDeclaredField("instanceCache");
+    field.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Map<Class<?>, WeakReference<Value>> cache =
+        (Map<Class<?>, WeakReference<Value>>) field.get(exec);
+    cache.put(Api.class, new WeakReference<>(instance));
+
+    AtomicInteger active = new AtomicInteger();
+    AtomicInteger maxActive = new AtomicInteger();
+    when(member.execute("x"))
+        .thenAnswer(
+            invocation -> {
+              int current = active.incrementAndGet();
+              maxActive.updateAndGet(previous -> Math.max(previous, current));
+              try {
+                Thread.sleep(100);
+              } finally {
+                active.decrementAndGet();
+              }
+              return mock(Value.class);
+            });
+
+    ExecutorService pool = Executors.newFixedThreadPool(2);
+    try {
+      Future<Value> first =
+          pool.submit(() -> exec.evaluate(Convention.DEFAULT, "hello", Api.class, "x"));
+      Future<Value> second =
+          pool.submit(() -> exec.evaluate(Convention.DEFAULT, "hello", Api.class, "x"));
+
+      assertNotNull(first.get(2, TimeUnit.SECONDS));
+      assertNotNull(second.get(2, TimeUnit.SECONDS));
+    } finally {
+      pool.shutdownNow();
+    }
+
+    assertEquals(1, maxActive.get());
+  }
+
+  @Test
+  void closeWaitsForInFlightInvocationToFinish() throws Exception {
+    Context ctx = mock(Context.class);
+    PyExecutor exec = newExec(ctx);
+
+    Value instance = mock(Value.class);
+    Value member = mock(Value.class);
+    Value result = mock(Value.class);
+
+    when(instance.isNull()).thenReturn(false);
+    when(instance.hasMember("hello")).thenReturn(true);
+    when(instance.getMember("hello")).thenReturn(member);
+    when(member.canExecute()).thenReturn(true);
+
+    Field field = PyExecutor.class.getDeclaredField("instanceCache");
+    field.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Map<Class<?>, WeakReference<Value>> cache =
+        (Map<Class<?>, WeakReference<Value>>) field.get(exec);
+    cache.put(Api.class, new WeakReference<>(instance));
+
+    CountDownLatch entered = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    AtomicBoolean closeCalled = new AtomicBoolean(false);
+    doAnswer(
+            invocation -> {
+              closeCalled.set(true);
+              return null;
+            })
+        .when(ctx)
+        .close();
+    when(member.execute("x"))
+        .thenAnswer(
+            invocation -> {
+              entered.countDown();
+              release.await(2, TimeUnit.SECONDS);
+              return result;
+            });
+
+    ExecutorService pool = Executors.newFixedThreadPool(2);
+    try {
+      Future<Value> invokeFuture =
+          pool.submit(() -> exec.evaluate(Convention.DEFAULT, "hello", Api.class, "x"));
+      assertTrue(entered.await(1, TimeUnit.SECONDS));
+
+      Future<?> closeFuture =
+          pool.submit(
+              () -> {
+                exec.close();
+                return null;
+              });
+
+      Thread.sleep(100);
+      assertFalse(closeCalled.get());
+
+      release.countDown();
+      assertSame(result, invokeFuture.get(2, TimeUnit.SECONDS));
+      closeFuture.get(2, TimeUnit.SECONDS);
+    } finally {
+      pool.shutdownNow();
+    }
+
+    assertTrue(closeCalled.get());
   }
 }
