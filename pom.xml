@@ -51,7 +51,7 @@
     <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
     <maven-plugin-api.version>3.9.14</maven-plugin-api.version>
     <google-java-format.version>1.28.0</google-java-format.version>
-    <jacoco.coverage.instruction.minimum>0.50</jacoco.coverage.instruction.minimum>
+    <jacoco.coverage.instruction.minimum>0.70</jacoco.coverage.instruction.minimum>
     <minimum-maven.version>3.9.0</minimum-maven.version>
     <minimum-java.version>21</minimum-java.version>
 
@@ -67,6 +67,8 @@
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     <sonar.organization>ih0r-d</sonar.organization>
     <sonar.projectKey>ih0r-d_polyglot-platform</sonar.projectKey>
+    <sonar.exclusions>samples/**</sonar.exclusions>
+    <sonar.coverage.exclusions>samples/**</sonar.coverage.exclusions>
   </properties>
 
   <licenses>
@@ -311,6 +313,27 @@
               <goals>
                 <goal>report</goal>
               </goals>
+            </execution>
+            <execution>
+              <id>check</id>
+              <phase>verify</phase>
+              <goals>
+                <goal>check</goal>
+              </goals>
+              <configuration>
+                <rules>
+                  <rule>
+                    <element>BUNDLE</element>
+                    <limits>
+                      <limit>
+                        <counter>INSTRUCTION</counter>
+                        <value>COVEREDRATIO</value>
+                        <minimum>${jacoco.coverage.instruction.minimum}</minimum>
+                      </limit>
+                    </limits>
+                  </rule>
+                </rules>
+              </configuration>
             </execution>
           </executions>
         </plugin>

@@ -261,24 +261,52 @@ jobs:
       - name: Build project and generate coverage
         run: ./mvnw -B -ntp -Pquality clean verify
 
-      - name: Resolve SonarCloud project key
-        id: sonar-project
-        if: env.SONAR_TOKEN != ''
+      - name: Publish coverage summary
+        if: always()
         run: |
-          echo "project_key=$(./mvnw -q -ntp -DforceStdout help:evaluate -Dexpression=sonar.projectKey)" >> "$GITHUB_OUTPUT"
+          python3 <<'PY'
+          import os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
 
-      - name: Check SonarCloud project availability
-        id: sonar-availability
-        if: env.SONAR_TOKEN != ''
-        run: |
-          if curl -fsS \
-            -H "Authorization: Bearer ${SONAR_TOKEN}" \
-            "${SONAR_HOST_URL}/api/components/show?component=${{ steps.sonar-project.outputs.project_key }}" \
-            >/dev/null; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
+          reports = sorted(Path(".").glob("**/target/site/jacoco/jacoco.xml"))
+          reports = [p for p in reports if "samples/" not in p.as_posix()]
+
+          rows = []
+          total_missed = 0
+          total_covered = 0
+
+          for report in reports:
+            root = ET.parse(report).getroot()
+            counters = [c for c in root.findall("counter") if c.attrib.get("type") == "INSTRUCTION"]
+            if not counters:
+              continue
+
+            counter = counters[0]
+            missed = int(counter.attrib["missed"])
+            covered = int(counter.attrib["covered"])
+            total = missed + covered
+            pct = (covered / total * 100) if total else 0.0
+
+            module = report.relative_to(Path(".")).as_posix().replace("/target/site/jacoco/jacoco.xml", "")
+            rows.append((module, covered, total, pct))
+            total_missed += missed
+            total_covered += covered
+
+          summary_path = os.environ["GITHUB_STEP_SUMMARY"]
+          with open(summary_path, "a", encoding="utf-8") as summary:
+            summary.write("## Coverage Summary\n\n")
+            if not rows:
+              summary.write("No JaCoCo XML reports were found.\n")
+            else:
+              total_instructions = total_missed + total_covered
+              total_pct = (total_covered / total_instructions * 100) if total_instructions else 0.0
+              summary.write(f"**Total instruction coverage:** {total_pct:.2f}% ({total_covered}/{total_instructions})\n\n")
+              summary.write("| Module | Coverage |\n")
+              summary.write("| --- | ---: |\n")
+              for module, covered, total, pct in rows:
+                summary.write(f"| `{module}` | {pct:.2f}% ({covered}/{total}) |\n")
+          PY
 
       - name: Upload coverage to Codecov
         if: env.CODECOV_TOKEN != ''
@@ -288,12 +316,12 @@ jobs:
           fail_ci_if_error: false
 
       - name: Run SonarCloud analysis
-        if: env.SONAR_TOKEN != '' && steps.sonar-availability.outputs.available == 'true'
+        if: env.SONAR_TOKEN != ''
         run: >
           ./mvnw -B -ntp
           org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar
           -Dsonar.token="${SONAR_TOKEN}"
-          -Dsonar.coverage.exclusions="samples/**"
+          -Dsonar.qualitygate.wait=true
 
       - name: Skip Codecov upload when token is unavailable
         if: env.CODECOV_TOKEN == ''
@@ -302,7 +330,3 @@ jobs:
       - name: Skip SonarCloud analysis when token is unavailable
         if: env.SONAR_TOKEN == ''
         run: echo "Skipping SonarCloud analysis because SONAR_TOKEN is not configured."
-
-      - name: Skip SonarCloud analysis when project is unavailable
-        if: env.SONAR_TOKEN != '' && steps.sonar-availability.outputs.available == 'false'
-        run: echo "Skipping SonarCloud analysis because the configured project is not available on SonarCloud yet."
