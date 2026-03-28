@@ -1,0 +1,44 @@
+{
+  "properties": [
+    {
+      "name": "polyglot.core.fail-fast",
+      "type": "java.lang.Boolean",
+      "description": "Eagerly validates discovered @PolyglotClient beans during startup and fails application startup if warmup, preload, or client binding fails.",
+      "defaultValue": true
+    },
+    {
+      "name": "polyglot.core.log-metadata-on-startup",
+      "type": "java.lang.Boolean",
+      "description": "Logs a single starter startup summary after warmup, preload, and fail-fast validation complete.",
+      "defaultValue": true
+    },
+    {
+      "name": "polyglot.core.log-level",
+      "type": "java.lang.String",
+      "description": "Log level used for the startup summary. Supported values are TRACE, DEBUG, INFO, WARN, and ERROR.",
+      "defaultValue": "DEBUG"
+    },
+    {
+      "name": "polyglot.python.safe-defaults",
+      "type": "java.lang.Boolean",
+      "description": "Applies the starter's recommended GraalPy defaults. Disable this when you want a more minimal Python context and will provide your own PolyglotContextCustomizer beans.",
+      "defaultValue": true
+    },
+    {
+      "name": "polyglot.python.preload-scripts",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Logical Python script names to evaluate during startup after warmup. Names are resolved through the configured ScriptSource."
+    },
+    {
+      "name": "polyglot.js.preload-scripts",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Logical JavaScript script names to evaluate during startup after warmup. Names are resolved through the configured ScriptSource."
+    },
+    {
+      "name": "polyglot.actuator.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Globally enables or disables the starter's actuator integrations.",
+      "defaultValue": true
+    }
+  ]
+}

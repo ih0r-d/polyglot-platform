@@ -60,6 +60,34 @@ Add the Spring Boot starter if needed:
 </dependency>
 ```
 
+Typical Spring Boot happy path:
+
+```java
+@SpringBootApplication
+@EnablePolyglotClients
+class DemoApplication {}
+```
+
+```java
+@PolyglotClient
+public interface GreetingService {
+  String hello(String name);
+}
+```
+
+```yaml
+polyglot:
+  core:
+    fail-fast: true
+  python:
+    enabled: true
+    resources-path: classpath:python
+    warmup-on-startup: true
+```
+
+When `@EnablePolyglotClients` does not declare `basePackages`, the starter scans the package of
+the importing configuration class.
+
 Add only the language runtimes you enable:
 
 ```xml

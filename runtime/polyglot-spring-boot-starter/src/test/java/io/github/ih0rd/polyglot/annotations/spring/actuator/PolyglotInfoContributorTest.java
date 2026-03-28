@@ -50,9 +50,12 @@ class PolyglotInfoContributorTest {
 
     contributor.contribute(builder);
     Map<String, Object> details = builder.build().getDetails();
+    Map<?, ?> python = (Map<?, ?>) details.get("python");
 
     assertTrue(details.containsKey("python"));
     assertFalse(details.containsKey("js"));
-    assertEquals(true, ((Map<?, ?>) details.get("python")).get("available"));
+    assertEquals(true, python.get("available"));
+    assertEquals(true, python.get("safeDefaults"));
+    assertEquals(java.util.List.of("demo"), python.get("preloadScripts"));
   }
 }

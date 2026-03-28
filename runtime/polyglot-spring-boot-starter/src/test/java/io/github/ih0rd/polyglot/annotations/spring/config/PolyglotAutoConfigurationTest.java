@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.boot.actuate.info.InfoContributor;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
@@ -77,5 +78,15 @@ class PolyglotAutoConfigurationTest {
             "polyglot.python.enabled=true",
             "polyglot.python.resources-path=classpath:python")
         .run(context -> assertThat(context).hasSingleBean(PolyglotStartupLifecycle.class));
+  }
+
+  @Test
+  void actuatorDisabledSkipsActuatorIntegration() {
+    contextRunner
+        .withConfiguration(
+            AutoConfigurations.of(
+                PolyglotAutoConfiguration.class, PolyglotActuatorAutoConfiguration.class))
+        .withPropertyValues("polyglot.core.enabled=true", "polyglot.actuator.enabled=false")
+        .run(context -> assertThat(context).doesNotHaveBean(InfoContributor.class));
   }
 }

@@ -91,7 +91,10 @@ public final class PolyglotClientRegistrar implements ImportBeanDefinitionRegist
         Objects.requireNonNull(metadata.getAnnotationAttributes(annotationName));
 
     String[] basePackages = (String[]) attrs.get("basePackages");
-    return (basePackages != null) ? basePackages : new String[0];
+    if (basePackages == null || basePackages.length == 0) {
+      return new String[] {ClassUtils.getPackageName(metadata.getClassName())};
+    }
+    return basePackages;
   }
 
   /** Resolves the class loader used for scanning and client type validation. */

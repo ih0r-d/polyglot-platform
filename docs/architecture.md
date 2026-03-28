@@ -71,7 +71,7 @@ The runtime layer is the actual GraalVM polyglot integration layer. It adapts Ja
 - `@EnablePolyglotClients` scanning
 - `PolyglotClientFactoryBean`
 - optional actuator health/info and Micrometer metrics integration
-- startup warmup logging
+- startup warmup, optional script preload, and fail-fast client validation
 
 `polyglot-bom` is a consumption aid. It aligns runtime module versions with GraalVM dependencies for applications using the adapter.
 
@@ -116,13 +116,20 @@ It supports:
 - class-style exports, where the exported value is executable and instantiated once
 - object-style exports, where the exported value is a dictionary-like map of functions
 
-Resolved Python targets are cached per Java interface using weak references.
+Resolved Python targets are cached per Java interface using weak references. Source caching is also
+per Java interface, and there is no automatic hot reload when scripts change after startup.
 
 ### JavaScript Path
 
 `JsExecutor` resolves the script name the same way, for example `forecast_service.js`.
 
-It evaluates the script once per interface and expects interface methods to map to executable JavaScript functions in language bindings. There is no separate exported-object convention like the Python path currently uses.
+It evaluates the script once per interface and expects interface methods to map to executable
+JavaScript functions in language bindings. There is no separate exported-object convention like the
+Python path currently uses.
+
+Starter-managed executors are singleton beans that serialize access to their shared GraalVM
+`Context`. This makes them suitable for normal concurrent Spring application use, but it does not
+imply source isolation or live reload semantics.
 
 ## Script Resolution
 

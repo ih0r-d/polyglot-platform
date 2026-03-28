@@ -29,11 +29,15 @@ public final class PolyglotHelper {
    * Creates and initializes a new context for the given language.
    *
    * @param language guest language
+   * @param applyRecommendedDefaults whether the repository's recommended language defaults should
+   *     be applied
    * @param customizer optional builder customizer
    * @return initialized context
    */
   public static Context newContext(
-      SupportedLanguage language, Consumer<Context.Builder> customizer) {
+      SupportedLanguage language,
+      boolean applyRecommendedDefaults,
+      Consumer<Context.Builder> customizer) {
 
     Objects.requireNonNull(language, "language must not be null");
 
@@ -44,12 +48,15 @@ public final class PolyglotHelper {
         VirtualFileSystem vfs =
             VirtualFileSystem.newBuilder().resourceDirectory("org.graalvm.python.vfs").build();
 
-        builder =
-            GraalPyResources.contextBuilder(vfs)
-                .allowAllAccess(true)
-                .allowExperimentalOptions(true)
-                .option(ENGINE_WARN_INTERPRETER_ONLY, OPTION_FALSE)
-                .option(PYTHON_WARN_EXPERIMENTAL_FEATURES, OPTION_FALSE);
+        builder = GraalPyResources.contextBuilder(vfs);
+        if (applyRecommendedDefaults) {
+          builder =
+              builder
+                  .allowAllAccess(true)
+                  .allowExperimentalOptions(true)
+                  .option(ENGINE_WARN_INTERPRETER_ONLY, OPTION_FALSE)
+                  .option(PYTHON_WARN_EXPERIMENTAL_FEATURES, OPTION_FALSE);
+        }
       }
 
       case JS -> {
@@ -79,6 +86,18 @@ public final class PolyglotHelper {
    * @return initialized context
    */
   public static Context newContext(SupportedLanguage language) {
-    return newContext(language, null);
+    return newContext(language, true, null);
+  }
+
+  /**
+   * Creates and initializes a new context using the repository's recommended defaults.
+   *
+   * @param language guest language
+   * @param customizer optional builder customizer
+   * @return initialized context
+   */
+  public static Context newContext(
+      SupportedLanguage language, Consumer<Context.Builder> customizer) {
+    return newContext(language, true, customizer);
   }
 }

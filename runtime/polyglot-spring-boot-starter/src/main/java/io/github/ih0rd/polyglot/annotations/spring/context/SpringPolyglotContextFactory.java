@@ -5,6 +5,7 @@ import org.springframework.beans.factory.ObjectProvider;
 
 import io.github.ih0rd.adapter.context.PolyglotHelper;
 import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 
 /**
  * Spring-aware factory for creating language-specific contexts.
@@ -14,14 +15,18 @@ import io.github.ih0rd.polyglot.SupportedLanguage;
  */
 public final class SpringPolyglotContextFactory {
 
+  private final PolyglotProperties properties;
   private final ObjectProvider<PolyglotContextCustomizer> customizers;
 
   /**
    * Creates a factory backed by the ordered Spring customizer stream.
    *
+   * @param properties starter properties
    * @param customizers ordered customizer provider
    */
-  public SpringPolyglotContextFactory(ObjectProvider<PolyglotContextCustomizer> customizers) {
+  public SpringPolyglotContextFactory(
+      PolyglotProperties properties, ObjectProvider<PolyglotContextCustomizer> customizers) {
+    this.properties = properties;
     this.customizers = customizers;
   }
 
@@ -34,6 +39,14 @@ public final class SpringPolyglotContextFactory {
   public Context create(SupportedLanguage language) {
     return PolyglotHelper.newContext(
         language,
+        useRecommendedDefaults(language),
         builder -> customizers.orderedStream().forEach(c -> c.customize(language, builder)));
+  }
+
+  private boolean useRecommendedDefaults(SupportedLanguage language) {
+    return switch (language) {
+      case PYTHON -> properties.python().safeDefaults();
+      case JS -> true;
+    };
   }
 }

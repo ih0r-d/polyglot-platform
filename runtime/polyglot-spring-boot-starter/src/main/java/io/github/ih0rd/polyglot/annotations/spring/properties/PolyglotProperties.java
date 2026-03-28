@@ -38,8 +38,8 @@ public record PolyglotProperties(
    *
    * @param enabled enables the polyglot starter globally
    * @param failFast fails application startup on critical configuration errors
-   * @param logMetadataOnStartup logs polyglot metadata once on startup
-   * @param logLevel semantic log level hint used by the starter
+   * @param logMetadataOnStartup logs a single startup summary for the starter
+   * @param logLevel log level used for the startup summary
    */
   public record CoreProperties(
       boolean enabled, boolean failFast, boolean logMetadataOnStartup, String logLevel) {
@@ -63,9 +63,11 @@ public record PolyglotProperties(
    * @param enabled enables Python executor bean
    * @param resourcesPath base script location expressed as a Spring Resource location (e.g. {@code
    *     classpath:/python/}, {@code file:./python/})
-   * @param safeDefaults applies safe default options for GraalPy
+   * @param safeDefaults applies the starter's recommended GraalPy defaults; when disabled, the
+   *     starter creates a more minimal Python context and expects callers to customize it
    * @param warmupOnStartup performs lightweight warmup during application startup
-   * @param preloadScripts optional list of script/module names to preload during warmup
+   * @param preloadScripts optional list of logical script names to evaluate during startup after
+   *     warmup
    */
   public record PythonProperties(
       boolean enabled,
@@ -92,7 +94,8 @@ public record PolyglotProperties(
    * @param resourcesPath base script location expressed as a Spring Resource location (e.g. {@code
    *     classpath:/js/}, {@code file:./js/})
    * @param warmupOnStartup performs lightweight warmup during application startup
-   * @param preloadScripts optional list of script/module names to preload during warmup
+   * @param preloadScripts optional list of logical script names to evaluate during startup after
+   *     warmup
    */
   public record JsProperties(
       boolean enabled, String resourcesPath, boolean warmupOnStartup, List<String> preloadScripts) {
@@ -111,10 +114,11 @@ public record PolyglotProperties(
    *
    * <p>Prefix: {@code polyglot.actuator.*}
    *
+   * @param enabled enables all starter actuator integrations
    * @param info info contributor settings
    * @param health health indicator settings
    */
-  public record ActuatorProperties(InfoProperties info, HealthProperties health) {
+  public record ActuatorProperties(boolean enabled, InfoProperties info, HealthProperties health) {
 
     public ActuatorProperties {
       info = (info != null) ? info : new InfoProperties(true);
@@ -122,7 +126,7 @@ public record PolyglotProperties(
     }
 
     public static ActuatorProperties defaults() {
-      return new ActuatorProperties(new InfoProperties(true), new HealthProperties(true));
+      return new ActuatorProperties(true, new InfoProperties(true), new HealthProperties(true));
     }
 
     /**

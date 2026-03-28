@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 
 import org.junit.jupiter.api.AfterEach;
@@ -12,21 +14,27 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 
 import io.github.ih0rd.adapter.context.JsExecutor;
 import io.github.ih0rd.adapter.context.PyExecutor;
+import io.github.ih0rd.polyglot.annotations.spring.client.PolyglotClientFactoryBean;
 import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 
 class PolyglotStartupLifecycleTest {
 
+  @Mock private ConfigurableListableBeanFactory beanFactory;
   @Mock private PyExecutor pyExecutor;
   @Mock private JsExecutor jsExecutor;
+  @Mock private BeanDefinition clientBeanDefinition;
 
   private AutoCloseable mocks;
 
   @BeforeEach
   void setUp() {
     mocks = MockitoAnnotations.openMocks(this);
+    org.mockito.Mockito.when(beanFactory.getBeanDefinitionNames()).thenReturn(new String[0]);
   }
 
   @AfterEach
@@ -37,12 +45,15 @@ class PolyglotStartupLifecycleTest {
   @Test
   void startWarmsUpEnabledExecutorsAndMarksLifecycleRunning() {
     PolyglotStartupLifecycle lifecycle =
-        new PolyglotStartupLifecycle(enabledProperties(true, true, true), pyExecutor, jsExecutor);
+        new PolyglotStartupLifecycle(
+            enabledProperties(true, true, true), beanFactory, pyExecutor, jsExecutor);
 
     lifecycle.start();
 
     verify(pyExecutor).evaluate(PolyglotWarmupConstants.NOOP_EXPRESSION);
+    verify(pyExecutor).preloadScript("demo");
     verify(jsExecutor).evaluate(PolyglotWarmupConstants.NOOP_EXPRESSION);
+    verify(beanFactory).getBeanDefinitionNames();
     assertEquals(Integer.MAX_VALUE, lifecycle.getPhase());
     assertEquals(true, lifecycle.isRunning());
   }
@@ -50,11 +61,13 @@ class PolyglotStartupLifecycleTest {
   @Test
   void startSkipsWarmupWhenCoreIsDisabled() {
     PolyglotStartupLifecycle lifecycle =
-        new PolyglotStartupLifecycle(enabledProperties(false, true, false), pyExecutor, null);
+        new PolyglotStartupLifecycle(
+            enabledProperties(false, true, false), beanFactory, pyExecutor, null);
 
     lifecycle.start();
 
     verify(pyExecutor, never()).evaluate(PolyglotWarmupConstants.NOOP_EXPRESSION);
+    verifyNoInteractions(beanFactory);
     assertFalse(lifecycle.isRunning());
   }
 
@@ -64,7 +77,8 @@ class PolyglotStartupLifecycleTest {
         .when(pyExecutor)
         .evaluate(PolyglotWarmupConstants.NOOP_EXPRESSION);
     PolyglotStartupLifecycle lifecycle =
-        new PolyglotStartupLifecycle(enabledProperties(true, true, false), pyExecutor, null);
+        new PolyglotStartupLifecycle(
+            enabledProperties(true, true, false), beanFactory, pyExecutor, null);
 
     assertThrows(IllegalStateException.class, lifecycle::start);
   }
@@ -83,11 +97,50 @@ class PolyglotStartupLifecycleTest {
                 null,
                 null,
                 null),
+            beanFactory,
             pyExecutor,
             null);
 
     assertDoesNotThrow(lifecycle::start);
     assertFalse(lifecycle.isRunning());
+  }
+
+  @Test
+  void startEagerlyValidatesRegisteredPolyglotClientsWhenFailFastIsEnabled() {
+    org.mockito.Mockito.when(beanFactory.getBeanDefinitionNames()).thenReturn(new String[] {"demo"});
+    org.mockito.Mockito.when(beanFactory.getBeanDefinition("demo")).thenReturn(clientBeanDefinition);
+    org.mockito.Mockito.when(clientBeanDefinition.getBeanClassName())
+        .thenReturn(PolyglotClientFactoryBean.class.getName());
+
+    PolyglotStartupLifecycle lifecycle =
+        new PolyglotStartupLifecycle(
+            enabledProperties(true, false, false), beanFactory, pyExecutor, jsExecutor);
+
+    lifecycle.start();
+
+    verify(beanFactory).getBean("demo");
+  }
+
+  @Test
+  void startDoesNotEagerlyValidateClientsWhenFailFastIsDisabled() {
+    PolyglotStartupLifecycle lifecycle =
+        new PolyglotStartupLifecycle(
+            new PolyglotProperties(
+                new PolyglotProperties.CoreProperties(true, false, false, "info"),
+                new PolyglotProperties.PythonProperties(
+                    true, "classpath:/python", true, false, java.util.List.of("demo")),
+                new PolyglotProperties.JsProperties(
+                    true, "classpath:/js", false, java.util.List.of("bootstrap")),
+                null,
+                null),
+            beanFactory,
+            pyExecutor,
+            jsExecutor);
+
+    lifecycle.start();
+
+    verify(beanFactory, never()).getBean(anyString());
+    verifyNoInteractions(beanFactory);
   }
 
   private static PolyglotProperties enabledProperties(

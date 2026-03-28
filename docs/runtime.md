@@ -185,6 +185,9 @@ Important compatibility note:
 4. Enable scanning with `@EnablePolyglotClients`.
 5. Inject the generated Spring beans as normal interfaces.
 
+If `@EnablePolyglotClients` does not declare `basePackages`, the starter scans the package of the
+importing configuration class.
+
 Language resolution rules for `@PolyglotClient` are enforced by `PolyglotClientFactoryBean`:
 
 - one explicit language: use that executor
@@ -196,28 +199,47 @@ Language resolution rules for `@PolyglotClient` are enforced by `PolyglotClientF
 
 Current configuration properties live under `polyglot.*`.
 
-Actively used properties include:
+Core properties:
 
 - `polyglot.core.enabled`
 - `polyglot.core.fail-fast`
+- `polyglot.core.log-metadata-on-startup`
+- `polyglot.core.log-level`
+
+Python properties:
+
 - `polyglot.python.enabled`
 - `polyglot.python.resources-path`
+- `polyglot.python.safe-defaults`
 - `polyglot.python.warmup-on-startup`
+- `polyglot.python.preload-scripts`
+
+JavaScript properties:
+
 - `polyglot.js.enabled`
 - `polyglot.js.resources-path`
 - `polyglot.js.warmup-on-startup`
+- `polyglot.js.preload-scripts`
+
+Operational properties:
+
 - `polyglot.metrics.enabled`
+- `polyglot.actuator.enabled`
 - `polyglot.actuator.info.enabled`
 - `polyglot.actuator.health.enabled`
 
-Properties currently modeled but not yet fully acted on by startup logic include:
+Starter behavior:
 
-- `polyglot.core.log-metadata-on-startup`
-- `polyglot.python.safe-defaults`
-- `polyglot.python.preload-scripts`
-- `polyglot.js.preload-scripts`
-
-The startup lifecycle currently performs a lightweight no-op warmup only. It does not preload user scripts.
+- `polyglot.core.fail-fast=true` eagerly instantiates discovered `@PolyglotClient` beans during
+  startup so invalid contracts fail before the application begins serving requests.
+- `polyglot.core.log-metadata-on-startup=true` emits a single startup summary at the configured
+  `polyglot.core.log-level`.
+- `polyglot.python.preload-scripts` and `polyglot.js.preload-scripts` evaluate the listed logical
+  scripts during startup after warmup. These names are resolved through the configured
+  `ScriptSource`; they are not interface names.
+- `polyglot.python.safe-defaults=true` applies the starter's recommended GraalPy defaults. When
+  disabled, the starter creates a more minimal Python context and expects applications to provide
+  their own `PolyglotContextCustomizer` beans if they need additional options.
 
 ## Operational Behavior
 
@@ -238,5 +260,11 @@ If Micrometer is present, the starter registers gauges for:
 
 - The runtime is intended for trusted application embedding, not untrusted sandbox execution.
 - JavaScript execution is supported, but JavaScript contract generation is not.
-- Warmup initializes the engine but does not currently preload user contracts.
+- Startup preloading evaluates named scripts but does not provide hot reload or source versioning.
 - The binding convention is currently opinionated and name-based; alternative conventions are not implemented yet.
+- Starter-managed executors are shared singleton beans that serialize access to the underlying
+  GraalVM `Context`. They are intended for concurrent Spring application use, but contract loading
+  and cache invalidation remain per-executor concerns.
+- Source caching is keyed by Java interface. Python target instances are cached per interface using
+  weak references. Changing a script after startup does not trigger automatic reload; clear caches
+  or recreate the executor if you need to pick up changed sources.

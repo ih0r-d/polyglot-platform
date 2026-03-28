@@ -28,6 +28,9 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  *   <li>script name derived from the Java interface simple name in snake case
  *   <li>exported Python value name equal to the Java interface simple name
  * </ul>
+ *
+ * <p>Sources are cached per Java interface. Resolved Python targets are cached per interface using
+ * weak references, so a reclaimed target may be recreated on a later invocation.
  */
 public final class PyExecutor extends AbstractPolyglotExecutor {
 
@@ -52,13 +55,15 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   @Override
   protected <T> Value evaluate(
       Convention convention, String methodName, Class<T> memberTargetType, Object... args) {
-    return switch (requireConvention(convention)) {
-      case DEFAULT, BY_INTERFACE_EXPORT -> {
-        Value instance = resolveInstance(memberTargetType);
-        yield invokeMember(instance, methodName, args);
-      }
-      case BY_METHOD_NAME -> invokeByMethodName(memberTargetType, methodName, args);
-    };
+    return withContextLock(
+        () ->
+            switch (requireConvention(convention)) {
+              case DEFAULT, BY_INTERFACE_EXPORT -> {
+                Value instance = resolveInstance(memberTargetType);
+                yield invokeMember(instance, methodName, args);
+              }
+              case BY_METHOD_NAME -> invokeByMethodName(memberTargetType, methodName, args);
+            });
   }
 
   /** Eagerly resolves the Python export to verify that the contract can be bound. */
@@ -68,10 +73,13 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
       throw new IllegalArgumentException("Interface type must not be null");
     }
 
-    switch (requireConvention(convention)) {
-      case DEFAULT, BY_INTERFACE_EXPORT -> validateInterfaceExportBinding(iface);
-      case BY_METHOD_NAME -> validateMethodNameBinding(iface);
-    }
+    withContextLock(
+        () -> {
+          switch (requireConvention(convention)) {
+            case DEFAULT, BY_INTERFACE_EXPORT -> validateInterfaceExportBinding(iface);
+            case BY_METHOD_NAME -> validateMethodNameBinding(iface);
+          }
+        });
   }
 
   /** Adds Python-specific cache details to the executor metadata snapshot. */
@@ -104,6 +112,16 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   public static PyExecutor createWithContext(Context context, ScriptSource scriptSource) {
 
     return new PyExecutor(context, scriptSource);
+  }
+
+  /**
+   * Resolves and evaluates a Python script by logical name without binding it to a Java contract.
+   *
+   * @param scriptName logical script name resolved through {@link ScriptSource}
+   */
+  public void preloadScript(String scriptName) {
+    Source source = loadScript(SupportedLanguage.PYTHON, scriptName);
+    withContextLock(() -> context.eval(source));
   }
 
   /**

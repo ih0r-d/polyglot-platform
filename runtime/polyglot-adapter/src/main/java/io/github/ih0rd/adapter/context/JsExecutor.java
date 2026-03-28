@@ -21,6 +21,9 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  *
  * <p>The executor loads one script per Java contract and resolves interface methods from JavaScript
  * language bindings.
+ *
+ * <p>Sources are cached per Java interface. Script changes are not observed automatically after a
+ * module has been loaded into the executor.
  */
 public final class JsExecutor extends AbstractPolyglotExecutor {
 
@@ -43,9 +46,12 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
   @Override
   protected <T> Value evaluate(
       Convention convention, String methodName, Class<T> memberTargetType, Object... args) {
-    requireSupportedConvention(convention);
-    ensureModuleLoaded(memberTargetType);
-    return callFunction(methodName, args);
+    return withContextLock(
+        () -> {
+          requireSupportedConvention(convention);
+          ensureModuleLoaded(memberTargetType);
+          return callFunction(methodName, args);
+        });
   }
 
   /**
@@ -56,22 +62,25 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
     if (iface == null) {
       throw new IllegalArgumentException("Interface type must not be null");
     }
-    requireSupportedConvention(convention);
+    withContextLock(
+        () -> {
+          requireSupportedConvention(convention);
 
-    ensureModuleLoaded(iface);
+          ensureModuleLoaded(iface);
 
-    Value bindings = context.getBindings(languageId());
+          Value bindings = context.getBindings(languageId());
 
-    for (Method method : contractMethods(iface)) {
-      String name = method.getName();
-      Value fn = bindings.getMember(name);
+          for (Method method : contractMethods(iface)) {
+            String name = method.getName();
+            Value fn = bindings.getMember(name);
 
-      if (fn == null || !fn.canExecute()) {
-        throw new BindingException(
-            "JavaScript function '%s' not found or not executable for interface '%s'"
-                .formatted(name, iface.getName()));
-      }
-    }
+            if (fn == null || !fn.canExecute()) {
+              throw new BindingException(
+                  "JavaScript function '%s' not found or not executable for interface '%s'"
+                      .formatted(name, iface.getName()));
+            }
+          }
+        });
   }
 
   /** Adds JavaScript-specific loading information to the executor metadata snapshot. */
@@ -99,6 +108,17 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
   public static JsExecutor createWithContext(Context context, ScriptSource scriptSource) {
 
     return new JsExecutor(context, scriptSource);
+  }
+
+  /**
+   * Resolves and evaluates a JavaScript script by logical name without binding it to a Java
+   * contract.
+   *
+   * @param scriptName logical script name resolved through {@link ScriptSource}
+   */
+  public void preloadScript(String scriptName) {
+    Source source = loadScript(SupportedLanguage.JS, scriptName);
+    withContextLock(() -> context.eval(source));
   }
 
   /** Loads and evaluates the JavaScript script associated with the given contract if needed. */

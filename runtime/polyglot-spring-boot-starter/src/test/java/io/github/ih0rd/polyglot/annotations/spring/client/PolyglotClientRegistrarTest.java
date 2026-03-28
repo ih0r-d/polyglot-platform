@@ -18,6 +18,9 @@ class PolyglotClientRegistrarTest {
   @EnablePolyglotClients(basePackages = "io.github.ih0rd.polyglot.annotations.spring.client")
   static class ClientScanConfiguration {}
 
+  @EnablePolyglotClients
+  static class DefaultPackageScanConfiguration {}
+
   @PolyglotClient
   interface DiscoveredClient {}
 
@@ -31,6 +34,19 @@ class PolyglotClientRegistrarTest {
 
     registrar.registerBeanDefinitions(
         AnnotationMetadata.introspect(ClientScanConfiguration.class), registry);
+
+    assertEquals(
+        PolyglotClientFactoryBean.class.getName(),
+        registry.getBeanDefinition(DiscoveredClient.class.getName()).getBeanClassName());
+  }
+
+  @Test
+  void registerBeanDefinitionsUsesImportingPackageWhenBasePackagesAreOmitted() {
+    PolyglotClientRegistrar registrar = new PolyglotClientRegistrar();
+    DefaultListableBeanFactory registry = new DefaultListableBeanFactory();
+
+    registrar.registerBeanDefinitions(
+        AnnotationMetadata.introspect(DefaultPackageScanConfiguration.class), registry);
 
     assertEquals(
         PolyglotClientFactoryBean.class.getName(),

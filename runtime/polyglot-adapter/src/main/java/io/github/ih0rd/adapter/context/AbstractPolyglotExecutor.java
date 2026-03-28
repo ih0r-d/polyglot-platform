@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
@@ -35,6 +36,10 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  *
  * <p>This type is part of the runtime implementation and is not intended as a stable third-party
  * subclassing surface.
+ *
+ * <p>Executor instances serialize access to the underlying {@link Context}. This makes the shared
+ * starter-managed singleton executors safer for concurrent application use, but does not provide
+ * any hot-reload or multi-version source isolation semantics.
  */
 public abstract class AbstractPolyglotExecutor implements AutoCloseable {
 
@@ -46,6 +51,9 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
 
   /** Cache of evaluated or compiled sources keyed by Java contract type. */
   protected final Map<Class<?>, Source> sourceCache = new ConcurrentHashMap<>();
+
+  /** Monitor used to serialize guest context access. */
+  protected final Object contextMonitor = new Object();
 
   /**
    * Creates a new executor instance.
@@ -91,7 +99,7 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
     try {
       Source source =
           Source.newBuilder(languageId(), code, "inline." + languageId()).buildLiteral();
-      return context.eval(source);
+      return withContextLock(() -> context.eval(source));
     } catch (Exception e) {
       throw new InvocationException("Error during " + languageId() + " inline code execution", e);
     }
@@ -192,13 +200,16 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
    */
   protected Value callFunction(String methodName, Object... args) {
     try {
-      Value bindings = context.getBindings(languageId());
-      Value fn = bindings.getMember(methodName);
+      return withContextLock(
+          () -> {
+            Value bindings = context.getBindings(languageId());
+            Value fn = bindings.getMember(methodName);
 
-      if (fn == null || !fn.canExecute()) {
-        throw new BindingException("Function not found: " + methodName);
-      }
-      return fn.execute(args);
+            if (fn == null || !fn.canExecute()) {
+              throw new BindingException("Function not found: " + methodName);
+            }
+            return fn.execute(args);
+          });
     } catch (BindingException e) {
       throw e;
     } catch (Exception e) {
@@ -253,6 +264,20 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
   /** Closes the underlying GraalVM context. */
   @Override
   public void close() {
-    context.close();
+    synchronized (contextMonitor) {
+      context.close();
+    }
+  }
+
+  protected final <T> T withContextLock(Supplier<T> action) {
+    synchronized (contextMonitor) {
+      return action.get();
+    }
+  }
+
+  protected final void withContextLock(Runnable action) {
+    synchronized (contextMonitor) {
+      action.run();
+    }
   }
 }

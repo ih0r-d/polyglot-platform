@@ -17,6 +17,10 @@ import org.springframework.context.annotation.Import;
 @Import(PolyglotClientRegistrar.class)
 public @interface EnablePolyglotClients {
 
-  /** Base packages to scan for polyglot client interfaces. */
+  /**
+   * Base packages to scan for polyglot client interfaces.
+   *
+   * <p>When left empty, the starter scans the package of the importing configuration class.
+   */
   String[] basePackages() default {};
 }

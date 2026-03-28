@@ -16,6 +16,7 @@ class PolyglotPropertiesTest {
     assertTrue(properties.core().enabled());
     assertEquals("classpath:python", properties.python().resourcesPath());
     assertEquals("classpath:js", properties.js().resourcesPath());
+    assertTrue(properties.actuator().enabled());
     assertTrue(properties.metrics().enabled());
   }
 

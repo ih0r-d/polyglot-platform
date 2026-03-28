@@ -54,9 +54,9 @@ public class PolyglotAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public SpringPolyglotContextFactory polyglotContextFactory(
-      ObjectProvider<PolyglotContextCustomizer> customizers) {
+      PolyglotProperties properties, ObjectProvider<PolyglotContextCustomizer> customizers) {
 
-    return new SpringPolyglotContextFactory(customizers);
+    return new SpringPolyglotContextFactory(properties, customizers);
   }
 
   /**
@@ -71,10 +71,11 @@ public class PolyglotAutoConfiguration {
   @ConditionalOnMissingBean
   PolyglotStartupLifecycle polyglotStartupLifecycle(
       PolyglotProperties properties,
+      org.springframework.beans.factory.config.ConfigurableListableBeanFactory beanFactory,
       ObjectProvider<PyExecutor> pyExecutor,
       ObjectProvider<JsExecutor> jsExecutor) {
 
     return new PolyglotStartupLifecycle(
-        properties, pyExecutor.getIfAvailable(), jsExecutor.getIfAvailable());
+        properties, beanFactory, pyExecutor.getIfAvailable(), jsExecutor.getIfAvailable());
   }
 }

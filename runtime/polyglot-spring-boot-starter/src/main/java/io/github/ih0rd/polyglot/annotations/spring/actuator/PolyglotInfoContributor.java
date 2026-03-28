@@ -46,7 +46,9 @@ public class PolyglotInfoContributor implements InfoContributor {
     Map<String, Object> python = new LinkedHashMap<>();
     python.put("enabled", true);
     python.put("resourcesPath", properties.python().resourcesPath());
+    python.put("safeDefaults", properties.python().safeDefaults());
     python.put("warmupOnStartup", properties.python().warmupOnStartup());
+    python.put("preloadScripts", properties.python().preloadScripts());
     python.put("available", executors.python().isPresent());
     return python;
   }
@@ -56,6 +58,7 @@ public class PolyglotInfoContributor implements InfoContributor {
     js.put("enabled", true);
     js.put("resourcesPath", properties.js().resourcesPath());
     js.put("warmupOnStartup", properties.js().warmupOnStartup());
+    js.put("preloadScripts", properties.js().preloadScripts());
     js.put("available", executors.js().isPresent());
     return js;
   }
