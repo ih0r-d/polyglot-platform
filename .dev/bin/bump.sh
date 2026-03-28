@@ -3,11 +3,11 @@ set -euo pipefail
 
 TYPE=${1:-patch}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPT_DIR/../lib/common.sh"
 
-cd "$REPO_ROOT"
-JAVA_HOME="$(cd "$(dirname "$(command -v java)")/.." && pwd -P)"
-export JAVA_HOME
+cd_repo_root
+setup_java_home
+setup_maven_opts
 
 CURRENT="$(./mvnw -q -Dexpression=project.version -DforceStdout help:evaluate)"
 BASE="${CURRENT/-SNAPSHOT/}"
@@ -23,12 +23,13 @@ esac
 
 NEXT="$MAJOR.$MINOR.$PATCH-SNAPSHOT"
 
-./mvnw -B -ntp versions:set \
+run_mvn versions:set \
   -DnewVersion="$NEXT" \
   -DprocessAllModules=true \
   -DgenerateBackupPoms=false
 
-git add pom.xml api/**/pom.xml runtime/**/pom.xml build-tools/**/pom.xml
+mapfile -t pom_files < <(project_pom_files)
+git add "${pom_files[@]}"
 git commit -m "Bump version: $CURRENT → $NEXT" || true
 
 echo "✅ Bumped: $CURRENT → $NEXT"

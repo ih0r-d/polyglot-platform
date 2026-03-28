@@ -1,129 +1,58 @@
 version: "3"
 
-vars:
-  REPO_ROOT: ..
-  MAVEN_OPTS: >
-    --enable-native-access=ALL-UNNAMED
-    --add-opens=java.base/java.lang=ALL-UNNAMED
-    --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
-    -XX:+IgnoreUnrecognizedVMOptions
-
 tasks:
   clean:
     desc: Remove Maven build output and generated files
-    silent: true
     cmds:
-      - echo "🧹 Cleaning build output and generated Maven files..."
-      - |
-        cd "{{.REPO_ROOT}}"
-        export JAVA_HOME="$(cd "$(dirname "$(command -v java)")/.." && pwd -P)"
-        ./mvnw -q -B -ntp clean
-        find . -type f \( \
-          -name '.flattened-pom.xml' -o \
-          -name 'dependency-reduced-pom.xml' -o \
-          -name 'pom.xml.tag' -o \
-          -name 'pom.xml.releaseBackup' -o \
-          -name 'pom.xml.versionsBackup' -o \
-          -name 'pom.xml.next' -o \
-          -name 'release.properties' \
-        \) -delete
-      - echo "✅ Clean complete."
+      - ./bin/clean.sh
 
   build:
-    silent: true
-    vars:
-      MODULE: '{{.MODULE | default ""}}'
-      SKIP_TESTS: '{{.SKIP_TESTS | default "false"}}'
+    desc: Build project
     cmds:
-      - echo "🔧 Building {{if .MODULE}}{{.MODULE}}{{else}}project{{end}} ..."
-      - |
-        cd "{{.REPO_ROOT}}"
-        export JAVA_HOME="$(cd "$(dirname "$(command -v java)")/.." && pwd -P)"
-        args="-B -ntp clean install -Djacoco.skip=true"
-        if [ "{{.SKIP_TESTS}}" = "true" ]; then
-          args="$args -DskipTests"
-        fi
-        if [ -n "{{.MODULE}}" ]; then
-          args="$args -pl {{.MODULE}} -am"
-        fi
-        ./mvnw $args
-      - echo "📦 Build complete"
+      - ./bin/build.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
   test:
     desc: Run tests
-    silent: true
     cmds:
-      - echo "🧪 Running tests..."
-      - cd "{{.REPO_ROOT}}" && export JAVA_HOME="$(cd "$(dirname "$(command -v java)")/.." && pwd -P)" && MAVEN_OPTS="{{.MAVEN_OPTS}}" ./mvnw -B -ntp test
-      - echo "✅ Tests done."
+      - ./bin/test.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
   verify:
-    desc: Run tests and Checkstyle
-    silent: true
+    desc: Run verify
     cmds:
-      - echo "🔍 Running tests + Checkstyle..."
-      - task: test
-      - cd "{{.REPO_ROOT}}" && export JAVA_HOME="$(cd "$(dirname "$(command -v java)")/.." && pwd -P)" && MAVEN_OPTS="{{.MAVEN_OPTS}}" ./mvnw -B -ntp verify
-      - echo "✅ Verification complete."
-
-  release:
-    desc: Release the full project (version bump, changelog, tag, deploy)
-    silent: true
-    vars:
-      VERSION: { sh: 'echo ${VERSION:-}' }
-    cmds:
-      - |
-        if [ -z "{{.VERSION}}" ]; then
-          echo "❌ VERSION is required"
-          echo "Usage:"
-          echo "  task release VERSION=0.0.22"
-          exit 1
-        fi
-  
-        echo "🚀 Releasing version {{.VERSION}}"
-        echo "📦 Target: full multi-module build"
-
-        cd "{{.REPO_ROOT}}"
-        export JAVA_HOME="$(cd "$(dirname "$(command -v java)")/.." && pwd -P)"
-        chmod +x ./.dev/release.sh
-        ./.dev/release.sh {{.VERSION}}
-  
-        echo "✅ Release {{.VERSION}} completed"
-
-
-  bump:
-    desc: Bump project version (patch|minor|major)
-    silent: true
-    vars:
-      TYPE: { sh: 'echo ${TYPE:-patch}' }
-    cmds:
-      - echo "⬆️  Bumping {{.TYPE}} version..."
-      - cd "{{.REPO_ROOT}}" && export JAVA_HOME="$(cd "$(dirname "$(command -v java)")/.." && pwd -P)" && chmod +x ./.dev/bump.sh && ./.dev/bump.sh {{.TYPE}}
-      - echo "✅ Version bumped."
-
-  clean-remote-tags:
-    desc: Delete remote tags that don't exist locally
-    silent: true
-    cmds:
-      - echo "🧨 Cleaning remote tags..."
-      - cd "{{.REPO_ROOT}}" && chmod +x ./.dev/clean-remote-tags.sh && ./.dev/clean-remote-tags.sh
-      - echo "✅ Remote tags cleaned."
-
-  version:
-    desc: Show current project version
-    silent: true
-    cmds:
-      - echo "📦 Current version:"
-      - cd "{{.REPO_ROOT}}" && export JAVA_HOME="$(cd "$(dirname "$(command -v java)")/.." && pwd -P)" && ./mvnw -q -Dexpression=project.version -DforceStdout help:evaluate 2>/dev/null | tr -d '\r' | grep -E '^[0-9]'
+      - ./bin/verify.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
   format:
     desc: Format code with Spotless
     cmds:
-      - cd "{{.REPO_ROOT}}" && export JAVA_HOME="$(cd "$(dirname "$(command -v java)")/.." && pwd -P)" && ./mvnw -B -ntp spotless:apply
+      - ./bin/format.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  version:
+    desc: Show current project version
+    cmds:
+      - ./bin/version.sh
+
+  bump:
+    desc: Bump project version (patch|minor|major)
+    cmds:
+      - ./bin/bump.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{else}} patch{{end}}
+
+  release:
+    desc: Release the full project
+    cmds:
+      - ./bin/release.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  clean-remote-tags:
+    desc: Delete remote tags that don't exist locally
+    cmds:
+      - ./bin/clean-remote-tags.sh
+
+  pre-commit-maven:
+    desc: Run the local Maven pre-commit checks
+    cmds:
+      - ./bin/pre-commit-maven.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
   default:
     desc: Default task (clean + build)
-    silent: false
     cmds:
       - task: clean
       - task: build

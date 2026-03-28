@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/common.sh"
+
+cd_repo_root
 git fetch --tags
 
 remote_tags=$(git ls-remote --tags origin | awk '{print $2}' | sed 's|refs/tags/||')

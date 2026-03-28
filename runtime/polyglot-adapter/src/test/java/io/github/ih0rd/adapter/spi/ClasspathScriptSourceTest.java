@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 import java.io.ByteArrayInputStream;
 import java.io.Reader;
 import java.io.StringWriter;
-import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.AfterEach;
@@ -40,7 +40,8 @@ class ClasspathScriptSourceTest {
 
   @Test
   void existsReturnsTrueWhenResourceIsPresent() throws Exception {
-    when(classLoader.getResource("python/demo.py")).thenReturn(new URL("file:/tmp/demo.py"));
+    when(classLoader.getResource("python/demo.py"))
+        .thenReturn(URI.create("file:/tmp/demo.py").toURL());
 
     assertTrue(source.exists(SupportedLanguage.PYTHON, "demo"));
   }
@@ -58,7 +59,7 @@ class ClasspathScriptSourceTest {
     try {
       Thread.currentThread().setContextClassLoader(classLoader);
       when(classLoader.getResource("python/default_demo.py"))
-          .thenReturn(new URL("file:/tmp/default_demo.py"));
+          .thenReturn(URI.create("file:/tmp/default_demo.py").toURL());
 
       ClasspathScriptSource defaultSource = new ClasspathScriptSource();
 
@@ -81,6 +82,7 @@ class ClasspathScriptSourceTest {
   }
 
   @Test
+  @SuppressWarnings("resource")
   void openThrowsWhenResolvedResourceStreamIsMissing() {
     when(classLoader.getResourceAsStream("python/missing.py")).thenReturn(null);
 
