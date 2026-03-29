@@ -38,7 +38,6 @@ concurrency:
 permissions:
   contents: read
   pull-requests: read
-  security-events: write
 
 jobs:
   dependency-review:
@@ -130,6 +129,9 @@ jobs:
     name: CodeQL
     runs-on: ubuntu-latest
     needs: build
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
       - name: Checkout repository
@@ -159,6 +161,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push'
+    permissions:
+      contents: read
+      security-events: write
     env:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
@@ -175,7 +180,7 @@ jobs:
 
       - name: Install Snyk CLI
         if: env.SNYK_TOKEN != ''
-        uses: snyk/actions/setup@v1.0.0
+        uses: snyk/actions/setup@9adf32b1121593767fc3c057af55b55db032dc04 # v1.0.0
 
       - name: Run Snyk Maven scan
         if: env.SNYK_TOKEN != ''
@@ -233,8 +238,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: quality
     if: github.event_name == 'push'
+    permissions:
+      contents: read
+      id-token: write
     env:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_HOST_URL: https://sonarcloud.io
 
@@ -309,9 +316,9 @@ jobs:
           PY
 
       - name: Upload coverage to Codecov
-        if: env.CODECOV_TOKEN != ''
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@cf3f51a67d2820f7a7cefa0831889fbbef41ca57 # v5.4.1
         with:
+          use_oidc: true
           files: ./build-tools/polyglot-codegen/target/site/jacoco/jacoco.xml,./runtime/polyglot-adapter/target/site/jacoco/jacoco.xml,./runtime/polyglot-spring-boot-starter/target/site/jacoco/jacoco.xml
           fail_ci_if_error: false
 
@@ -322,10 +329,6 @@ jobs:
           org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar
           -Dsonar.token="${SONAR_TOKEN}"
           -Dsonar.qualitygate.wait=true
-
-      - name: Skip Codecov upload when token is unavailable
-        if: env.CODECOV_TOKEN == ''
-        run: echo "Skipping Codecov upload because CODECOV_TOKEN is not configured."
 
       - name: Skip SonarCloud analysis when token is unavailable
         if: env.SONAR_TOKEN == ''
