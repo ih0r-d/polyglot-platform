@@ -28,7 +28,10 @@ run_mvn versions:set \
   -DprocessAllModules=true \
   -DgenerateBackupPoms=false
 
-mapfile -t pom_files < <(project_pom_files)
+pom_files=()
+while IFS= read -r pom_file; do
+  pom_files+=("$pom_file")
+done < <(project_pom_files)
 git add "${pom_files[@]}"
 git commit -m "Bump version: $CURRENT → $NEXT" || true
 
