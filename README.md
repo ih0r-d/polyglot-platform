@@ -1,18 +1,45 @@
 # polyglot-adapter
 
+[![CI](https://github.com/ih0r-d/polyglot-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/ih0r-d/polyglot-platform/actions/workflows/ci.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ih0r-d_polyglot-adapter&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ih0r-d_polyglot-adapter)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ih0r-d_polyglot-adapter&metric=coverage)](https://sonarcloud.io/summary/new_code?id=ih0r-d_polyglot-adapter)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
 `polyglot-adapter` provides runtime and build-time support for executing Python and JavaScript on the JVM through GraalVM Polyglot.
 
-The repository is organized into three layers:
+It provides:
 
-- `api`: shared annotations and contract model
-- `runtime`: core executor API, Spring Boot integration, and BOM
-- `build-tools`: contract parsing and Java interface generation
+- runtime execution APIs for embedded polyglot calls
+- Spring Boot integration for declarative client binding
+- build-time code generation from contracts
+
+## Table of Contents
+
+- [Requirements](#requirements)
+- [Repository Layout](#repository-layout)
+- [Modules](#modules)
+- [Installation](#installation)
+- [Runtime Quick Start](#runtime-quick-start)
+- [Build](#build)
+- [Development](#development)
+- [Documentation](#documentation)
+- [Samples](#samples)
+- [OSS Project Policies](#oss-project-policies)
+- [License](#license)
 
 ## Requirements
 
 - Build tooling modules: JDK 21+, Maven 3.9+
 - Runtime modules: JDK 25+, GraalVM 25.x+, Maven 3.9+
 - CI and local quality checks assume the Maven wrapper: `./mvnw`
+
+## Repository Layout
+
+The repository is organized into three layers:
+
+- `api`: shared annotations and contract model
+- `runtime`: core executor API, Spring Boot integration, and BOM
+- `build-tools`: contract parsing and Java interface generation
 
 ## Modules
 
@@ -24,7 +51,14 @@ The repository is organized into three layers:
 - `build-tools/polyglot-codegen`: contract parser and Java source generator
 - `build-tools/polyglot-codegen-maven-plugin`: Maven integration for code generation
 
-## Runtime Quick Start
+## Installation
+
+Artifacts are published under:
+
+- Group ID: `io.github.ih0r-d`
+- BOM: `polyglot-bom`
+- Core runtime: `polyglot-adapter`
+- Spring Boot starter: `polyglot-spring-boot-starter`
 
 Import the runtime BOM:
 
@@ -60,6 +94,8 @@ Add the Spring Boot starter if needed:
 </dependency>
 ```
 
+## Runtime Quick Start
+
 Typical Spring Boot happy path:
 
 ```java
@@ -75,6 +111,8 @@ public interface GreetingService {
 }
 ```
 
+Minimal Spring Boot configuration:
+
 ```yaml
 polyglot:
   core:
@@ -85,8 +123,7 @@ polyglot:
     warmup-on-startup: true
 ```
 
-When `@EnablePolyglotClients` does not declare `basePackages`, the starter scans the package of
-the importing configuration class.
+When `@EnablePolyglotClients` does not declare `basePackages`, the starter scans the package of the importing configuration class.
 
 Add only the language runtimes you enable:
 
@@ -106,20 +143,6 @@ Add only the language runtimes you enable:
 </dependency>
 ```
 
-## Documentation
-
-The project documentation is maintained in [`docs/`](docs/):
-
-- [`docs/index.md`](docs/index.md)
-- [`docs/overview.md`](docs/overview.md)
-- [`docs/architecture.md`](docs/architecture.md)
-- [`docs/compatibility.md`](docs/compatibility.md)
-- [`docs/runtime.md`](docs/runtime.md)
-- [`docs/codegen.md`](docs/codegen.md)
-- [`docs/concepts.md`](docs/concepts.md)
-- [`docs/release-process.md`](docs/release-process.md)
-- [`docs/roadmap.md`](docs/roadmap.md)
-
 ## Build
 
 Run the full build:
@@ -134,9 +157,38 @@ Run the stricter local quality gate:
 ./mvnw -B -ntp -Pquality verify
 ```
 
+## Development
+
+Local developer tooling and helper scripts are available in [`.dev/`](.dev/).
+
+If present, start with [`.dev/README.md`](.dev/README.md) for local workflows, helper commands, and repository-specific development utilities.
+
+Main project commands use the Maven wrapper:
+
+```bash
+./mvnw clean verify
+./mvnw -B -ntp -Pquality verify
+```
+
+## Documentation
+
+Project documentation is maintained in [`docs/`](docs/). Start with [`docs/index.md`](docs/index.md).
+
+- [`docs/index.md`](docs/index.md)
+- [`docs/overview.md`](docs/overview.md)
+- [`docs/architecture.md`](docs/architecture.md)
+- [`docs/compatibility.md`](docs/compatibility.md)
+- [`docs/runtime.md`](docs/runtime.md)
+- [`docs/codegen.md`](docs/codegen.md)
+- [`docs/concepts.md`](docs/concepts.md)
+- [`docs/release-process.md`](docs/release-process.md)
+- [`docs/roadmap.md`](docs/roadmap.md)
+
 ## Samples
 
-The `samples/` directory contains example applications. Those modules are demonstrative only and are not the canonical source of documentation.
+The `samples/` directory contains example applications.
+
+Those modules are intended for demonstration and experimentation only; canonical behavior and supported configuration are documented in [`docs/`](docs/).
 
 ## OSS Project Policies
 
