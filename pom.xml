@@ -64,7 +64,7 @@
 
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     <sonar.organization>ih0r-d</sonar.organization>
-    <sonar.projectKey>ih0r-d_polyglot-platform</sonar.projectKey>
+    <sonar.projectKey>ih0r-d_polyglot-adapter</sonar.projectKey>
     <sonar.exclusions>samples/**</sonar.exclusions>
     <sonar.coverage.exclusions>samples/**</sonar.coverage.exclusions>
   </properties>
