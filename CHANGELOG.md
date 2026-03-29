@@ -1,3 +1,102 @@
+# Polyglot-adapter changelog
+
+All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be documented in this file.
+
+## [0.2.0] - 2026-03-29
+
+
+### ➕ Added
+- update demo to explicit ScriptSource wiring (731f124)
+- add Spring ScriptSource, warmup and metrics support (b9eb0eb)
+- improve Python return type inference with heterogeneous fallback (9933aa2)
+- add package support and migrate example to generated interfaces (bc83f66)
+- integrate polyglot-codegen maven plugin and update examples (752172a)
+- support class and dict-style exports (258e9d5)
+
+
+### ⚙️ Changed
+- decouple script loading via ScriptSource SPI (96e3a2c)
+- stabilize autoconfig, startup lifecycle, and tests (c52b307)
+- update application.yml for spring boot example (4088417)
+- extract repeated option values into constants (fb98b3f)
+- drop deprecated resource provider in favor of ScriptSource (dca088a)
+- introduce contract-api and decouple codegen from runtime (985eafe)
+- move codegen and graal to Maven profiles (fb2e7bb)
+- unify parsers under LanguageParser and introduce registry dispatch (84ac062)
+- refine generated header and checksum format (28e0cbc)
+- split codegen into separate parent with contract-api and maven-plugin modules (0deffdb)
+- repository structure, build configuration, and documentation cleanup (79ef05b)
+- move example project to samples (90c9dbc)
+- update docs and github actions (cc45bc7)
+- cleanup samples projects (99fb650)
+- simplify local automation and document .dev layout (91a10ac)
+
+
+### ✅ Fixed
+- replace field injection with constructor injection in PolyglotClientFactoryBean (7fd6e27)
+- add codegen example, small updates on other examples (b477299)
+- update maven dependencies (149f6f1)
+- update maven dependencies (757989c)
+- update maven-plugin-api.version to v3.9.14 (bc68777)
+- reduce vulnerable dependencies in sample modules (0876dc6)
+- update examples to current project layout (f932c1c)
+- update dependencies versions to fix security vulnerability (91031d0)
+- harden @PolyglotClient convention binding (081e91e)
+- harden Spring DX, fail-fast startup, and runtime contract (1e6f63f)
+- scope mockito agent to runtime modules and fix strict docs link (ec142d3)
+- update sonar project key (0067d45)
+
+
+### 🧪 Internal
+- align build script with Maven skipTests semantics (f34e13b)
+- rename java-example to java-maven-example (db37a64)
+- fix AbstractPolyglotExecutor tests after ScriptSource SPI (3b9fa7d)
+- apply spotless formatting (8deb78c)
+- normalize workflows (ci, security, release) (cad32ac)
+- fix ref condition in release script (fbaeb0e)
+- update github actions to v6 (b270e39)
+- update dependency org.apache.maven.plugins:maven-enforcer-plugin to v3.6.2 (5eb2f1c)
+- fix JaCoCo, surefire argLine and starter test setup (68683df)
+- establish sonar new code baseline (fd4c283)
+- add SonarCloud quality gate and coverage badges (9787b1d)
+- add sonar maven plugin and project configuration (e0674b1)
+- update dependency org.sonarsource.scanner.maven:sonar-maven-plugin to v5 (b640639)
+- apply spotless formatting (16e1a1b)
+- get language from filename by extension (60f9efd)
+- add new stats_api_v2 example and update libraries_api (9f339bc)
+- update actions/upload-artifact action to v7 (bdd4c2a)
+- rename to polyglot-platform, update SCM, Sonar key, and README (84226a7)
+- initial documentation setup (f6131cd)
+- add Java+Python AOT example workflow (91831c3)
+- update dependency maven to v3.9.14 (4ec5229)
+- update github actions to v6 (478bef4)
+- update dependency org.apache.maven.plugins:maven-surefire-plugin to v3.5.5 (3662d27)
+- update dependency junit:junit to v3.8.2 (7ab3c71)
+- fix workflows and improve CI pipeline (75aa3f1)
+- update dependency com.diffplug.spotless:spotless-maven-plugin to v3.3.0 (83d0c72)
+- update dependency org.apache.maven.plugins:maven-compiler-plugin to v3.15.0 (e3d9750)
+- stabilize Maven CI and published Javadocs (dec49ce)
+- update dependency org.codehaus.mojo:exec-maven-plugin to v3.6.3 (6edd083)
+- update dependency numpy to v2.4.3 (10379ee)
+- update dependency faker to v26.3.0 (d65ad3d)
+- update dependency maven to v3.9.14 (8a39184)
+- simplify .dev tasks for root aggregator (4c811c8)
+- scope workflow triggers and harden security jobs (07d420f)
+- fix invalid secret checks in analysis workflow (88a6fbe)
+- fix quality profile spotbugs findings (7f0d06e)
+- consolidate checks and streamline workflow layout (2978cb9)
+- improve polyglot-adapter coverage and Sonar analysis (261dc84)
+- run sonar once for monorepo (53d4742)
+- enforce 70% coverage and publish sonar summary (5e8c84b)
+- add preload and startup stabilization coverage (11bc48b)
+- raise Sonar coverage with targeted API and starter tests (97299ff)
+- harden workflow permissions and pin third-party actions (75659a5)
+- refresh root readme with badges and project overview (7fac086)
+- make Maven Central publishing manual-only (801b62f)
+- make local release task prepare/tag only (e54cfe3)
+- allow release script to resume prepared releases (f097c2d)
+
+
 # polyglot-adapter changelog
 
 All notable changes to **polyglot-adapter** are documented in this file.
