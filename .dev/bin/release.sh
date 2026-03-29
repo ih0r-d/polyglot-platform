@@ -56,6 +56,7 @@ if [ "$already_prepared" = false ]; then
   git cliff --config .git-cliff.toml \
     --unreleased \
     --tag "$VERSION" \
+    --strip header \
     --prepend CHANGELOG.md
 fi
 
