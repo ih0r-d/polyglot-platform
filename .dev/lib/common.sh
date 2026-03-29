@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEV_DIR="$(cd "$LIB_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$DEV_DIR/.." && pwd)"
 
 setup_java_home() {

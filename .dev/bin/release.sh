@@ -22,8 +22,6 @@ run_mvn versions:set \
   -DprocessAllModules=true \
   -DgenerateBackupPoms=false
 
-run_mvn -Prelease deploy
-
 git cliff --config .git-cliff.toml \
   --unreleased \
   --tag "$VERSION" \
@@ -37,4 +35,5 @@ git tag -a "v$VERSION" -m "Release $VERSION"
 git push origin main
 git push origin "v$VERSION"
 
-echo "✅ Release $VERSION completed"
+echo "✅ Release $VERSION prepared, tagged, and pushed"
+echo "ℹ Maven Central publishing is manual-only via GitHub Actions workflow_dispatch"

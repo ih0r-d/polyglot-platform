@@ -37,7 +37,7 @@ tasks:
       - ./bin/bump.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{else}} patch{{end}}
 
   release:
-    desc: Release the full project
+    desc: Prepare, tag, and push a release without Maven Central publishing
     cmds:
       - ./bin/release.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 

@@ -27,6 +27,7 @@ Use Task only as a convenience alias layer:
 - `task -t .dev/Taskfile.yaml build`
 - `task -t .dev/Taskfile.yaml bump -- minor`
 - `task -t .dev/Taskfile.yaml release -- 1.2.3`
+- `task -t .dev/Taskfile.yaml bump -- patch`
 
 ## Rules
 
@@ -45,4 +46,6 @@ Use Task only as a convenience alias layer:
 ## Safety
 
 - `release.sh` expects a clean working tree.
+- `release.sh` updates project versions, regenerates `CHANGELOG.md`, commits, creates `v<version>`, and pushes `main` plus the tag.
+- `release.sh` does not publish to Maven Central. Maven Central publishing is manual-only through `.github/workflows/publish-maven-central.yaml`.
 - `clean-remote-tags.sh` deletes remote tags that do not exist locally.

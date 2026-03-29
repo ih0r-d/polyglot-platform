@@ -9,8 +9,10 @@ This project should publish releases as repeatable, reviewable changes rather th
 3. Review dependency, security, and CodeQL workflow results.
 4. Update `CHANGELOG.md` and any release notes.
 5. Confirm documentation and samples match the released API.
-6. Push a `v*` tag to trigger the GitHub release workflow.
-7. Run the `Publish Maven Central` workflow manually with that exact tag after the tag is in GitHub.
+6. Run `task -t .dev/Taskfile.yaml release -- <version>` to set the release version, update `CHANGELOG.md`, commit, tag, and push.
+7. Run `task -t .dev/Taskfile.yaml bump -- patch` after the release if you want to move `main` to the next patch snapshot.
+8. Push the snapshot bump commit if you created one locally.
+9. Run the `Publish Maven Central` workflow manually with the exact release tag after the tag is in GitHub.
 
 ## Release Automation
 
@@ -19,6 +21,7 @@ This project should publish releases as repeatable, reviewable changes rather th
 - Maven Central publishing is intentionally not part of the tag-push workflow.
 - Publishing to Maven Central runs only from `.github/workflows/publish-maven-central.yaml`, triggered with `workflow_dispatch`.
 - The manual publish workflow checks out the requested tag, verifies it matches the Maven project version, and deploys with the existing Maven `release` profile and signing configuration.
+- Local `.dev/bin/release.sh` no longer runs Maven `deploy`; it only prepares and pushes the Git commit and tag for the release.
 
 ## Release Expectations
 
