@@ -33,6 +33,6 @@ while IFS= read -r pom_file; do
   pom_files+=("$pom_file")
 done < <(project_pom_files)
 git add "${pom_files[@]}"
-git commit -m "Bump version: $CURRENT → $NEXT" || true
+git commit -m "chore(version): bump $CURRENT to $NEXT" || true
 
 echo "✅ Bumped: $CURRENT → $NEXT"

@@ -61,7 +61,7 @@ if [ "$already_prepared" = false ]; then
 fi
 
 git add CHANGELOG.md "${pom_files[@]}"
-git commit -m "Release $VERSION" || true
+git commit -m "chore(release): $VERSION" || true
 git tag -a "v$VERSION" -m "Release $VERSION"
 
 git push origin main
