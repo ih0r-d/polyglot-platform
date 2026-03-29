@@ -1,0 +1,65 @@
+name: Publish Maven Central
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Git tag to publish, for example v0.2.0
+        required: true
+        type: string
+
+concurrency:
+  group: publish-maven-central-${{ inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish Maven Central
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tagged release
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: refs/tags/${{ inputs.tag }}
+
+      - name: Set up Temurin JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: maven
+          server-id: central
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: GPG_PASSPHRASE
+
+      - name: Verify tag exists locally
+        run: |
+          git rev-parse --verify "refs/tags/${{ inputs.tag }}"
+
+      - name: Verify tag matches project version
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          project_version="$(./mvnw -q -DforceStdout org.apache.maven.plugins:maven-help-plugin:3.5.1:evaluate -Dexpression=project.version)"
+          release_version="${project_version%-SNAPSHOT}"
+          tag_version="${RELEASE_TAG#v}"
+          if [ "$release_version" != "$tag_version" ]; then
+            echo "Tag ${RELEASE_TAG} does not match project version ${project_version}" >&2
+            exit 1
+          fi
+
+      - name: Deploy to Maven Central
+        env:
+          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          ./mvnw -B -ntp -Prelease -DskipTests deploy \
+            -Dgpg.passphrase="${GPG_PASSPHRASE}"
