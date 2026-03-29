@@ -40,8 +40,10 @@ jobs:
           gpg-passphrase: GPG_PASSPHRASE
 
       - name: Verify tag exists locally
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          git rev-parse --verify "refs/tags/${{ inputs.tag }}"
+          git rev-parse --verify "refs/tags/${RELEASE_TAG}"
 
       - name: Verify tag matches project version
         env:
