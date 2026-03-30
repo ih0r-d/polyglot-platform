@@ -16,25 +16,33 @@ import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.polyglot.annotations.spring.client.PolyglotClientFactoryBean;
 import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 
-/// # PolyglotStartupLifecycle
-///
-/// Internal Spring lifecycle component responsible for:
-/// - Polyglot engine warmup
-/// - Early client validation when fail-fast is enabled
-/// - Single startup summary log
-///
-/// ## Responsibilities
-/// - Perform safe NOOP warmup for enabled languages
-/// - Optionally preload configured scripts
-/// - Eagerly instantiate polyglot clients when fail-fast is enabled
-/// - Fail fast if configured startup work fails
-/// - Emit a single structured startup summary when enabled
-///
-/// ## Design notes
-/// - Internal component (not public API)
-/// - Executors own Context lifecycle
-/// - Uses SmartLifecycle for deterministic startup ordering
-///
+/**
+ * Internal Spring lifecycle component responsible for:
+ *
+ * <ul>
+ *   <li>Polyglot engine warmup
+ *   <li>Early client validation when fail-fast is enabled
+ *   <li>A single startup summary log
+ * </ul>
+ *
+ * <p><strong>Responsibilities:</strong>
+ *
+ * <ul>
+ *   <li>Perform safe NOOP warmup for enabled languages
+ *   <li>Optionally preload configured scripts
+ *   <li>Eagerly instantiate polyglot clients when fail-fast is enabled
+ *   <li>Fail fast if configured startup work fails
+ *   <li>Emit a single structured startup summary when enabled
+ * </ul>
+ *
+ * <p><strong>Design notes:</strong>
+ *
+ * <ul>
+ *   <li>Internal component, not public API
+ *   <li>Executors own context lifecycle
+ *   <li>Uses {@link SmartLifecycle} for deterministic startup ordering
+ * </ul>
+ */
 public final class PolyglotStartupLifecycle implements SmartLifecycle {
 
   private static final Logger log = LoggerFactory.getLogger(PolyglotStartupLifecycle.class);
@@ -47,6 +55,15 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
 
   private volatile boolean running;
 
+  /**
+   * Creates a lifecycle using eager executor instances.
+   *
+   * @param properties starter properties
+   * @param beanFactory bean factory used for eager client validation
+   * @param runtimeState runtime state recorder
+   * @param pyExecutor Python executor instance, if available
+   * @param jsExecutor JavaScript executor instance, if available
+   */
   public PolyglotStartupLifecycle(
       PolyglotProperties properties,
       ConfigurableListableBeanFactory beanFactory,
@@ -61,6 +78,15 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
         PolyglotObjectProviders.providerOf(jsExecutor));
   }
 
+  /**
+   * Creates a lifecycle using lazy executor providers.
+   *
+   * @param properties starter properties
+   * @param beanFactory bean factory used for eager client validation
+   * @param runtimeState runtime state recorder
+   * @param pyExecutor provider for the optional Python executor
+   * @param jsExecutor provider for the optional JavaScript executor
+   */
   public PolyglotStartupLifecycle(
       PolyglotProperties properties,
       ConfigurableListableBeanFactory beanFactory,
@@ -271,7 +297,7 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
     return running;
   }
 
-  /// Run as late as possible
+  /** Runs as late as possible in the Spring lifecycle. */
   @Override
   public int getPhase() {
     return Integer.MAX_VALUE;

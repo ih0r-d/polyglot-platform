@@ -12,7 +12,11 @@ import io.github.ih0rd.polyglot.model.config.CodegenConfig;
  */
 public interface LanguageParser {
 
-  /** Returns the language handled by this parser. */
+  /**
+   * Returns the language handled by this parser.
+   *
+   * @return supported language implemented by this parser
+   */
   SupportedLanguage language();
 
   /**

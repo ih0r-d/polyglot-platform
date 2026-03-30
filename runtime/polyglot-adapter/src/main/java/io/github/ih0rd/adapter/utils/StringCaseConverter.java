@@ -3,43 +3,41 @@ package io.github.ih0rd.adapter.utils;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-/// # StringCaseConverter
-/// Utility class for transforming strings between `snake_case` and `camelCase`.
-///
-/// ---
-/// ### Description
-/// Provides static helper methods to convert identifiers between common Java and Python naming
-// styles:
-/// - `snake_case` → `camelCase`
-/// - `camelCase` → `snake_case`
-///
-/// ---
-/// ### Example
-/// ```java
-/// String a = StringCaseConverter.camelToSnake("myTestString"); // "my_test_string"
-/// String b = StringCaseConverter.snakeToCamel("example_name"); // "exampleName"
-/// ```
+/**
+ * Utility class for transforming strings between {@code snake_case} and {@code camelCase}.
+ *
+ * <p>Provides static helper methods to convert identifiers between common Java and Python naming
+ * styles:
+ *
+ * <ul>
+ *   <li>{@code snake_case -> camelCase}
+ *   <li>{@code camelCase -> snake_case}
+ * </ul>
+ *
+ * <p><strong>Example:</strong>
+ *
+ * <pre>{@code
+ * String a = StringCaseConverter.camelToSnake("myTestString"); // "my_test_string"
+ * String b = StringCaseConverter.snakeToCamel("example_name"); // "exampleName"
+ * }</pre>
+ */
 public class StringCaseConverter {
 
   private StringCaseConverter() {}
 
-  /// ### snakeToCamel
-  /// Converts a string from `snake_case` to `camelCase`.
-  ///
-  /// ---
-  /// #### Parameters
-  /// - `snakeCase` — input string written in `snake_case`.
-  ///
-  /// ---
-  /// #### Returns
-  /// The converted string in `camelCase` form.
-  ///
-  /// ---
-  /// #### Example
-  /// ```java
-  /// String result = StringCaseConverter.snakeToCamel("hello_world");
-  /// // result = "helloWorld"
-  /// ```
+  /**
+   * Converts a string from {@code snake_case} to {@code camelCase}.
+   *
+   * <p><strong>Example:</strong>
+   *
+   * <pre>{@code
+   * String result = StringCaseConverter.snakeToCamel("hello_world");
+   * // result = "helloWorld"
+   * }</pre>
+   *
+   * @param snakeCase input string written in {@code snake_case}
+   * @return the converted string in {@code camelCase} form
+   */
   public static String snakeToCamel(String snakeCase) {
     if (snakeCase == null || snakeCase.isEmpty()) {
       return snakeCase;
@@ -51,23 +49,19 @@ public class StringCaseConverter {
             .collect(Collectors.joining());
   }
 
-  /// ### camelToSnake
-  /// Converts a string from `camelCase` to `snake_case`.
-  ///
-  /// ---
-  /// #### Parameters
-  /// - `camelCase` — input string written in `camelCase`.
-  ///
-  /// ---
-  /// #### Returns
-  /// The converted string in `snake_case` form.
-  ///
-  /// ---
-  /// #### Example
-  /// ```java
-  /// String result = StringCaseConverter.camelToSnake("myTestString");
-  /// // result = "my_test_string"
-  /// ```
+  /**
+   * Converts a string from {@code camelCase} to {@code snake_case}.
+   *
+   * <p><strong>Example:</strong>
+   *
+   * <pre>{@code
+   * String result = StringCaseConverter.camelToSnake("myTestString");
+   * // result = "my_test_string"
+   * }</pre>
+   *
+   * @param camelCase input string written in {@code camelCase}
+   * @return the converted string in {@code snake_case} form
+   */
   public static String camelToSnake(String camelCase) {
     if (camelCase == null || camelCase.isEmpty()) {
       return camelCase;

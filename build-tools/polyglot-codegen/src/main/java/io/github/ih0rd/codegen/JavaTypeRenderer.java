@@ -13,6 +13,9 @@ public final class JavaTypeRenderer {
 
   private final Set<String> imports = new HashSet<>();
 
+  /** Creates a fresh renderer with an empty import collection. */
+  public JavaTypeRenderer() {}
+
   /**
    * Renders a portable type as a Java source type.
    *
@@ -43,7 +46,11 @@ public final class JavaTypeRenderer {
     return "Object";
   }
 
-  /** Returns the imports collected while rendering the current interface. */
+  /**
+   * Returns the imports collected while rendering the current interface.
+   *
+   * @return immutable view of the collected imports
+   */
   public Set<String> getImports() {
     return Set.copyOf(imports);
   }

@@ -104,7 +104,13 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
     return new JsExecutor(context, scriptSource);
   }
 
-  /** Creates a JavaScript executor using a caller-provided context. */
+  /**
+   * Creates a JavaScript executor using a caller-provided context.
+   *
+   * @param context externally managed GraalJS context
+   * @param scriptSource script source implementation
+   * @return configured executor bound to the provided context
+   */
   public static JsExecutor createWithContext(Context context, ScriptSource scriptSource) {
 
     return new JsExecutor(context, scriptSource);

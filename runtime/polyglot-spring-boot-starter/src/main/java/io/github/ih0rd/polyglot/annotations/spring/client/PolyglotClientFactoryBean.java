@@ -20,6 +20,8 @@ import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotCli
  *
  * <p>The produced bean is backed by an {@link AbstractPolyglotExecutor} and delegates method calls
  * through the runtime adapter's {@code bind(Class)} mechanism.
+ *
+ * @param <T> Java client contract type
  */
 public final class PolyglotClientFactoryBean<T> implements FactoryBean<T>, BeanFactoryAware {
 

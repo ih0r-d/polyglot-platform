@@ -33,7 +33,16 @@ public final class JavaInterfaceGenerator {
           + " */%n";
   private final JavaTypeRenderer renderer = new JavaTypeRenderer();
 
-  /** Generates a complete Java source file for the given contract. */
+  /** Creates a generator for deterministic Java interface rendering. */
+  public JavaInterfaceGenerator() {}
+
+  /**
+   * Generates a complete Java source file for the given contract.
+   *
+   * @param contract parsed contract model to render
+   * @param basePackage base Java package for the generated interface
+   * @return complete Java source file contents
+   */
   public String generate(ContractClass contract, String basePackage) {
 
     renderer.reset();

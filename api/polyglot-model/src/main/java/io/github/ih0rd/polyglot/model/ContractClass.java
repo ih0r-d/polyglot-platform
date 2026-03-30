@@ -10,6 +10,7 @@ import java.util.List;
  */
 public record ContractClass(String name, List<ContractMethod> methods) {
 
+  /** Creates an immutable contract class snapshot. */
   public ContractClass {
     methods = List.copyOf(methods);
   }

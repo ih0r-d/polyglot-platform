@@ -30,6 +30,8 @@ public @interface PolyglotClient {
    * Allowed guest languages for this client.
    *
    * <p>An empty array enables automatic resolution based on the executors available at runtime.
+   *
+   * @return explicitly allowed guest languages, or an empty array for automatic resolution
    */
   SupportedLanguage[] languages() default {};
 
@@ -41,6 +43,8 @@ public @interface PolyglotClient {
    * <p>For Python, {@link Convention#DEFAULT} and {@link Convention#BY_INTERFACE_EXPORT} currently
    * use the same export-based invocation path, but {@code BY_INTERFACE_EXPORT} is the explicit
    * convention name while {@code DEFAULT} remains the backward-compatible default.
+   *
+   * @return binding convention used when resolving guest-language members
    */
   Convention convention() default Convention.DEFAULT;
 }

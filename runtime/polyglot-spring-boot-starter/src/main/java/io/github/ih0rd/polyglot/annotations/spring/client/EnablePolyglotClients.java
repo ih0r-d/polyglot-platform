@@ -21,6 +21,8 @@ public @interface EnablePolyglotClients {
    * Base packages to scan for polyglot client interfaces.
    *
    * <p>When left empty, the starter scans the package of the importing configuration class.
+   *
+   * @return base packages to scan for {@code @PolyglotClient} interfaces
    */
   String[] basePackages() default {};
 }

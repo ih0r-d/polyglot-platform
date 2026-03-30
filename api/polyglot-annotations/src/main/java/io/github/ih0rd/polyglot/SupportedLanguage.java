@@ -13,7 +13,9 @@ import java.util.Arrays;
  * </ul>
  */
 public enum SupportedLanguage {
+  /** Python guest-language support. */
   PYTHON("python", ".py"),
+  /** JavaScript guest-language support. */
   JS("js", ".js");
 
   private final String id;
@@ -24,12 +26,20 @@ public enum SupportedLanguage {
     this.ext = ext;
   }
 
-  /** Returns the GraalVM language id, for example {@code python} or {@code js}. */
+  /**
+   * Returns the GraalVM language id, for example {@code python} or {@code js}.
+   *
+   * @return GraalVM language identifier
+   */
   public String id() {
     return id;
   }
 
-  /** Returns the default file extension for scripts in this language. */
+  /**
+   * Returns the default file extension for scripts in this language.
+   *
+   * @return default script file extension including the leading dot
+   */
   public String ext() {
     return ext;
   }

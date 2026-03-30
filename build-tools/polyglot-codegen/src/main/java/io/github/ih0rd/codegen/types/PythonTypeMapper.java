@@ -10,21 +10,26 @@ import io.github.ih0rd.polyglot.model.types.PolyPrimitive;
 import io.github.ih0rd.polyglot.model.types.PolyType;
 import io.github.ih0rd.polyglot.model.types.PolyUnknown;
 
-/// # PythonTypeMapper
-///
-/// Maps Python type annotations to canonical {@link PolyType}.
-///
-/// Responsibilities:
-/// - Convert Python primitive type names to canonical type model
-/// - Parse generic type hints (e.g., List[int], Dict[String, int])
-/// - Provide safe fallback for unsupported or unknown types
-///
-/// Design notes:
-/// - This class handles primitive and generic mappings
-/// - Container types (list, dict) are handled recursively
-/// - No Java-specific logic is allowed here
-/// - No rendering concerns — only canonical type mapping
-///
+/**
+ * Maps Python type annotations to canonical {@link PolyType}.
+ *
+ * <p><strong>Responsibilities:</strong>
+ *
+ * <ul>
+ *   <li>Convert Python primitive type names to the canonical type model
+ *   <li>Parse generic type hints such as {@code List[int]} and {@code Dict[String, int]}
+ *   <li>Provide a safe fallback for unsupported or unknown types
+ * </ul>
+ *
+ * <p><strong>Design notes:</strong>
+ *
+ * <ul>
+ *   <li>This class handles primitive and generic mappings
+ *   <li>Container types such as lists and dictionaries are handled recursively
+ *   <li>No Java-specific logic is allowed here
+ *   <li>No rendering concerns, only canonical type mapping
+ * </ul>
+ */
 public final class PythonTypeMapper implements LanguageTypeMapper {
 
   private static final Map<String, PolyType> PRIMITIVES =
@@ -39,13 +44,15 @@ public final class PythonTypeMapper implements LanguageTypeMapper {
           "tuple", new PolyList(new PolyUnknown()),
           "Any", new PolyUnknown());
 
-  /// ### mapPrimitive
-  ///
-  /// Maps a Python primitive type name or type hint to {@link PolyType}.
-  ///
-  /// @param languageType Python type name (e.g. "int", "List[String]")
-  /// @return canonical {@link PolyType}, or {@link PolyUnknown} if unsupported
-  ///
+  /** Creates a mapper for Python primitive and generic type hints. */
+  public PythonTypeMapper() {}
+
+  /**
+   * Maps a Python primitive type name or type hint to {@link PolyType}.
+   *
+   * @param languageType Python type name, for example {@code int} or {@code List[String]}
+   * @return canonical {@link PolyType}, or {@link PolyUnknown} if unsupported
+   */
   @Override
   public PolyType mapPrimitive(String languageType) {
     if (languageType == null || languageType.isBlank()) {

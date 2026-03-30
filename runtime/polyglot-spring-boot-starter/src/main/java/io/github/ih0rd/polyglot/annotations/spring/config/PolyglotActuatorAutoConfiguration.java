@@ -24,6 +24,9 @@ import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties
 @ConditionalOnProperty(prefix = "polyglot.actuator", name = "enabled", matchIfMissing = true)
 public class PolyglotActuatorAutoConfiguration {
 
+  /** Creates the actuator auto-configuration bean container. */
+  public PolyglotActuatorAutoConfiguration() {}
+
   /**
    * Creates the actuator info contributor.
    *

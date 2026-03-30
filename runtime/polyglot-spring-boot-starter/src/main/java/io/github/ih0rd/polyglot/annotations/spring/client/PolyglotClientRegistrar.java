@@ -28,6 +28,9 @@ import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotCli
  */
 public final class PolyglotClientRegistrar implements ImportBeanDefinitionRegistrar {
 
+  /** Creates the registrar used by {@link EnablePolyglotClients}. */
+  public PolyglotClientRegistrar() {}
+
   /**
    * Registers {@link PolyglotClientFactoryBean} definitions for each discovered client interface.
    *

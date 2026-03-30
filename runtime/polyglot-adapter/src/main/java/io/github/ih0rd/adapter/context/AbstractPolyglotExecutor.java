@@ -72,12 +72,17 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
     this.scriptSource = scriptSource;
   }
 
-  /** Returns the GraalVM language id, for example {@code python} or {@code js}. */
+  /**
+   * Returns the GraalVM language id, for example {@code python} or {@code js}.
+   *
+   * @return GraalVM language identifier used by the executor
+   */
   protected abstract String languageId();
 
   /**
    * Executes a guest-language method corresponding to a Java contract method.
    *
+   * @param convention binding convention used to resolve the guest-language target
    * @param methodName method name on the Java interface
    * @param memberTargetType bound contract type
    * @param args call arguments
@@ -181,10 +186,22 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
         "Binding validation is not implemented for executor: " + getClass().getSimpleName());
   }
 
+  /**
+   * Returns a non-null binding convention.
+   *
+   * @param convention requested convention
+   * @return validated convention
+   */
   protected final Convention requireConvention(Convention convention) {
     return Objects.requireNonNull(convention, "Convention must not be null");
   }
 
+  /**
+   * Returns the contract methods declared by the interface, excluding {@link Object} methods.
+   *
+   * @param iface contract interface type
+   * @return contract methods eligible for binding and validation
+   */
   protected final Method[] contractMethods(Class<?> iface) {
     return java.util.Arrays.stream(iface.getMethods())
         .filter(method -> method.getDeclaringClass() != Object.class)
@@ -269,12 +286,24 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
     }
   }
 
+  /**
+   * Runs an action while holding the context monitor and returns its result.
+   *
+   * @param action action to run under the context lock
+   * @param <T> action result type
+   * @return result returned by the action
+   */
   protected final <T> T withContextLock(Supplier<T> action) {
     synchronized (contextMonitor) {
       return action.get();
     }
   }
 
+  /**
+   * Runs an action while holding the context monitor.
+   *
+   * @param action action to run under the context lock
+   */
   protected final void withContextLock(Runnable action) {
     synchronized (contextMonitor) {
       action.run();

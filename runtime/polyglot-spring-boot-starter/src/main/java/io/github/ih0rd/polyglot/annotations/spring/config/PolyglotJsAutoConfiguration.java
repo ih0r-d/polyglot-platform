@@ -26,6 +26,9 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
 @ConditionalOnProperty(prefix = "polyglot.js", name = "enabled", havingValue = "true")
 public class PolyglotJsAutoConfiguration {
 
+  /** Creates the JavaScript auto-configuration bean container. */
+  public PolyglotJsAutoConfiguration() {}
+
   /**
    * Creates the JavaScript script source backed by Spring resources.
    *

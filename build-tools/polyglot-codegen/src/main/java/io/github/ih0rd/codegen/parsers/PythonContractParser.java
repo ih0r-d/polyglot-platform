@@ -22,6 +22,12 @@ import io.github.ih0rd.polyglot.model.types.PolyPrimitive;
 import io.github.ih0rd.polyglot.model.types.PolyType;
 import io.github.ih0rd.polyglot.model.types.PolyUnknown;
 
+/**
+ * Python parser that extracts exported contracts from guest-language source files.
+ *
+ * <p>Supports exported classes and exported dictionaries of top-level functions, then maps Python
+ * signatures to the shared contract model used by code generation.
+ */
 public final class PythonContractParser implements LanguageParser {
 
   private static final String PYTHON_DECORATOR_INCLUDE = "@adapter_include";
@@ -39,6 +45,9 @@ public final class PythonContractParser implements LanguageParser {
   private static final Pattern DEF_START = Pattern.compile("^" + S + "def" + S + "(" + W + ")");
 
   private final PythonTypeMapper mapper = new PythonTypeMapper();
+
+  /** Creates a parser with the default Python type mapper. */
+  public PythonContractParser() {}
 
   @Override
   public SupportedLanguage language() {

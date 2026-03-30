@@ -13,6 +13,7 @@ import io.github.ih0rd.polyglot.model.types.PolyType;
  */
 public record ContractMethod(String name, List<ContractParam> params, PolyType returnType) {
 
+  /** Creates an immutable contract method snapshot. */
   public ContractMethod {
     params = List.copyOf(params);
   }

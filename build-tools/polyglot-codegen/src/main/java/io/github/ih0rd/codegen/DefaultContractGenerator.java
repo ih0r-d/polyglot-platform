@@ -26,6 +26,7 @@ public final class DefaultContractGenerator implements ContractGenerator {
 
   private final Map<SupportedLanguage, LanguageParser> parsers;
 
+  /** Creates a generator with the built-in parser set. */
   public DefaultContractGenerator() {
     this(DEFAULT_PARSERS);
   }

@@ -23,6 +23,7 @@ public record PolyglotProperties(
     ActuatorProperties actuator,
     MetricsProperties metrics) {
 
+  /** Creates normalized root starter properties with defaults for missing nested groups. */
   public PolyglotProperties {
     core = (core != null) ? core : CoreProperties.defaults();
     python = (python != null) ? python : PythonProperties.defaults();
@@ -44,12 +45,18 @@ public record PolyglotProperties(
   public record CoreProperties(
       boolean enabled, boolean failFast, boolean logMetadataOnStartup, String logLevel) {
 
+    /** Creates normalized core properties with a fallback startup log level. */
     public CoreProperties {
       if (logLevel == null || logLevel.isBlank()) {
         logLevel = "debug";
       }
     }
 
+    /**
+     * Returns the default core settings.
+     *
+     * @return default core properties
+     */
     public static CoreProperties defaults() {
       return new CoreProperties(true, true, true, "DEBUG");
     }
@@ -77,10 +84,16 @@ public record PolyglotProperties(
       boolean warmupOnStartup,
       List<String> preloadScripts) {
 
+    /** Creates normalized Python properties with immutable preload scripts. */
     public PythonProperties {
       preloadScripts = (preloadScripts != null) ? List.copyOf(preloadScripts) : List.of();
     }
 
+    /**
+     * Returns the default Python settings.
+     *
+     * @return default Python properties
+     */
     public static PythonProperties defaults() {
       return new PythonProperties(false, "classpath:python", true, false, List.of());
     }
@@ -102,10 +115,16 @@ public record PolyglotProperties(
   public record JsProperties(
       boolean enabled, String resourcesPath, boolean warmupOnStartup, List<String> preloadScripts) {
 
+    /** Creates normalized JavaScript properties with immutable preload scripts. */
     public JsProperties {
       preloadScripts = (preloadScripts != null) ? List.copyOf(preloadScripts) : List.of();
     }
 
+    /**
+     * Returns the default JavaScript settings.
+     *
+     * @return default JavaScript properties
+     */
     public static JsProperties defaults() {
       return new JsProperties(false, "classpath:js", false, List.of());
     }
@@ -122,11 +141,17 @@ public record PolyglotProperties(
    */
   public record ActuatorProperties(boolean enabled, InfoProperties info, HealthProperties health) {
 
+    /** Creates normalized actuator properties with nested defaults. */
     public ActuatorProperties {
       info = (info != null) ? info : new InfoProperties(true);
       health = (health != null) ? health : new HealthProperties(true);
     }
 
+    /**
+     * Returns the default actuator settings.
+     *
+     * @return default actuator properties
+     */
     public static ActuatorProperties defaults() {
       return new ActuatorProperties(true, new InfoProperties(true), new HealthProperties(true));
     }
@@ -159,6 +184,11 @@ public record PolyglotProperties(
    */
   public record MetricsProperties(boolean enabled) {
 
+    /**
+     * Returns the default metrics settings.
+     *
+     * @return default metrics properties
+     */
     public static MetricsProperties defaults() {
       return new MetricsProperties(true);
     }

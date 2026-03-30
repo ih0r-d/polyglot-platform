@@ -6,21 +6,30 @@ import io.github.ih0rd.polyglot.model.config.CodegenConfig;
 import io.github.ih0rd.polyglot.model.parser.LanguageParser;
 import io.github.ih0rd.polyglot.model.parser.ScriptDescriptor;
 
-/// # JsAstParser
-///
-/// JavaScript contract parser (stub).
-///
-/// Responsibilities:
-/// - Acts as a placeholder for future JavaScript AST-based code generation
-/// - Defines an explicit extension point for JS support
-///
-/// Design notes:
-/// - JavaScript code generation is NOT supported in the current version
-/// - This class intentionally contains no parsing logic
-/// - No assumptions are made about JavaScript module systems or exports
-/// - ScriptSource is accepted for API symmetry only
-///
+/**
+ * JavaScript contract parser stub.
+ *
+ * <p><strong>Responsibilities:</strong>
+ *
+ * <ul>
+ *   <li>Act as a placeholder for future JavaScript AST-based code generation
+ *   <li>Define an explicit extension point for JavaScript support
+ * </ul>
+ *
+ * <p><strong>Design notes:</strong>
+ *
+ * <ul>
+ *   <li>JavaScript code generation is not supported in the current version
+ *   <li>This class intentionally contains no parsing logic
+ *   <li>No assumptions are made about JavaScript module systems or exports
+ *   <li>{@link ScriptDescriptor} is accepted for API symmetry only
+ * </ul>
+ */
 public final class JsContractParser implements LanguageParser {
+
+  /** Creates the JavaScript parser placeholder. */
+  public JsContractParser() {}
+
   @Override
   public SupportedLanguage language() {
     return SupportedLanguage.JS;

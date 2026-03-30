@@ -32,7 +32,7 @@ class SpringPolyglotContextFactoryTest {
             null,
             null,
             null);
-    ObjectProvider<PolyglotContextCustomizer> customizers = mock(ObjectProvider.class);
+    ObjectProvider<PolyglotContextCustomizer> customizers = mockCustomizerProvider();
     PolyglotContextCustomizer customizer = mock(PolyglotContextCustomizer.class);
     when(customizers.orderedStream()).thenReturn(List.of(customizer).stream());
 
@@ -61,7 +61,7 @@ class SpringPolyglotContextFactoryTest {
 
   @Test
   void createAlwaysUsesRecommendedDefaultsForJs() {
-    ObjectProvider<PolyglotContextCustomizer> customizers = mock(ObjectProvider.class);
+    ObjectProvider<PolyglotContextCustomizer> customizers = mockCustomizerProvider();
     when(customizers.orderedStream()).thenReturn(List.<PolyglotContextCustomizer>of().stream());
     Context context = mock(Context.class);
 
@@ -76,5 +76,10 @@ class SpringPolyglotContextFactoryTest {
 
       assertSame(context, factory.create(SupportedLanguage.JS));
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static ObjectProvider<PolyglotContextCustomizer> mockCustomizerProvider() {
+    return mock(ObjectProvider.class);
   }
 }

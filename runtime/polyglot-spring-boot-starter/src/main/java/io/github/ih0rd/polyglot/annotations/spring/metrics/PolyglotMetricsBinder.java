@@ -38,6 +38,9 @@ public class PolyglotMetricsBinder implements SmartInitializingSingleton {
    *
    * @param pyExecutor provider for the optional Python executor
    * @param jsExecutor provider for the optional JavaScript executor
+   * @param meterRegistry Micrometer registry used for registration
+   * @param properties starter properties
+   * @param runtimeState runtime state holder
    */
   public PolyglotMetricsBinder(
       ObjectProvider<PyExecutor> pyExecutor,
@@ -57,7 +60,11 @@ public class PolyglotMetricsBinder implements SmartInitializingSingleton {
     bindTo(meterRegistry);
   }
 
-  /** Registers all applicable meters against the given registry. */
+  /**
+   * Registers all applicable meters against the given registry.
+   *
+   * @param registry registry that receives the created meters
+   */
   public void bindTo(@NonNull MeterRegistry registry) {
     Gauge.builder(
             "polyglot.executor.available.count", runtimeState, state -> state.availableExecutors())

@@ -31,6 +31,14 @@ import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties
     matchIfMissing = true)
 public class PolyglotAutoConfiguration {
 
+  /** Creates the core auto-configuration bean container. */
+  public PolyglotAutoConfiguration() {}
+
+  /**
+   * Creates the runtime state holder used by startup, actuator, and metrics integrations.
+   *
+   * @return runtime state holder
+   */
   @Bean
   @ConditionalOnMissingBean
   public PolyglotRuntimeState polyglotRuntimeState() {
@@ -55,6 +63,7 @@ public class PolyglotAutoConfiguration {
   /**
    * Creates the Spring-aware context factory used by the starter.
    *
+   * @param properties starter properties
    * @param customizers ordered customizer provider
    * @return context factory
    */

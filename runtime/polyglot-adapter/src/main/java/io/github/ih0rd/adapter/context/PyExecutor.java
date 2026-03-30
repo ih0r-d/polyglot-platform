@@ -108,6 +108,10 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
    * Creates a Python executor with a caller-provided context.
    *
    * <p>The caller remains responsible for the context lifecycle.
+   *
+   * @param context externally managed GraalPy context
+   * @param scriptSource script source implementation
+   * @return configured executor bound to the provided context
    */
   public static PyExecutor createWithContext(Context context, ScriptSource scriptSource) {
 

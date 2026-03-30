@@ -31,7 +31,13 @@ public final class PolyglotExecutors {
     this(PolyglotObjectProviders.providerOf(python), PolyglotObjectProviders.providerOf(js));
   }
 
-  /** Creates the facade from lazy executor providers. */
+  /**
+   * Creates the facade from lazy executor providers.
+   *
+   * @param python provider for the optional Python executor
+   * @param js provider for the optional JavaScript executor
+   * @return facade backed by the supplied providers
+   */
   public static PolyglotExecutors fromProviders(
       ObjectProvider<PyExecutor> python, ObjectProvider<JsExecutor> js) {
     return new PolyglotExecutors(python, js);
@@ -42,12 +48,20 @@ public final class PolyglotExecutors {
     this.js = js;
   }
 
-  /** Returns the Python executor when the Python runtime integration is enabled. */
+  /**
+   * Returns the Python executor when the Python runtime integration is enabled.
+   *
+   * @return optional Python executor
+   */
   public Optional<PyExecutor> python() {
     return Optional.ofNullable(python.getIfAvailable());
   }
 
-  /** Returns the JavaScript executor when the JavaScript runtime integration is enabled. */
+  /**
+   * Returns the JavaScript executor when the JavaScript runtime integration is enabled.
+   *
+   * @return optional JavaScript executor
+   */
   public Optional<JsExecutor> js() {
     return Optional.ofNullable(js.getIfAvailable());
   }
@@ -94,12 +108,20 @@ public final class PolyglotExecutors {
     return Map.copyOf(result);
   }
 
-  /** Returns whether the Python executor bean is currently available. */
+  /**
+   * Returns whether the Python executor bean is currently available.
+   *
+   * @return {@code true} when the Python executor is available
+   */
   public boolean isPythonEnabled() {
     return python.getIfAvailable() != null;
   }
 
-  /** Returns whether the JavaScript executor bean is currently available. */
+  /**
+   * Returns whether the JavaScript executor bean is currently available.
+   *
+   * @return {@code true} when the JavaScript executor is available
+   */
   public boolean isJsEnabled() {
     return js.getIfAvailable() != null;
   }

@@ -8,6 +8,7 @@ import java.util.List;
  * @param variants allowed variants
  */
 public record PolyUnion(List<PolyType> variants) implements PolyType {
+  /** Creates an immutable union type description. */
   public PolyUnion {
     variants = List.copyOf(variants);
   }

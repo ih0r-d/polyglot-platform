@@ -15,28 +15,39 @@ import io.github.ih0rd.polyglot.model.ContractModel;
 import io.github.ih0rd.polyglot.model.config.CodegenConfig;
 import io.github.ih0rd.polyglot.model.parser.ScriptDescriptor;
 
-/// # CodegenMain
-///
-/// Command-line entry point for polyglot contract code generation.
-///
-/// Designed for build-time execution (e.g. via Maven exec plugin).
-///
-/// ---
-///
-/// ## Responsibilities:
-/// - Parse CLI arguments
-/// - Detect script language
-/// - Delegate parsing to {@link ContractGenerator}
-/// - Generate Java interfaces
-/// - Write generated sources to output directory
-///
-/// ## Design notes:
-/// - No runtime execution
-/// - No framework coupling
-/// - Language dispatch delegated to generator
-///
+/**
+ * Command-line entry point for polyglot contract code generation.
+ *
+ * <p>Designed for build-time execution, for example via a Maven exec plugin.
+ *
+ * <p><strong>Responsibilities:</strong>
+ *
+ * <ul>
+ *   <li>Parse CLI arguments
+ *   <li>Detect script language
+ *   <li>Delegate parsing to {@link ContractGenerator}
+ *   <li>Generate Java interfaces
+ *   <li>Write generated sources to the output directory
+ * </ul>
+ *
+ * <p><strong>Design notes:</strong>
+ *
+ * <ul>
+ *   <li>No runtime execution
+ *   <li>No framework coupling
+ *   <li>Language dispatch delegated to the generator
+ * </ul>
+ */
 public final class CodegenMain {
 
+  /** Utility entry point class; not intended to be instantiated. */
+  private CodegenMain() {}
+
+  /**
+   * Runs contract generation from the command line.
+   *
+   * @param args CLI arguments in the form {@code <inputDir> <outputDir> --package=<basePackage>}
+   */
   public static void main(String[] args) {
     CliArguments cli = parseArguments(args);
     validate(cli);

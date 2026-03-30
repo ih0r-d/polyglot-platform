@@ -445,6 +445,8 @@
             <encoding>${project.build.sourceEncoding}</encoding>
             <docencoding>${project.build.sourceEncoding}</docencoding>
             <quiet>true</quiet>
+            <doclint>all</doclint>
+            <failOnWarnings>true</failOnWarnings>
           </configuration>
         </plugin>
 
@@ -516,9 +518,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <configuration>
-              <failOnError>false</failOnError>
-            </configuration>
             <executions>
               <execution>
                 <id>attach-javadocs</id>

@@ -27,7 +27,7 @@ import io.github.ih0rd.polyglot.model.parser.ScriptDescriptor;
  * <p>The plugin is bound to the {@code generate-sources} lifecycle phase and automatically
  * registers the generated sources directory as a compile source root.
  *
- * <h3>Default behaviour</h3>
+ * <p><strong>Default behaviour:</strong>
  *
  * <ul>
  *   <li>Input directory: {@code src/main/resources}
@@ -40,6 +40,9 @@ import io.github.ih0rd.polyglot.model.parser.ScriptDescriptor;
  */
 @Mojo(name = "generate", defaultPhase = LifecyclePhase.GENERATE_SOURCES, threadSafe = true)
 public final class PolyglotCodegenMojo extends AbstractMojo {
+
+  /** Creates the Maven Mojo instance used by Maven during plugin execution. */
+  public PolyglotCodegenMojo() {}
 
   /**
    * Directory containing polyglot script contracts.

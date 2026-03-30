@@ -9,6 +9,7 @@ import java.util.List;
  */
 public record ContractModel(List<ContractClass> classes) {
 
+  /** Creates an immutable contract model snapshot. */
   public ContractModel {
     classes = List.copyOf(classes);
   }

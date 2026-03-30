@@ -9,27 +9,29 @@ import org.graalvm.polyglot.Value;
 
 import io.github.ih0rd.adapter.exceptions.EvaluationException;
 
-/// # CommonUtils
-/// Utility class providing reflection and polyglot adapter helpers.
-///
-/// ---
-/// ### Responsibilities
-/// - Fast method invocation using {@link java.lang.invoke.MethodHandle}.
-/// - Primitive and wrapper argument coercion for GraalVM calls.
-/// - Reflection helpers for method discovery and validation.
-/// - Lightweight polyglot utilities (e.g., `getFirstElement()`).
-///
-/// ---
-/// ### Notes
-/// All reflection or invocation errors are wrapped in {@link
-// io.github.ih0rd.adapter.exceptions.EvaluationException}.
-///
-/// ---
-/// ### Example
-/// ```java
-/// var result = CommonUtils.invokeMethod(MyApi.class, instance, "ping");
-/// System.out.println(result.asString());
-/// ```
+/**
+ * Utility class providing reflection and polyglot adapter helpers.
+ *
+ * <p><strong>Responsibilities:</strong>
+ *
+ * <ul>
+ *   <li>Fast method invocation using {@link java.lang.invoke.MethodHandle}
+ *   <li>Primitive and wrapper argument coercion for GraalVM calls
+ *   <li>Reflection helpers for method discovery and validation
+ *   <li>Lightweight polyglot utilities such as {@code getFirstElement()}
+ * </ul>
+ *
+ * <p><strong>Notes:</strong>
+ *
+ * <p>All reflection or invocation errors are wrapped in {@link EvaluationException}.
+ *
+ * <p><strong>Example:</strong>
+ *
+ * <pre>{@code
+ * var result = CommonUtils.invokeMethod(MyApi.class, instance, "ping");
+ * System.out.println(result.asString());
+ * }</pre>
+ */
 public final class CommonUtils {
 
   private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
@@ -42,23 +44,17 @@ public final class CommonUtils {
     // utility class, do not instantiate
   }
 
-  /// ### invokeMethod
-  /// Reflectively invokes a method on the given target instance using {@link MethodHandle}.
-  ///
-  /// ---
-  /// #### Parameters
-  /// - `targetType` — the Java interface type bound to the polyglot class.
-  /// - `targetInstance` — the polyglot-mapped Java instance.
-  /// - `methodName` — the method name to call.
-  /// - `args` — optional arguments to pass.
-  ///
-  /// ---
-  /// #### Returns
-  /// {@link Value} containing the unwrapped return value.
-  ///
-  /// ---
-  /// #### Throws
-  /// {@link EvaluationException} if reflection fails or the method cannot be invoked.
+  /**
+   * Reflectively invokes a method on the given target instance using {@link MethodHandle}.
+   *
+   * @param <T> Java contract type
+   * @param targetType the Java interface type bound to the polyglot class
+   * @param targetInstance the polyglot-mapped Java instance
+   * @param methodName the method name to call
+   * @param args optional arguments to pass
+   * @return {@link Value} containing the unwrapped return value
+   * @throws EvaluationException if reflection fails or the method cannot be invoked
+   */
   public static <T> Value invokeMethod(
       Class<T> targetType, T targetInstance, String methodName, Object... args) {
 
@@ -110,9 +106,11 @@ public final class CommonUtils {
         .orElseThrow(() -> new EvaluationException("Method '" + methodName + "' not found"));
   }
 
-  /// ### coerceArguments
-  /// Coerces wrapper arguments to match primitive parameter types before reflective invocation.
-  /// GraalVM conversion is used where applicable.
+  /**
+   * Coerces wrapper arguments to primitive parameter types before reflective invocation.
+   *
+   * <p>GraalVM conversion is used where applicable.
+   */
   private static Object[] coerceArguments(Class<?>[] paramTypes, Object[] args) {
     Object[] coerced = new Object[args.length];
     for (int i = 0; i < args.length; i++) {
@@ -123,12 +121,11 @@ public final class CommonUtils {
     return coerced;
   }
 
-  /// ### coercePrimitive
-  /// Uses GraalVM {@link Value#as(Class)} for safe primitive coercion.
-  ///
-  /// ---
-  /// #### Throws
-  /// {@link IllegalArgumentException} if `null` is passed for a primitive parameter.
+  /**
+   * Uses GraalVM {@link Value#as(Class)} for safe primitive coercion.
+   *
+   * @throws IllegalArgumentException if {@code null} is passed for a primitive parameter
+   */
   private static Object coercePrimitive(Class<?> primitiveType, Object arg) {
     if (arg == null) {
       throw new IllegalArgumentException("Null passed for primitive parameter: " + primitiveType);
@@ -139,12 +136,14 @@ public final class CommonUtils {
     return arg;
   }
 
-  /// ### checkIfMethodExists
-  /// Checks whether a method exists on a given interface.
-  ///
-  /// ---
-  /// #### Throws
-  /// {@link EvaluationException} if the provided class is not an interface.
+  /**
+   * Checks whether a method exists on a given interface.
+   *
+   * @param interfaceClass Java interface to inspect
+   * @param methodName method name to look up
+   * @return {@code true} if the interface declares a method with the given name
+   * @throws EvaluationException if the provided class is not an interface
+   */
   public static boolean checkIfMethodExists(Class<?> interfaceClass, String methodName) {
     if (!interfaceClass.isInterface()) {
       throw new EvaluationException(
@@ -156,8 +155,13 @@ public final class CommonUtils {
         .anyMatch(name -> name.equals(methodName));
   }
 
-  /// ### getFirstElement
-  /// Returns the first element from a given {@link Set}, or `null` if empty.
+  /**
+   * Returns the first element from a given {@link Set}, or {@code null} if empty.
+   *
+   * @param <T> element type
+   * @param memberKeys set to inspect
+   * @return first element of the set, or {@code null} when the set is null or empty
+   */
   public static <T> T getFirstElement(Set<T> memberKeys) {
     if (memberKeys == null || memberKeys.isEmpty()) {
       return null;

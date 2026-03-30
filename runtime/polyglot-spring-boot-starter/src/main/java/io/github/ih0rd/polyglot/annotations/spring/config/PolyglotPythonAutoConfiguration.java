@@ -26,6 +26,9 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
 @ConditionalOnProperty(prefix = "polyglot.python", name = "enabled", havingValue = "true")
 public class PolyglotPythonAutoConfiguration {
 
+  /** Creates the Python auto-configuration bean container. */
+  public PolyglotPythonAutoConfiguration() {}
+
   /**
    * Creates the Python script source backed by Spring resources.
    *
