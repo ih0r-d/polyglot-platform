@@ -7,28 +7,31 @@ import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 
 import io.github.ih0rd.adapter.context.JsExecutor;
 import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotRuntimeState;
+import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.binder.MeterBinder;
 
 /**
  * Micrometer binder that exposes coarse-grained adapter metrics for the configured executors.
  *
  * <p>The binder is intentionally read-only and derives all values from executor metadata snapshots.
  */
-public class PolyglotMetricsBinder implements MeterBinder {
+public class PolyglotMetricsBinder implements SmartInitializingSingleton {
 
   private static final Logger log = LoggerFactory.getLogger(PolyglotMetricsBinder.class);
 
   private final ObjectProvider<PyExecutor> pyExecutor;
   private final ObjectProvider<JsExecutor> jsExecutor;
-  private final boolean pythonConfigured;
-  private final boolean jsConfigured;
+  private final MeterRegistry meterRegistry;
+  private final PolyglotProperties properties;
+  private final PolyglotRuntimeState runtimeState;
 
   /**
    * Creates the binder.
@@ -39,29 +42,63 @@ public class PolyglotMetricsBinder implements MeterBinder {
   public PolyglotMetricsBinder(
       ObjectProvider<PyExecutor> pyExecutor,
       ObjectProvider<JsExecutor> jsExecutor,
-      boolean pythonConfigured,
-      boolean jsConfigured) {
+      MeterRegistry meterRegistry,
+      PolyglotProperties properties,
+      PolyglotRuntimeState runtimeState) {
     this.pyExecutor = pyExecutor;
     this.jsExecutor = jsExecutor;
-    this.pythonConfigured = pythonConfigured;
-    this.jsConfigured = jsConfigured;
+    this.meterRegistry = meterRegistry;
+    this.properties = properties;
+    this.runtimeState = runtimeState;
+  }
+
+  @Override
+  public void afterSingletonsInstantiated() {
+    bindTo(meterRegistry);
   }
 
   /** Registers all applicable meters against the given registry. */
-  @Override
   public void bindTo(@NonNull MeterRegistry registry) {
-    if (pythonConfigured) {
+    Gauge.builder(
+            "polyglot.executor.available.count", runtimeState, state -> state.availableExecutors())
+        .description("Number of currently available polyglot executors")
+        .register(registry);
+
+    Gauge.builder(
+            "polyglot.executor.configured.count", this, binder -> binder.configuredExecutors())
+        .description("Number of polyglot executors enabled by configuration")
+        .register(registry);
+
+    Gauge.builder(
+            "polyglot.startup.duration",
+            runtimeState,
+            state -> nonNegative(state.startupDurationMs()))
+        .description("Polyglot startup initialization duration in milliseconds")
+        .baseUnit("milliseconds")
+        .register(registry);
+
+    int registeredLanguages = 0;
+    if (properties.python().enabled()) {
       bindPython(registry);
+      registeredLanguages++;
     }
-    if (jsConfigured) {
+    if (properties.js().enabled()) {
       bindJs(registry);
+      registeredLanguages++;
+    }
+    if (registeredLanguages > 0 && log.isDebugEnabled()) {
+      log.debug(
+          "[Polyglot][Metrics] Registered metrics for {} language(s): executor.enabled, "
+              + "executor.source.cache.size, executor.contract.cache.size",
+          registeredLanguages);
     }
   }
 
   private void bindPython(MeterRegistry registry) {
     Tags tags = baseTags(SupportedLanguage.PYTHON);
 
-    Gauge.builder("polyglot.executor.enabled", pyExecutor, provider -> enabled(provider.getIfAvailable()))
+    Gauge.builder(
+            "polyglot.executor.enabled", pyExecutor, provider -> enabled(provider.getIfAvailable()))
         .description("Whether the Python executor is enabled")
         .tags(tags)
         .register(registry);
@@ -90,15 +127,20 @@ public class PolyglotMetricsBinder implements MeterBinder {
         .tags(tags)
         .register(registry);
 
-    log.info(
-        "[Polyglot][Metrics] Python metrics registered: "
-            + "sourceCacheSize, instanceCacheSize, boundInterfaces");
+    Gauge.builder(
+            "polyglot.executor.contract.cache.size",
+            pyExecutor,
+            provider -> number(metadata(provider.getIfAvailable()), "instanceCacheSize"))
+        .description("Number of cached polyglot contract bindings")
+        .tags(tags)
+        .register(registry);
   }
 
   private void bindJs(MeterRegistry registry) {
     Tags tags = baseTags(SupportedLanguage.JS);
 
-    Gauge.builder("polyglot.executor.enabled", jsExecutor, provider -> enabled(provider.getIfAvailable()))
+    Gauge.builder(
+            "polyglot.executor.enabled", jsExecutor, provider -> enabled(provider.getIfAvailable()))
         .description("Whether the JavaScript executor is enabled")
         .tags(tags)
         .register(registry);
@@ -119,15 +161,36 @@ public class PolyglotMetricsBinder implements MeterBinder {
         .tags(tags)
         .register(registry);
 
-    log.info("[Polyglot][Metrics] JS metrics registered: sourceCacheSize, loadedInterfaces");
+    Gauge.builder(
+            "polyglot.executor.contract.cache.size",
+            jsExecutor,
+            provider -> size(metadata(provider.getIfAvailable()), "loadedInterfaces"))
+        .description("Number of cached polyglot contract bindings")
+        .tags(tags)
+        .register(registry);
   }
 
   private Tags baseTags(SupportedLanguage language) {
     return Tags.of("language", language.id());
   }
 
+  private int configuredExecutors() {
+    int configured = 0;
+    if (properties.python().enabled()) {
+      configured++;
+    }
+    if (properties.js().enabled()) {
+      configured++;
+    }
+    return configured;
+  }
+
   private static double enabled(Object executor) {
     return executor != null ? 1.0 : 0.0;
+  }
+
+  private static double nonNegative(long value) {
+    return value >= 0 ? value : 0.0;
   }
 
   private static Map<String, Object> metadata(PyExecutor executor) {

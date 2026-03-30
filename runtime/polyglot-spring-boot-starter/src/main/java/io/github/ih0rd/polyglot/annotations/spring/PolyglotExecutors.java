@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.ObjectProvider;
 
 import io.github.ih0rd.adapter.context.JsExecutor;
 import io.github.ih0rd.adapter.context.PyExecutor;
@@ -16,8 +17,8 @@ import io.github.ih0rd.adapter.context.PyExecutor;
  */
 public final class PolyglotExecutors {
 
-  private final @Nullable PyExecutor python;
-  private final @Nullable JsExecutor js;
+  private final ObjectProvider<PyExecutor> python;
+  private final ObjectProvider<JsExecutor> js;
 
   /**
    * Creates the facade.
@@ -26,18 +27,28 @@ public final class PolyglotExecutors {
    * @param js JavaScript executor, if enabled
    */
   public PolyglotExecutors(@Nullable PyExecutor python, @Nullable JsExecutor js) {
+    this(providerOf(python), providerOf(js));
+  }
+
+  /** Creates the facade from lazy executor providers. */
+  public static PolyglotExecutors fromProviders(
+      ObjectProvider<PyExecutor> python, ObjectProvider<JsExecutor> js) {
+    return new PolyglotExecutors(python, js);
+  }
+
+  private PolyglotExecutors(ObjectProvider<PyExecutor> python, ObjectProvider<JsExecutor> js) {
     this.python = python;
     this.js = js;
   }
 
   /** Returns the Python executor when the Python runtime integration is enabled. */
   public Optional<PyExecutor> python() {
-    return Optional.ofNullable(python);
+    return Optional.ofNullable(python.getIfAvailable());
   }
 
   /** Returns the JavaScript executor when the JavaScript runtime integration is enabled. */
   public Optional<JsExecutor> js() {
-    return Optional.ofNullable(js);
+    return Optional.ofNullable(js.getIfAvailable());
   }
 
   /**
@@ -47,7 +58,7 @@ public final class PolyglotExecutors {
    * @throws IllegalStateException if Python support is disabled
    */
   public PyExecutor requirePython() {
-    return Optional.ofNullable(python)
+    return Optional.ofNullable(python.getIfAvailable())
         .orElseThrow(
             () -> new IllegalStateException("Python executor is not enabled or not configured"));
   }
@@ -59,7 +70,7 @@ public final class PolyglotExecutors {
    * @throws IllegalStateException if JavaScript support is disabled
    */
   public JsExecutor requireJs() {
-    return Optional.ofNullable(js)
+    return Optional.ofNullable(js.getIfAvailable())
         .orElseThrow(
             () -> new IllegalStateException("JS executor is not enabled or not configured"));
   }
@@ -71,22 +82,48 @@ public final class PolyglotExecutors {
    */
   public Map<String, Object> metadata() {
     Map<String, Object> result = new HashMap<>();
-    if (python != null) {
-      result.put("python", python.metadata());
+    PyExecutor pythonExecutor = python.getIfAvailable();
+    if (pythonExecutor != null) {
+      result.put("python", pythonExecutor.metadata());
     }
-    if (js != null) {
-      result.put("js", js.metadata());
+    JsExecutor jsExecutor = js.getIfAvailable();
+    if (jsExecutor != null) {
+      result.put("js", jsExecutor.metadata());
     }
     return Map.copyOf(result);
   }
 
   /** Returns whether the Python executor bean is currently available. */
   public boolean isPythonEnabled() {
-    return python != null;
+    return python.getIfAvailable() != null;
   }
 
   /** Returns whether the JavaScript executor bean is currently available. */
   public boolean isJsEnabled() {
-    return js != null;
+    return js.getIfAvailable() != null;
+  }
+
+  private static <T> ObjectProvider<T> providerOf(@Nullable T instance) {
+    return new ObjectProvider<>() {
+      @Override
+      public T getObject(Object... args) {
+        return instance;
+      }
+
+      @Override
+      public T getIfAvailable() {
+        return instance;
+      }
+
+      @Override
+      public T getIfUnique() {
+        return instance;
+      }
+
+      @Override
+      public T getObject() {
+        return instance;
+      }
+    };
   }
 }

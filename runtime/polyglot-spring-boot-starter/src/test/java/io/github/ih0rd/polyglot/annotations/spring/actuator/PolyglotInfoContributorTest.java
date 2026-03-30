@@ -3,6 +3,7 @@ package io.github.ih0rd.polyglot.annotations.spring.actuator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 import java.util.Map;
 
@@ -37,6 +38,18 @@ class PolyglotInfoContributorTest {
 
   @Test
   void contributeAddsOnlyEnabledLanguageSections() {
+    when(pyExecutor.metadata())
+        .thenReturn(
+            Map.of(
+                "executorType",
+                PyExecutor.class.getName(),
+                "languageId",
+                "python",
+                "sourceCacheSize",
+                2,
+                "instanceCacheSize",
+                3));
+
     PolyglotProperties properties =
         new PolyglotProperties(
             null,
@@ -53,16 +66,34 @@ class PolyglotInfoContributorTest {
     contributor.contribute(builder);
     Map<String, Object> details = builder.build().getDetails();
     Map<?, ?> python = (Map<?, ?>) details.get("python");
+    Map<?, ?> executors = (Map<?, ?>) details.get("executors");
+    Map<?, ?> metadata = (Map<?, ?>) python.get("metadata");
 
+    assertEquals(1, executors.get("configuredCount"));
+    assertEquals(1, executors.get("availableCount"));
     assertTrue(details.containsKey("python"));
     assertFalse(details.containsKey("js"));
     assertEquals(true, python.get("available"));
     assertEquals(true, python.get("safeDefaults"));
     assertEquals(java.util.List.of("demo"), python.get("preloadScripts"));
+    assertEquals(2, metadata.get("sourceCacheSize"));
+    assertEquals(3, metadata.get("contractCacheSize"));
   }
 
   @Test
   void contributeAddsJsSectionWhenEnabled() {
+    when(jsExecutor.metadata())
+        .thenReturn(
+            Map.of(
+                "executorType",
+                JsExecutor.class.getName(),
+                "languageId",
+                "js",
+                "sourceCacheSize",
+                1,
+                "loadedInterfaces",
+                java.util.List.of("client")));
+
     PolyglotProperties properties =
         new PolyglotProperties(
             null,
@@ -80,10 +111,16 @@ class PolyglotInfoContributorTest {
     contributor.contribute(builder);
     Map<String, Object> details = builder.build().getDetails();
     Map<?, ?> js = (Map<?, ?>) details.get("js");
+    Map<?, ?> executors = (Map<?, ?>) details.get("executors");
+    Map<?, ?> metadata = (Map<?, ?>) js.get("metadata");
 
     assertFalse(details.containsKey("python"));
+    assertEquals(1, executors.get("configuredCount"));
+    assertEquals(1, executors.get("availableCount"));
     assertEquals(true, js.get("enabled"));
     assertEquals(true, js.get("available"));
     assertEquals(java.util.List.of("client"), js.get("preloadScripts"));
+    assertEquals(1, metadata.get("sourceCacheSize"));
+    assertEquals(1, metadata.get("contractCacheSize"));
   }
 }

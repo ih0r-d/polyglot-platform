@@ -15,7 +15,7 @@
     <description>polyglot-springboot-example</description>
     <properties>
         <java.version>25</java.version>
-        <polyglot.version>0.2.0</polyglot.version>
+        <polyglot.version>0.2.1-SNAPSHOT</polyglot.version>
         <!-- Python packages for GraalPy -->
         <python.package.1>faker==26.0.0</python.package.1>
         <python.package.2>tabulate==0.9.0</python.package.2>
@@ -76,6 +76,12 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <jvmArguments>
+                        --enable-native-access=ALL-UNNAMED
+                        --sun-misc-unsafe-memory-access=allow
+                    </jvmArguments>
+                </configuration>
             </plugin>
           <plugin>
             <groupId>org.graalvm.python</groupId>

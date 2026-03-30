@@ -18,6 +18,8 @@ import org.springframework.beans.factory.ObjectProvider;
 
 import io.github.ih0rd.adapter.context.JsExecutor;
 import io.github.ih0rd.adapter.context.PyExecutor;
+import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotRuntimeState;
+import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 class PolyglotMetricsBinderTest {
@@ -49,7 +51,12 @@ class PolyglotMetricsBinderTest {
         .thenReturn(Map.of("sourceCacheSize", 4, "loadedInterfaces", List.of("Api")));
 
     PolyglotMetricsBinder binder =
-        new PolyglotMetricsBinder(provider(pyExecutor), provider(jsExecutor), true, true);
+        new PolyglotMetricsBinder(
+            provider(pyExecutor),
+            provider(jsExecutor),
+            registry(),
+            enabledProperties(true, true),
+            runtimeState(42, 2));
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
     binder.bindTo(registry);
@@ -69,8 +76,25 @@ class PolyglotMetricsBinderTest {
             .gauge()
             .value());
     assertEquals(
+        3.0,
+        registry
+            .find("polyglot.executor.contract.cache.size")
+            .tag("language", "python")
+            .gauge()
+            .value());
+    assertEquals(
         1.0,
         registry.find("polyglot.js.loaded.interfaces.count").tag("language", "js").gauge().value());
+    assertEquals(
+        1.0,
+        registry
+            .find("polyglot.executor.contract.cache.size")
+            .tag("language", "js")
+            .gauge()
+            .value());
+    assertEquals(2.0, registry.find("polyglot.executor.available.count").gauge().value());
+    assertEquals(2.0, registry.find("polyglot.executor.configured.count").gauge().value());
+    assertEquals(42.0, registry.find("polyglot.startup.duration").gauge().value());
   }
 
   @Test
@@ -78,7 +102,12 @@ class PolyglotMetricsBinderTest {
     when(pyExecutor.metadata()).thenReturn(Map.of("cachedInterfaces", "not-a-collection"));
 
     PolyglotMetricsBinder binder =
-        new PolyglotMetricsBinder(provider(pyExecutor), provider(null), true, false);
+        new PolyglotMetricsBinder(
+            provider(pyExecutor),
+            provider(null),
+            registry(),
+            enabledProperties(true, false),
+            runtimeState(-1, 1));
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
     binder.bindTo(registry);
@@ -104,7 +133,13 @@ class PolyglotMetricsBinderTest {
     AtomicBoolean accessed = new AtomicBoolean(false);
     ObjectProvider<PyExecutor> pyProvider = trackingProvider(pyExecutor, accessed);
 
-    PolyglotMetricsBinder binder = new PolyglotMetricsBinder(pyProvider, provider(null), true, false);
+    PolyglotMetricsBinder binder =
+        new PolyglotMetricsBinder(
+            pyProvider,
+            provider(null),
+            registry(),
+            enabledProperties(true, false),
+            runtimeState(-1, 1));
 
     binder.bindTo(new SimpleMeterRegistry());
 
@@ -143,6 +178,30 @@ class PolyglotMetricsBinderTest {
         return stream();
       }
     };
+  }
+
+  private static PolyglotProperties enabledProperties(boolean pythonEnabled, boolean jsEnabled) {
+    return new PolyglotProperties(
+        null,
+        new PolyglotProperties.PythonProperties(
+            pythonEnabled, "classpath:/python", true, false, List.of()),
+        new PolyglotProperties.JsProperties(jsEnabled, "classpath:/js", false, List.of()),
+        null,
+        null);
+  }
+
+  private static SimpleMeterRegistry registry() {
+    return new SimpleMeterRegistry();
+  }
+
+  private static PolyglotRuntimeState runtimeState(long startupDurationMs, int availableExecutors) {
+    PolyglotRuntimeState state = new PolyglotRuntimeState();
+    PyExecutor availablePy =
+        availableExecutors > 0 ? org.mockito.Mockito.mock(PyExecutor.class) : null;
+    JsExecutor availableJs =
+        availableExecutors > 1 ? org.mockito.Mockito.mock(JsExecutor.class) : null;
+    state.recordStartup(availablePy, availableJs, startupDurationMs);
+    return state;
   }
 
   private static <T> ObjectProvider<T> trackingProvider(T instance, AtomicBoolean accessed) {

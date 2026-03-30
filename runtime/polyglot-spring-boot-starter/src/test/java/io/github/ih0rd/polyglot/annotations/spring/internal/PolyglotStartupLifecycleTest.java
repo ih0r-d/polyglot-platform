@@ -29,11 +29,13 @@ class PolyglotStartupLifecycleTest {
   @Mock private JsExecutor jsExecutor;
   @Mock private BeanDefinition clientBeanDefinition;
 
+  private PolyglotRuntimeState runtimeState;
   private AutoCloseable mocks;
 
   @BeforeEach
   void setUp() {
     mocks = MockitoAnnotations.openMocks(this);
+    runtimeState = new PolyglotRuntimeState();
     org.mockito.Mockito.when(beanFactory.getBeanDefinitionNames()).thenReturn(new String[0]);
   }
 
@@ -46,7 +48,7 @@ class PolyglotStartupLifecycleTest {
   void startWarmsUpEnabledExecutorsAndMarksLifecycleRunning() {
     PolyglotStartupLifecycle lifecycle =
         new PolyglotStartupLifecycle(
-            enabledProperties(true, true, true), beanFactory, pyExecutor, jsExecutor);
+            enabledProperties(true, true, true), beanFactory, runtimeState, pyExecutor, jsExecutor);
 
     lifecycle.start();
 
@@ -56,13 +58,14 @@ class PolyglotStartupLifecycleTest {
     verify(beanFactory).getBeanDefinitionNames();
     assertEquals(Integer.MAX_VALUE, lifecycle.getPhase());
     assertEquals(true, lifecycle.isRunning());
+    assertEquals(2, runtimeState.availableExecutors());
   }
 
   @Test
   void startSkipsWarmupWhenCoreIsDisabled() {
     PolyglotStartupLifecycle lifecycle =
         new PolyglotStartupLifecycle(
-            enabledProperties(false, true, false), beanFactory, pyExecutor, null);
+            enabledProperties(false, true, false), beanFactory, runtimeState, pyExecutor, null);
 
     lifecycle.start();
 
@@ -78,7 +81,7 @@ class PolyglotStartupLifecycleTest {
         .evaluate(PolyglotWarmupConstants.NOOP_EXPRESSION);
     PolyglotStartupLifecycle lifecycle =
         new PolyglotStartupLifecycle(
-            enabledProperties(true, true, false), beanFactory, pyExecutor, null);
+            enabledProperties(true, true, false), beanFactory, runtimeState, pyExecutor, null);
 
     assertThrows(IllegalStateException.class, lifecycle::start);
   }
@@ -98,6 +101,7 @@ class PolyglotStartupLifecycleTest {
                 null,
                 null),
             beanFactory,
+            runtimeState,
             pyExecutor,
             null);
 
@@ -116,7 +120,11 @@ class PolyglotStartupLifecycleTest {
 
     PolyglotStartupLifecycle lifecycle =
         new PolyglotStartupLifecycle(
-            enabledProperties(true, false, false), beanFactory, pyExecutor, jsExecutor);
+            enabledProperties(true, false, false),
+            beanFactory,
+            runtimeState,
+            pyExecutor,
+            jsExecutor);
 
     lifecycle.start();
 
@@ -136,6 +144,7 @@ class PolyglotStartupLifecycleTest {
                 null,
                 null),
             beanFactory,
+            runtimeState,
             pyExecutor,
             jsExecutor);
 
@@ -158,6 +167,7 @@ class PolyglotStartupLifecycleTest {
                 null,
                 null),
             beanFactory,
+            runtimeState,
             pyExecutor,
             jsExecutor);
 
@@ -176,6 +186,7 @@ class PolyglotStartupLifecycleTest {
                 null,
                 null),
             beanFactory,
+            runtimeState,
             pyExecutor,
             null);
 
@@ -194,6 +205,7 @@ class PolyglotStartupLifecycleTest {
                 null,
                 null),
             beanFactory,
+            runtimeState,
             pyExecutor,
             null);
 

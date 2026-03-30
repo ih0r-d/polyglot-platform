@@ -12,6 +12,7 @@ import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors;
 import io.github.ih0rd.polyglot.annotations.spring.context.PolyglotContextCustomizer;
 import io.github.ih0rd.polyglot.annotations.spring.context.SpringPolyglotContextFactory;
+import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotRuntimeState;
 import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotStartupLifecycle;
 import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 
@@ -30,6 +31,12 @@ import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties
     matchIfMissing = true)
 public class PolyglotAutoConfiguration {
 
+  @Bean
+  @ConditionalOnMissingBean
+  public PolyglotRuntimeState polyglotRuntimeState() {
+    return new PolyglotRuntimeState();
+  }
+
   /**
    * Creates the facade that exposes whichever executors were configured for the application.
    *
@@ -42,7 +49,7 @@ public class PolyglotAutoConfiguration {
   public PolyglotExecutors polyglotExecutors(
       ObjectProvider<PyExecutor> py, ObjectProvider<JsExecutor> js) {
 
-    return new PolyglotExecutors(py.getIfAvailable(), js.getIfAvailable());
+    return PolyglotExecutors.fromProviders(py, js);
   }
 
   /**
@@ -72,10 +79,11 @@ public class PolyglotAutoConfiguration {
   PolyglotStartupLifecycle polyglotStartupLifecycle(
       PolyglotProperties properties,
       org.springframework.beans.factory.config.ConfigurableListableBeanFactory beanFactory,
+      PolyglotRuntimeState runtimeState,
       ObjectProvider<PyExecutor> pyExecutor,
       ObjectProvider<JsExecutor> jsExecutor) {
 
     return new PolyglotStartupLifecycle(
-        properties, beanFactory, pyExecutor.getIfAvailable(), jsExecutor.getIfAvailable());
+        properties, beanFactory, runtimeState, pyExecutor, jsExecutor);
   }
 }

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.BeanFactory;
 
 import io.github.ih0rd.adapter.context.JsExecutor;
 import io.github.ih0rd.adapter.context.PyExecutor;
@@ -44,6 +45,7 @@ class PolyglotClientFactoryBeanTest {
   @Mock private PythonApi pythonProxy;
   @Mock private MethodConventionApi methodConventionProxy;
   @Mock private AutoApi autoProxy;
+  @Mock private BeanFactory beanFactory;
 
   private AutoCloseable mocks;
 
@@ -62,8 +64,7 @@ class PolyglotClientFactoryBeanTest {
     when(pyExecutor.bind(PythonApi.class, Convention.DEFAULT)).thenReturn(pythonProxy);
 
     PolyglotClientFactoryBean<PythonApi> factory =
-        new PolyglotClientFactoryBean<>(
-            PythonApi.class.getName(), new PolyglotExecutors(pyExecutor, null));
+        factory(PythonApi.class, new PolyglotExecutors(pyExecutor, null));
 
     assertSame(pythonProxy, factory.getObject());
     verify(pyExecutor).validateBinding(PythonApi.class, Convention.DEFAULT);
@@ -74,8 +75,7 @@ class PolyglotClientFactoryBeanTest {
     when(jsExecutor.bind(AutoApi.class, Convention.DEFAULT)).thenReturn(autoProxy);
 
     PolyglotClientFactoryBean<AutoApi> factory =
-        new PolyglotClientFactoryBean<>(
-            AutoApi.class.getName(), new PolyglotExecutors(null, jsExecutor));
+        factory(AutoApi.class, new PolyglotExecutors(null, jsExecutor));
 
     assertSame(autoProxy, factory.getObject());
     verify(jsExecutor).validateBinding(AutoApi.class, Convention.DEFAULT);
@@ -87,8 +87,7 @@ class PolyglotClientFactoryBeanTest {
         .thenReturn(methodConventionProxy);
 
     PolyglotClientFactoryBean<MethodConventionApi> factory =
-        new PolyglotClientFactoryBean<>(
-            MethodConventionApi.class.getName(), new PolyglotExecutors(pyExecutor, null));
+        factory(MethodConventionApi.class, new PolyglotExecutors(pyExecutor, null));
 
     assertSame(methodConventionProxy, factory.getObject());
     verify(pyExecutor).validateBinding(MethodConventionApi.class, Convention.BY_METHOD_NAME);
@@ -97,8 +96,7 @@ class PolyglotClientFactoryBeanTest {
   @Test
   void getObjectFailsWhenAnnotationIsMissing() {
     PolyglotClientFactoryBean<PlainApi> factory =
-        new PolyglotClientFactoryBean<>(
-            PlainApi.class.getName(), new PolyglotExecutors(null, null));
+        factory(PlainApi.class, new PolyglotExecutors(null, null));
 
     assertThrows(MissingPolyglotClientAnnotationException.class, factory::getObject);
   }
@@ -106,8 +104,7 @@ class PolyglotClientFactoryBeanTest {
   @Test
   void getObjectFailsWhenAutoResolutionIsAmbiguous() {
     PolyglotClientFactoryBean<AutoApi> factory =
-        new PolyglotClientFactoryBean<>(
-            AutoApi.class.getName(), new PolyglotExecutors(pyExecutor, jsExecutor));
+        factory(AutoApi.class, new PolyglotExecutors(pyExecutor, jsExecutor));
 
     assertThrows(PolyglotClientResolutionException.class, factory::getObject);
   }
@@ -115,8 +112,7 @@ class PolyglotClientFactoryBeanTest {
   @Test
   void getObjectFailsWhenMultipleLanguagesAreDeclared() {
     PolyglotClientFactoryBean<MultiApi> factory =
-        new PolyglotClientFactoryBean<>(
-            MultiApi.class.getName(), new PolyglotExecutors(null, null));
+        factory(MultiApi.class, new PolyglotExecutors(null, null));
 
     assertThrows(PolyglotClientResolutionException.class, factory::getObject);
   }
@@ -127,8 +123,7 @@ class PolyglotClientFactoryBeanTest {
     when(pyExecutor.bind(PythonApi.class, Convention.DEFAULT)).thenThrow(cause);
 
     PolyglotClientFactoryBean<PythonApi> factory =
-        new PolyglotClientFactoryBean<>(
-            PythonApi.class.getName(), new PolyglotExecutors(pyExecutor, null));
+        factory(PythonApi.class, new PolyglotExecutors(pyExecutor, null));
 
     PolyglotClientBindingException exception =
         assertThrows(PolyglotClientBindingException.class, factory::getObject);
@@ -140,15 +135,21 @@ class PolyglotClientFactoryBeanTest {
   void constructorFailsForUnknownClass() {
     assertThrows(
         PolyglotClientClassNotFoundException.class,
-        () -> new PolyglotClientFactoryBean<>("missing.Type", new PolyglotExecutors(null, null)));
+        () -> new PolyglotClientFactoryBean<>("missing.Type"));
   }
 
   @Test
   void getObjectTypeReturnsResolvedClientClass() {
     PolyglotClientFactoryBean<PythonApi> factory =
-        new PolyglotClientFactoryBean<>(
-            PythonApi.class.getName(), new PolyglotExecutors(pyExecutor, null));
+        factory(PythonApi.class, new PolyglotExecutors(pyExecutor, null));
 
     assertEquals(PythonApi.class, factory.getObjectType());
+  }
+
+  private <T> PolyglotClientFactoryBean<T> factory(Class<T> type, PolyglotExecutors executors) {
+    when(beanFactory.getBean(PolyglotExecutors.class)).thenReturn(executors);
+    PolyglotClientFactoryBean<T> factory = new PolyglotClientFactoryBean<>(type.getName());
+    factory.setBeanFactory(beanFactory);
+    return factory;
   }
 }

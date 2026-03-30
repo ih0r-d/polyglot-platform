@@ -1,6 +1,9 @@
 package io.github.ih0rd.polyglot.annotations.spring.client;
 
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.FactoryBean;
+import org.springframework.util.Assert;
 
 import io.github.ih0rd.adapter.context.AbstractPolyglotExecutor;
 import io.github.ih0rd.polyglot.Convention;
@@ -18,34 +21,38 @@ import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotCli
  * <p>The produced bean is backed by an {@link AbstractPolyglotExecutor} and delegates method calls
  * through the runtime adapter's {@code bind(Class)} mechanism.
  */
-public final class PolyglotClientFactoryBean<T> implements FactoryBean<T> {
+public final class PolyglotClientFactoryBean<T> implements FactoryBean<T>, BeanFactoryAware {
 
   /** Java interface type annotated with {@link PolyglotClient}. */
   private final Class<T> clientType;
 
-  /** Holder for the executors currently available in the Spring context. */
-  private final PolyglotExecutors executors;
+  /** Bean factory used to resolve executors lazily. */
+  private BeanFactory beanFactory;
 
   /**
    * Creates a new factory bean for the given client interface.
    *
    * @param className fully qualified name of the client interface
-   * @param executors facade exposing available executors
    * @throws PolyglotClientClassNotFoundException if the class cannot be loaded
    */
   @SuppressWarnings("unchecked")
-  public PolyglotClientFactoryBean(String className, PolyglotExecutors executors) {
+  public PolyglotClientFactoryBean(String className) {
     try {
       this.clientType = (Class<T>) Class.forName(className);
-      this.executors = executors;
     } catch (ClassNotFoundException e) {
       throw new PolyglotClientClassNotFoundException(className, e);
     }
   }
 
+  @Override
+  public void setBeanFactory(BeanFactory beanFactory) {
+    this.beanFactory = beanFactory;
+  }
+
   /** Creates the actual polyglot-backed client bean instance. */
   @Override
   public T getObject() {
+    PolyglotExecutors executors = executors();
     PolyglotClient annotation = clientType.getAnnotation(PolyglotClient.class);
     if (annotation == null) {
       throw new MissingPolyglotClientAnnotationException(clientType.getName());
@@ -66,6 +73,7 @@ public final class PolyglotClientFactoryBean<T> implements FactoryBean<T> {
 
   /** Resolves which guest language should be used for the client contract. */
   private SupportedLanguage resolveLanguage(PolyglotClient annotation) {
+    PolyglotExecutors executors = executors();
     SupportedLanguage[] languages = annotation.languages();
 
     boolean pyPresent = executors.python().isPresent();
@@ -102,6 +110,7 @@ public final class PolyglotClientFactoryBean<T> implements FactoryBean<T> {
 
   /** Resolves the executor matching the selected guest language. */
   private AbstractPolyglotExecutor resolveExecutor(SupportedLanguage language) {
+    PolyglotExecutors executors = executors();
     return switch (language) {
       case PYTHON -> require(executors.python().orElse(null), SupportedLanguage.PYTHON.id());
       case JS -> require(executors.js().orElse(null), SupportedLanguage.JS.id());
@@ -121,5 +130,10 @@ public final class PolyglotClientFactoryBean<T> implements FactoryBean<T> {
   @Override
   public Class<?> getObjectType() {
     return clientType;
+  }
+
+  private PolyglotExecutors executors() {
+    Assert.state(beanFactory != null, "BeanFactory not initialized");
+    return beanFactory.getBean(PolyglotExecutors.class);
   }
 }

@@ -1,9 +1,12 @@
 package io.github.ih0rd.polyglot.annotations.spring.internal;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.SmartLifecycle;
@@ -38,19 +41,31 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
 
   private final PolyglotProperties properties;
   private final ConfigurableListableBeanFactory beanFactory;
-  private final PyExecutor pyExecutor;
-  private final JsExecutor jsExecutor;
+  private final PolyglotRuntimeState runtimeState;
+  private final ObjectProvider<PyExecutor> pyExecutor;
+  private final ObjectProvider<JsExecutor> jsExecutor;
 
   private volatile boolean running;
 
   public PolyglotStartupLifecycle(
       PolyglotProperties properties,
       ConfigurableListableBeanFactory beanFactory,
+      PolyglotRuntimeState runtimeState,
       PyExecutor pyExecutor,
       JsExecutor jsExecutor) {
+    this(properties, beanFactory, runtimeState, providerOf(pyExecutor), providerOf(jsExecutor));
+  }
+
+  public PolyglotStartupLifecycle(
+      PolyglotProperties properties,
+      ConfigurableListableBeanFactory beanFactory,
+      PolyglotRuntimeState runtimeState,
+      ObjectProvider<PyExecutor> pyExecutor,
+      ObjectProvider<JsExecutor> jsExecutor) {
 
     this.properties = properties;
     this.beanFactory = beanFactory;
+    this.runtimeState = runtimeState;
     this.pyExecutor = pyExecutor;
     this.jsExecutor = jsExecutor;
   }
@@ -62,16 +77,20 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
     }
 
     long startedAt = System.nanoTime();
+    PyExecutor pythonExecutor = pyExecutor.getIfAvailable();
+    JsExecutor jsLanguageExecutor = jsExecutor.getIfAvailable();
 
     try {
-      warmupPython();
-      preloadPython();
-      warmupJs();
-      preloadJs();
+      warmupPython(pythonExecutor);
+      preloadPython(pythonExecutor);
+      warmupJs(jsLanguageExecutor);
+      preloadJs(jsLanguageExecutor);
       eagerValidateClients();
+      long startupMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
+      runtimeState.recordStartup(pythonExecutor, jsLanguageExecutor, startupMs);
 
       if (properties.core().logMetadataOnStartup()) {
-        logStartupSummary(startedAt);
+        logStartupSummary(startupMs, pythonExecutor, jsLanguageExecutor);
       }
       running = true;
 
@@ -83,7 +102,7 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
     }
   }
 
-  private void warmupPython() {
+  private void warmupPython(PyExecutor pyExecutor) {
     if (pyExecutor == null
         || !properties.python().enabled()
         || !properties.python().warmupOnStartup()) {
@@ -94,7 +113,7 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
     pyExecutor.evaluate(PolyglotWarmupConstants.NOOP_EXPRESSION);
   }
 
-  private void preloadPython() {
+  private void preloadPython(PyExecutor pyExecutor) {
     if (pyExecutor == null
         || !properties.python().enabled()
         || properties.python().preloadScripts().isEmpty()) {
@@ -107,7 +126,7 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
     }
   }
 
-  private void warmupJs() {
+  private void warmupJs(JsExecutor jsExecutor) {
     if (jsExecutor == null || !properties.js().enabled() || !properties.js().warmupOnStartup()) {
       return;
     }
@@ -116,7 +135,7 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
     jsExecutor.evaluate(PolyglotWarmupConstants.NOOP_EXPRESSION);
   }
 
-  private void preloadJs() {
+  private void preloadJs(JsExecutor jsExecutor) {
     if (jsExecutor == null
         || !properties.js().enabled()
         || properties.js().preloadScripts().isEmpty()) {
@@ -145,50 +164,90 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
     }
   }
 
-  private void logStartupSummary(long startedAtNanos) {
-    long startupMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAtNanos);
-
-    logAtConfiguredLevel("---- Polyglot Starter ----------------------------------------");
-
+  private void logStartupSummary(long startupMs, PyExecutor pyExecutor, JsExecutor jsExecutor) {
+    logAtConfiguredLevel("Polyglot starter ready");
     logAtConfiguredLevel(
-        "Core        : {}, failFast={}, logLevel={}",
+        "Core        : enabled={}, failFast={}, logLevel={}",
         properties.core().enabled() ? "ENABLED" : "DISABLED",
         properties.core().failFast(),
         properties.core().logLevel().toUpperCase());
+    logAtConfiguredLevel(
+        "Executors   : available={}/{}, python={}, js={}",
+        runtimeState.availableExecutors(),
+        configuredExecutors(),
+        pyExecutor != null ? "ACTIVE" : "OFF",
+        jsExecutor != null ? "ACTIVE" : "OFF");
+    logAtConfiguredLevel("Startup     : polyglot={} ms", startupMs);
 
     if (properties.python().enabled()) {
       logAtConfiguredLevel(
-          "Python      : ENABLED ({})", pyExecutor != null ? "available" : "missing runtime");
-      logAtConfiguredLevel("  warmup    : {}", properties.python().warmupOnStartup());
-      logAtConfiguredLevel("  safeDefaults: {}", properties.python().safeDefaults());
-      logAtConfiguredLevel(
-          "  preload   : {}",
-          properties.python().preloadScripts().isEmpty()
-              ? "none"
-              : properties.python().preloadScripts());
+          "Python      : {}, warmup={}, safeDefaults={}, preload={}, metadata={}",
+          pyExecutor != null ? "AVAILABLE" : "MISSING",
+          properties.python().warmupOnStartup(),
+          properties.python().safeDefaults(),
+          preloadSummary(properties.python().preloadScripts()),
+          pythonMetadataSummary(pyExecutor));
     } else {
       logAtConfiguredLevel("Python      : DISABLED");
     }
 
     if (properties.js().enabled()) {
       logAtConfiguredLevel(
-          "JavaScript  : ENABLED ({})", jsExecutor != null ? "available" : "missing runtime");
-      logAtConfiguredLevel("  warmup    : {}", properties.js().warmupOnStartup());
-      logAtConfiguredLevel(
-          "  preload   : {}",
-          properties.js().preloadScripts().isEmpty() ? "none" : properties.js().preloadScripts());
+          "JavaScript  : {}, warmup={}, preload={}, metadata={}",
+          jsExecutor != null ? "AVAILABLE" : "MISSING",
+          properties.js().warmupOnStartup(),
+          preloadSummary(properties.js().preloadScripts()),
+          jsMetadataSummary(jsExecutor));
     } else {
       logAtConfiguredLevel("JavaScript  : DISABLED");
     }
+  }
 
-    logAtConfiguredLevel(
-        "Executors   : python={}, js={}",
-        pyExecutor != null ? "ACTIVE" : "OFF",
-        jsExecutor != null ? "ACTIVE" : "OFF");
+  private int configuredExecutors() {
+    int configured = 0;
+    if (properties.python().enabled()) {
+      configured++;
+    }
+    if (properties.js().enabled()) {
+      configured++;
+    }
+    return configured;
+  }
 
-    logAtConfiguredLevel("Startup     : polyglot={} ms", startupMs);
+  private static String preloadSummary(java.util.List<String> preloadScripts) {
+    return preloadScripts.isEmpty() ? "none" : preloadScripts.toString();
+  }
 
-    logAtConfiguredLevel("--------------------------------------------------------------");
+  private static Map<String, Object> pythonMetadataSummary(PyExecutor executor) {
+    if (executor == null) {
+      return Map.of("available", false);
+    }
+    Map<String, Object> metadata = executor.metadata();
+    return Map.of(
+        "available", true,
+        "executorType", metadata.getOrDefault("executorType", executor.getClass().getName()),
+        "languageId", metadata.getOrDefault("languageId", "python"),
+        "sourceCacheSize", metadata.getOrDefault("sourceCacheSize", 0),
+        "contractCacheSize", metadata.getOrDefault("instanceCacheSize", 0),
+        "boundInterfacesCount", size(metadata.get("cachedInterfaces")));
+  }
+
+  private static Map<String, Object> jsMetadataSummary(JsExecutor executor) {
+    if (executor == null) {
+      return Map.of("available", false);
+    }
+    Map<String, Object> metadata = executor.metadata();
+    return Map.of(
+        "available", true,
+        "executorType", metadata.getOrDefault("executorType", executor.getClass().getName()),
+        "languageId", metadata.getOrDefault("languageId", "js"),
+        "sourceCacheSize", metadata.getOrDefault("sourceCacheSize", 0),
+        "contractCacheSize", size(metadata.get("loadedInterfaces")),
+        "loadedInterfacesCount", size(metadata.get("loadedInterfaces")));
+  }
+
+  private static int size(Object value) {
+    return value instanceof Collection<?> collection ? collection.size() : 0;
   }
 
   private void logAtConfiguredLevel(String message, Object... args) {
@@ -216,5 +275,29 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
   @Override
   public void stop() {
     // no-op
+  }
+
+  private static <T> ObjectProvider<T> providerOf(T instance) {
+    return new ObjectProvider<>() {
+      @Override
+      public T getObject(Object... args) {
+        return instance;
+      }
+
+      @Override
+      public T getIfAvailable() {
+        return instance;
+      }
+
+      @Override
+      public T getIfUnique() {
+        return instance;
+      }
+
+      @Override
+      public T getObject() {
+        return instance;
+      }
+    };
   }
 }
