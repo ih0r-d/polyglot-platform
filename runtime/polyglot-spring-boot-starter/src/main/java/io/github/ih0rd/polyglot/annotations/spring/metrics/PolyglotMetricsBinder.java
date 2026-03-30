@@ -27,6 +27,8 @@ public class PolyglotMetricsBinder implements MeterBinder {
 
   private final ObjectProvider<PyExecutor> pyExecutor;
   private final ObjectProvider<JsExecutor> jsExecutor;
+  private final boolean pythonConfigured;
+  private final boolean jsConfigured;
 
   /**
    * Creates the binder.
@@ -35,46 +37,55 @@ public class PolyglotMetricsBinder implements MeterBinder {
    * @param jsExecutor provider for the optional JavaScript executor
    */
   public PolyglotMetricsBinder(
-      ObjectProvider<PyExecutor> pyExecutor, ObjectProvider<JsExecutor> jsExecutor) {
+      ObjectProvider<PyExecutor> pyExecutor,
+      ObjectProvider<JsExecutor> jsExecutor,
+      boolean pythonConfigured,
+      boolean jsConfigured) {
     this.pyExecutor = pyExecutor;
     this.jsExecutor = jsExecutor;
+    this.pythonConfigured = pythonConfigured;
+    this.jsConfigured = jsConfigured;
   }
 
   /** Registers all applicable meters against the given registry. */
   @Override
   public void bindTo(@NonNull MeterRegistry registry) {
-    pyExecutor.ifAvailable(py -> bindPython(registry, py));
-    jsExecutor.ifAvailable(js -> bindJs(registry, js));
+    if (pythonConfigured) {
+      bindPython(registry);
+    }
+    if (jsConfigured) {
+      bindJs(registry);
+    }
   }
 
-  private void bindPython(MeterRegistry registry, PyExecutor executor) {
+  private void bindPython(MeterRegistry registry) {
     Tags tags = baseTags(SupportedLanguage.PYTHON);
 
-    Gauge.builder("polyglot.executor.enabled", executor, ignored -> 1)
+    Gauge.builder("polyglot.executor.enabled", pyExecutor, provider -> enabled(provider.getIfAvailable()))
         .description("Whether the Python executor is enabled")
         .tags(tags)
         .register(registry);
 
     Gauge.builder(
             "polyglot.executor.source.cache.size",
-            executor,
-            ex -> number(ex.metadata(), "sourceCacheSize"))
+            pyExecutor,
+            provider -> number(metadata(provider.getIfAvailable()), "sourceCacheSize"))
         .description("Number of cached source units in the Python executor")
         .tags(tags)
         .register(registry);
 
     Gauge.builder(
             "polyglot.python.instance.cache.size",
-            executor,
-            ex -> number(ex.metadata(), "instanceCacheSize"))
+            pyExecutor,
+            provider -> number(metadata(provider.getIfAvailable()), "instanceCacheSize"))
         .description("Number of cached Python object instances")
         .tags(tags)
         .register(registry);
 
     Gauge.builder(
             "polyglot.python.bound.interfaces.count",
-            executor,
-            ex -> size(ex.metadata(), "cachedInterfaces"))
+            pyExecutor,
+            provider -> size(metadata(provider.getIfAvailable()), "cachedInterfaces"))
         .description("Number of Java interfaces bound to Python")
         .tags(tags)
         .register(registry);
@@ -84,26 +95,26 @@ public class PolyglotMetricsBinder implements MeterBinder {
             + "sourceCacheSize, instanceCacheSize, boundInterfaces");
   }
 
-  private void bindJs(MeterRegistry registry, JsExecutor executor) {
+  private void bindJs(MeterRegistry registry) {
     Tags tags = baseTags(SupportedLanguage.JS);
 
-    Gauge.builder("polyglot.executor.enabled", () -> 1)
+    Gauge.builder("polyglot.executor.enabled", jsExecutor, provider -> enabled(provider.getIfAvailable()))
         .description("Whether the JavaScript executor is enabled")
         .tags(tags)
         .register(registry);
 
     Gauge.builder(
             "polyglot.executor.source.cache.size",
-            executor,
-            ex -> number(ex.metadata(), "sourceCacheSize"))
+            jsExecutor,
+            provider -> number(metadata(provider.getIfAvailable()), "sourceCacheSize"))
         .description("Number of cached source units in the JS executor")
         .tags(tags)
         .register(registry);
 
     Gauge.builder(
             "polyglot.js.loaded.interfaces.count",
-            executor,
-            ex -> size(ex.metadata(), "loadedInterfaces"))
+            jsExecutor,
+            provider -> size(metadata(provider.getIfAvailable()), "loadedInterfaces"))
         .description("Number of Java interfaces loaded in JS")
         .tags(tags)
         .register(registry);
@@ -113,6 +124,18 @@ public class PolyglotMetricsBinder implements MeterBinder {
 
   private Tags baseTags(SupportedLanguage language) {
     return Tags.of("language", language.id());
+  }
+
+  private static double enabled(Object executor) {
+    return executor != null ? 1.0 : 0.0;
+  }
+
+  private static Map<String, Object> metadata(PyExecutor executor) {
+    return executor != null ? executor.metadata() : Map.of();
+  }
+
+  private static Map<String, Object> metadata(JsExecutor executor) {
+    return executor != null ? executor.metadata() : Map.of();
   }
 
   private double number(Map<String, Object> metadata, String key) {

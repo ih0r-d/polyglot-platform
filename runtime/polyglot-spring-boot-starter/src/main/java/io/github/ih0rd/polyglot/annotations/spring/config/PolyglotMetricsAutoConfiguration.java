@@ -1,6 +1,7 @@
 package io.github.ih0rd.polyglot.annotations.spring.config;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -28,7 +29,13 @@ public class PolyglotMetricsAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public PolyglotMetricsBinder polyglotMetricsBinder(
-      ObjectProvider<PyExecutor> py, ObjectProvider<JsExecutor> js) {
-    return new PolyglotMetricsBinder(py, js);
+      ObjectProvider<PyExecutor> py,
+      ObjectProvider<JsExecutor> js,
+      ListableBeanFactory beanFactory) {
+    return new PolyglotMetricsBinder(
+        py,
+        js,
+        beanFactory.getBeanNamesForType(PyExecutor.class, false, false).length > 0,
+        beanFactory.getBeanNamesForType(JsExecutor.class, false, false).length > 0);
   }
 }
