@@ -53,7 +53,12 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
       PolyglotRuntimeState runtimeState,
       PyExecutor pyExecutor,
       JsExecutor jsExecutor) {
-    this(properties, beanFactory, runtimeState, providerOf(pyExecutor), providerOf(jsExecutor));
+    this(
+        properties,
+        beanFactory,
+        runtimeState,
+        PolyglotObjectProviders.providerOf(pyExecutor),
+        PolyglotObjectProviders.providerOf(jsExecutor));
   }
 
   public PolyglotStartupLifecycle(
@@ -275,29 +280,5 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
   @Override
   public void stop() {
     // no-op
-  }
-
-  private static <T> ObjectProvider<T> providerOf(T instance) {
-    return new ObjectProvider<>() {
-      @Override
-      public T getObject(Object... args) {
-        return instance;
-      }
-
-      @Override
-      public T getIfAvailable() {
-        return instance;
-      }
-
-      @Override
-      public T getIfUnique() {
-        return instance;
-      }
-
-      @Override
-      public T getObject() {
-        return instance;
-      }
-    };
   }
 }

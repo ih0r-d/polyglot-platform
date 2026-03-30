@@ -9,6 +9,7 @@ import org.springframework.beans.factory.ObjectProvider;
 
 import io.github.ih0rd.adapter.context.JsExecutor;
 import io.github.ih0rd.adapter.context.PyExecutor;
+import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotObjectProviders;
 
 /**
  * Spring-facing facade exposing the executors created by the starter.
@@ -27,7 +28,7 @@ public final class PolyglotExecutors {
    * @param js JavaScript executor, if enabled
    */
   public PolyglotExecutors(@Nullable PyExecutor python, @Nullable JsExecutor js) {
-    this(providerOf(python), providerOf(js));
+    this(PolyglotObjectProviders.providerOf(python), PolyglotObjectProviders.providerOf(js));
   }
 
   /** Creates the facade from lazy executor providers. */
@@ -101,29 +102,5 @@ public final class PolyglotExecutors {
   /** Returns whether the JavaScript executor bean is currently available. */
   public boolean isJsEnabled() {
     return js.getIfAvailable() != null;
-  }
-
-  private static <T> ObjectProvider<T> providerOf(@Nullable T instance) {
-    return new ObjectProvider<>() {
-      @Override
-      public T getObject(Object... args) {
-        return instance;
-      }
-
-      @Override
-      public T getIfAvailable() {
-        return instance;
-      }
-
-      @Override
-      public T getIfUnique() {
-        return instance;
-      }
-
-      @Override
-      public T getObject() {
-        return instance;
-      }
-    };
   }
 }
