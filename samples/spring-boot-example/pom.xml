@@ -15,8 +15,7 @@
     <description>polyglot-springboot-example</description>
     <properties>
         <java.version>25</java.version>
-        <polyglot.platform.version>0.2.0-SNAPSHOT</polyglot.platform.version>
-
+        <polyglot.version>0.2.0</polyglot.version>
         <!-- Python packages for GraalPy -->
         <python.package.1>faker==26.0.0</python.package.1>
         <python.package.2>tabulate==0.9.0</python.package.2>
@@ -28,13 +27,12 @@
 
     </properties>
 
-    <!-- Polyglot BOM (versions for adapter + starter + GraalVM)  -->
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>io.github.ih0r-d</groupId>
                 <artifactId>polyglot-bom</artifactId>
-                <version>${polyglot.platform.version}</version>
+                <version>${polyglot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -42,12 +40,10 @@
     </dependencyManagement>
 
     <dependencies>
-        <!-- Polyglot Spring Boot Starter (AUTO-CONFIG + CLIENTS) -->
         <dependency>
             <groupId>io.github.ih0r-d</groupId>
             <artifactId>polyglot-spring-boot-starter</artifactId>
         </dependency>
-        <!-- GraalPy runtime (REQUIRED for Python execution)      -->
         <dependency>
             <groupId>org.graalvm.python</groupId>
             <artifactId>python-launcher</artifactId>
@@ -81,23 +77,34 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-            <plugin>
-                <groupId>org.graalvm.python</groupId>
-                <artifactId>graalpy-maven-plugin</artifactId>
-                <version>${graalpy-plugin.version}</version>
-                <configuration>
-                    <requirementsFile>requirements.txt</requirementsFile>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>generate-python-resources</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>process-graalpy-resources</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+          <plugin>
+            <groupId>org.graalvm.python</groupId>
+            <artifactId>graalpy-maven-plugin</artifactId>
+            <version>${graalpy-plugin.version}</version>
+            <configuration>
+              <packages>
+                <package>${python.package.1}</package>
+                <package>${python.package.2}</package>
+                <package>${python.package.3}</package>
+              </packages>
+            </configuration>
+            <executions>
+              <execution>
+                <id>lock-python-packages</id>
+                <phase>generate-resources</phase>
+                <goals>
+                  <goal>lock-packages</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>generate-python-resources</id>
+                <phase>generate-resources</phase>
+                <goals>
+                  <goal>process-graalpy-resources</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
         </plugins>
     </build>
 

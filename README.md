@@ -68,7 +68,7 @@ Import the runtime BOM:
     <dependency>
       <groupId>io.github.ih0r-d</groupId>
       <artifactId>polyglot-bom</artifactId>
-      <version>${polyglot.version}</version>
+      <version>0.2.0</version>
       <type>pom</type>
       <scope>import</scope>
     </dependency>
@@ -186,9 +186,15 @@ Project documentation is maintained in [`docs/`](docs/). Start with [`docs/index
 
 ## Samples
 
-The `samples/` directory contains example applications.
+The `samples/` directory contains maintained example applications pinned to `io.github.ih0r-d` version `0.2.0`.
 
-Those modules are intended for demonstration and experimentation only; canonical behavior and supported configuration are documented in [`docs/`](docs/).
+- `samples/java-maven-example`: framework-neutral runtime API with `FileSystemScriptSource`
+- `samples/java-maven-codegen-example`: code generation plus runtime binding
+- `samples/spring-boot-example`: Spring Boot starter, `@PolyglotClient`, actuator, and metrics
+- `samples/java-python-aot-adapter`: fat JAR and native-image packaging for a Python-backed contract
+- `samples/polyglot-ai-demo`: multi-contract Python runtime pipeline using handwritten Java interfaces
+
+Canonical behavior and supported configuration are documented in [`docs/`](docs/).
 
 ## OSS Project Policies
 

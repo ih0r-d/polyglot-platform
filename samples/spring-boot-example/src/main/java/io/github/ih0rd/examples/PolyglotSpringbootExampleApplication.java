@@ -5,9 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-@EnablePolyglotClients(
-        basePackages = "io.github.ih0rd.examples.contracts"
-)
+@EnablePolyglotClients
 public class PolyglotSpringbootExampleApplication {
 
     public static void main(String[] args) {

@@ -11,22 +11,28 @@
         <maven.compiler.release>25</maven.compiler.release>
         <maven.compiler.plugin.version>3.15.0</maven.compiler.plugin.version>
         <maven.shade.plugin.version>3.6.1</maven.shade.plugin.version>
-        <polyglot.platform.version>0.2.0-SNAPSHOT</polyglot.platform.version>
+        <polyglot.version>0.2.0</polyglot.version>
         <graal.version>25.0.2</graal.version>
         <graalpy.plugin.version>25.0.2</graalpy.plugin.version>
         <native.maven.plugin.version>0.10.6</native.maven.plugin.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.github.ih0r-d</groupId>
+                <artifactId>polyglot-bom</artifactId>
+                <version>${polyglot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>io.github.ih0r-d</groupId>
             <artifactId>polyglot-adapter</artifactId>
-            <version>${polyglot.platform.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.ih0r-d</groupId>
-            <artifactId>polyglot-annotations</artifactId>
-            <version>${polyglot.platform.version}</version>
         </dependency>
         <dependency>
             <groupId>org.graalvm.python</groupId>

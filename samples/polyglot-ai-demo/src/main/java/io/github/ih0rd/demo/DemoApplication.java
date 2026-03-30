@@ -1,9 +1,7 @@
 package io.github.ih0rd.demo;
 
-import io.github.ih0rd.adapter.context.PolyglotHelper;
 import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.adapter.spi.ClasspathScriptSource;
-import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.demo.polyglot.KeywordExtractor;
 import io.github.ih0rd.demo.polyglot.LanguageDetector;
 import io.github.ih0rd.demo.polyglot.SentimentAnalyzer;
@@ -17,8 +15,7 @@ public final class DemoApplication {
     public static void main(String[] args) {
         var scriptSource = new ClasspathScriptSource();
 
-        try (var ctx = PolyglotHelper.newContext(SupportedLanguage.PYTHON);
-                var executor = new PyExecutor(ctx, scriptSource)) {
+        try (var executor = PyExecutor.create(scriptSource, null)) {
             TextCleaner cleaner = executor.bind(TextCleaner.class);
             LanguageDetector languageDetector = executor.bind(LanguageDetector.class);
             SentimentAnalyzer sentimentAnalyzer = executor.bind(SentimentAnalyzer.class);

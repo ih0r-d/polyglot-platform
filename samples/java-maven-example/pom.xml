@@ -15,20 +15,29 @@
         <maven.compiler.release>25</maven.compiler.release>
         <graalpy-plugin.version>25.0.2</graalpy-plugin.version>
         <junit.version>5.13.4</junit.version>
-
+        <polyglot.version>0.2.0</polyglot.version>
         <python.package.1>faker==26.0.0</python.package.1>
         <python.package.2>tabulate==0.9.0</python.package.2>
         <python.package.3>numpy==2.2.4</python.package.3>
         <graal.version>25.0.2</graal.version>
-        <polyglot-adapter.version>0.2.0-SNAPSHOT</polyglot-adapter.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.github.ih0r-d</groupId>
+                <artifactId>polyglot-bom</artifactId>
+                <version>${polyglot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
-        <!-- Core SDK -->
         <dependency>
             <groupId>io.github.ih0r-d</groupId>
             <artifactId>polyglot-adapter</artifactId>
-            <version>${polyglot-adapter.version}</version>
         </dependency>
         <dependency>
             <groupId>org.graalvm.python</groupId>
@@ -47,7 +56,6 @@
             <type>pom</type>
         </dependency>
 
-        <!-- Test framework -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

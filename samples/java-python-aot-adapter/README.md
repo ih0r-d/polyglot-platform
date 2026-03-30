@@ -1,9 +1,9 @@
 # Java Python AOT Adapter Demo
 
-This example demonstrates how to integrate Python code into a Java application using the [Polyglot Platform](../../README.md).
+This example demonstrates how to integrate Python code into a Java application using [`polyglot-adapter`](../../README.md).
 
-Instead of interacting directly with the low-level [GraalVM Polyglot API](https://www.graalvm.org/sdk/javadoc/org/graalvm/polyglot/package-summary.html), the application uses the Polyglot Platform **adapter layer**.
-The adapter handles script loading and typed method binding, that allows Java code to call Python functions through normal Java interfaces.
+Instead of interacting directly with the low-level [GraalVM Polyglot API](https://www.graalvm.org/sdk/javadoc/org/graalvm/polyglot/package-summary.html), the application uses the runtime adapter layer.
+The adapter handles script loading and typed method binding so Java code can call Python through a normal Java interface.
 It also shows how to package and run the application as a fat JAR and as a GraalVM native executable.
 
 ## Review the Sample Application
@@ -22,12 +22,17 @@ The interaction between Java and Python is managed by the adapter runtime compon
 
 ### Implementation Details
 
-The Python implementation exports an API using `polyglot.export_value`:
-```java
-polyglot.export_value("QuoteApi", QuoteApi())
+The Python implementation exports a contract using `polyglot.export_value`:
+```python
+import polyglot
+
+class QuoteApi:
+    def calculateQuote(self, basePrice, customerTier):
+        ...
+
+polyglot.export_value("QuoteApi", QuoteApi)
 ```
-This export makes the Python object available to the adapter.
-Notice that the interface name and exported Python API name must be the same.
+This makes the contract available to the adapter. The Java interface name and exported Python contract name must match.
 
 On the Java side, the adapter resolves the exported object and binds it to a Java interface:
 ```java
@@ -51,20 +56,17 @@ Without `polyglot.export_value`, the adapter would have nothing named `QuoteApi`
     ```bash
     ./mvnw -DskipTests install
     ```
-    It builds and installs platform artifacts into your local Maven repo (_~/.m2_) so the application can resolve them.
+    The sample POM pins `io.github.ih0r-d` dependencies to `0.2.0`, so the published release must be available in your Maven repository configuration.
 
 ## Package and Run on a JVM
 
 Navigate to the demo directory and package the application:
 ```bash
-cd samples/java-python-aot-adapter
-```
-```bash
-mvn clean package
+./mvnw -f samples/java-python-aot-adapter/pom.xml clean package
 ```
 This creates a runnable fat JAR containing all dependencies. Run it:
 ```bash
-java -jar target/java-python-aot-adapter-0.0.1-all.jar
+java -jar samples/java-python-aot-adapter/target/java-python-aot-adapter-0.0.1-all.jar
 ```
 The expected output is:
 ```text
@@ -74,13 +76,13 @@ Quote: {'basePrice': 100.0, 'tier': 'GOLD', 'discountRate': 0.15, 'vatRate': 0.2
 
 The project uses the [Maven plugin for GraalVM Native Image](https://graalvm.github.io/native-build-tools/latest/maven-plugin.html) to build and package it as a native executable.
 ```bash
-mvn native:compile
+./mvnw -f samples/java-python-aot-adapter/pom.xml native:compile
 ```
 This produces a native executable in the _/target_ directory.
 
 Run it:
 ```bash
-./target/java-python-aot-adapter
+./samples/java-python-aot-adapter/target/java-python-aot-adapter
 ```
 The output should be the same as when running on the JVM.
 
@@ -88,9 +90,9 @@ The output should be the same as when running on the JVM.
 
 You can write this type of application with pure [GraalVM Polyglot API](https://www.graalvm.org/sdk/javadoc/org/graalvm/polyglot/package-summary.html) (`Context` and `Value` classes).
 However, once an application grows beyond a simple script call, managing script loading, binding, and invocation manually can become difficult.
-The Polyglot Platform adapter simplifies this process.
+The runtime adapter simplifies this process.
 
-Let's summarize why you should consider the Polyglot Platform with the GraalVM Polyglot API:
+Let's summarize why you should consider `polyglot-adapter` on top of the GraalVM Polyglot API:
 
 - Stronger Java typing: call Python through Java interfaces instead of string-based member lookups.
 - Less code: script loading, binding, and invocation are centralized in `PyExecutor`.

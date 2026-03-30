@@ -1,8 +1,9 @@
 package io.github.ih0rd.examples.aot;
 
+import io.github.ih0rd.adapter.context.PolyglotHelper;
 import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.adapter.spi.ClasspathScriptSource;
-import org.graalvm.polyglot.Context;
+import io.github.ih0rd.polyglot.SupportedLanguage;
 
 public final class Main {
 
@@ -14,15 +15,8 @@ public final class Main {
         PricingRules rules = new PricingRules(0.20);
         ClasspathScriptSource scriptSource = new ClasspathScriptSource();
 
-        try (var context = Context.newBuilder("python")
-                     .allowAllAccess(true)
-                     .allowExperimentalOptions(true)
-                     .option("engine.WarnInterpreterOnly", "false")
-                     .option("python.WarnExperimentalFeatures", "false")
-                     .build();
-             var pyExecutor = new PyExecutor(context, scriptSource)) {
-
-            context.initialize("python");
+        try (var context = PolyglotHelper.newContext(SupportedLanguage.PYTHON);
+             var pyExecutor = PyExecutor.createWithContext(context, scriptSource)) {
             context.getBindings("python").putMember("pricing_rules", rules);
 
             QuoteApi quoteApi = pyExecutor.bind(QuoteApi.class);

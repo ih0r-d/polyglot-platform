@@ -1,14 +1,11 @@
 package io.github.ih0rd.examples;
 
 import io.github.ih0rd.adapter.context.JsExecutor;
-import io.github.ih0rd.adapter.context.PolyglotHelper;
 import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.examples.contracts.BrokenForecastService;
 import io.github.ih0rd.examples.contracts.ForecastService;
 import io.github.ih0rd.examples.contracts.StatsApi;
-import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
-
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -67,8 +64,7 @@ public final class PolyglotAdapterDemo {
     }
 
     private void step1RunPython(ScriptSource scriptSource) {
-        try (var ctx = PolyglotHelper.newContext(SupportedLanguage.PYTHON);
-                var executor = new PyExecutor(ctx, scriptSource)) {
+        try (var executor = PyExecutor.create(scriptSource, null)) {
 
             StatsApi statsApi = executor.bind(StatsApi.class);
 
@@ -87,11 +83,10 @@ public final class PolyglotAdapterDemo {
     }
 
     private void step2RunPythonWithContext(ScriptSource scriptSource) {
-        try (var ctx = PolyglotHelper.newContext(
-                SupportedLanguage.PYTHON,
-                b -> b.option("engine.WarnInterpreterOnly", "false")
-                        .option("python.WarnExperimentalFeatures", "false"));
-                var executor = new PyExecutor(ctx, scriptSource)) {
+        try (var executor = PyExecutor.create(
+                scriptSource,
+                builder -> builder.option("engine.WarnInterpreterOnly", "false")
+                        .option("python.WarnExperimentalFeatures", "false"))) {
 
             ForecastService service =
                     executor.bind(ForecastService.class);
@@ -104,8 +99,7 @@ public final class PolyglotAdapterDemo {
     }
 
     private void step3RunJs(ScriptSource scriptSource) {
-        try (var ctx = PolyglotHelper.newContext(SupportedLanguage.JS);
-                var executor = new JsExecutor(ctx, scriptSource)) {
+        try (var executor = JsExecutor.create(scriptSource, null)) {
 
             executor.validateBinding(ForecastService.class);
 
@@ -120,8 +114,7 @@ public final class PolyglotAdapterDemo {
     }
 
     private void step4RunPythonWithBrokenValidation(ScriptSource scriptSource) {
-        try (var ctx = PolyglotHelper.newContext(SupportedLanguage.PYTHON);
-                var py = new PyExecutor(ctx, scriptSource)) {
+        try (var py = PyExecutor.create(scriptSource, null)) {
 
             reportValidation("[PY] ForecastService", () -> py.validateBinding(ForecastService.class), false);
             reportValidation(
@@ -133,8 +126,7 @@ public final class PolyglotAdapterDemo {
     }
 
     private void step5RunJsWithBrokenValidation(ScriptSource scriptSource) {
-        try (var ctx = PolyglotHelper.newContext(SupportedLanguage.JS);
-                var js = new JsExecutor(ctx, scriptSource)) {
+        try (var js = JsExecutor.create(scriptSource, null)) {
 
             reportValidation("[JS] ForecastService", () -> js.validateBinding(ForecastService.class), false);
             reportValidation(
@@ -148,10 +140,8 @@ public final class PolyglotAdapterDemo {
     private void step6PrintMetadata(ScriptSource jsScriptSource, ScriptSource pyScriptSource) {
         IO.println("[STEP 6] Executor metadata snapshot");
 
-        try (var pyCtx = PolyglotHelper.newContext(SupportedLanguage.PYTHON);
-                var jsCtx = PolyglotHelper.newContext(SupportedLanguage.JS);
-                var py = new PyExecutor(pyCtx, pyScriptSource);
-                var js = new JsExecutor(jsCtx, jsScriptSource)) {
+        try (var py = PyExecutor.create(pyScriptSource, null);
+                var js = JsExecutor.create(jsScriptSource, null)) {
 
             py.validateBinding(StatsApi.class);
             js.validateBinding(ForecastService.class);

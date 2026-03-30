@@ -88,7 +88,7 @@ Add the runtime BOM:
     <dependency>
       <groupId>io.github.ih0r-d</groupId>
       <artifactId>polyglot-bom</artifactId>
-      <version>${polyglot.version}</version>
+      <version>0.2.0</version>
       <type>pom</type>
       <scope>import</scope>
     </dependency>
