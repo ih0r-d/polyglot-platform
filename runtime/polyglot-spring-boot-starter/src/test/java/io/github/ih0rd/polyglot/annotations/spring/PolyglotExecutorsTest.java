@@ -70,20 +70,7 @@ class PolyglotExecutorsTest {
     return new ObjectProvider<>() {
       @Override
       public T getObject(Object... args) {
-        accessed.set(true);
-        return instance;
-      }
-
-      @Override
-      public T getIfAvailable() {
-        accessed.set(true);
-        return instance;
-      }
-
-      @Override
-      public T getIfUnique() {
-        accessed.set(true);
-        return instance;
+        return getObject();
       }
 
       @Override

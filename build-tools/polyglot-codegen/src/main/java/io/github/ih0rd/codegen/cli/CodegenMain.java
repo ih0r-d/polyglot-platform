@@ -1,6 +1,7 @@
 package io.github.ih0rd.codegen.cli;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -98,7 +99,7 @@ public final class CodegenMain {
     try {
       Files.createDirectories(cli.outputDir());
     } catch (IOException e) {
-      throw new RuntimeException("Failed to create output directory: " + cli.outputDir(), e);
+      throw new UncheckedIOException("Failed to create output directory: " + cli.outputDir(), e);
     }
   }
 
@@ -111,7 +112,7 @@ public final class CodegenMain {
           .filter(path -> path.toString().endsWith(".py"))
           .forEach(path -> processFile(path, cli, generator, javaGenerator));
     } catch (IOException e) {
-      throw new RuntimeException("Failed to scan input directory: " + cli.inputDir(), e);
+      throw new UncheckedIOException("Failed to scan input directory: " + cli.inputDir(), e);
     }
   }
 
@@ -120,36 +121,64 @@ public final class CodegenMain {
       CliArguments cli,
       ContractGenerator generator,
       JavaInterfaceGenerator javaGenerator) {
+    String source = readScript(scriptPath);
+
+    ScriptDescriptor descriptor =
+        new ScriptDescriptor(
+            SupportedLanguage.PYTHON,
+            source,
+            Objects.requireNonNull(scriptPath.getFileName(), "Script path must have a file name")
+                .toString());
+
+    ContractModel model;
     try {
-      String source = Files.readString(scriptPath);
+      model = generator.generate(descriptor, cli.config());
+    } catch (RuntimeException e) {
+      throw new CodegenCliException("Failed to process script: " + scriptPath, e);
+    }
 
-      ScriptDescriptor descriptor =
-          new ScriptDescriptor(
-              SupportedLanguage.PYTHON,
-              source,
-              Objects.requireNonNull(scriptPath.getFileName(), "Script path must have a file name")
-                  .toString());
+    Path packageDir = preparePackageDirectory(cli);
+    for (ContractClass contract : model.classes()) {
+      writeContract(packageDir, contract, cli.basePackage(), javaGenerator);
+    }
+  }
 
-      ContractModel model = generator.generate(descriptor, cli.config());
+  private static String readScript(Path scriptPath) {
+    try {
+      return Files.readString(scriptPath);
+    } catch (IOException e) {
+      throw new UncheckedIOException("Failed to read script: " + scriptPath, e);
+    }
+  }
 
-      for (ContractClass contract : model.classes()) {
-        String javaSource = javaGenerator.generate(contract, cli.basePackage());
+  private static Path preparePackageDirectory(CliArguments cli) {
+    Path packageDir = cli.outputDir().resolve(cli.basePackage().replace('.', '/'));
+    try {
+      Files.createDirectories(packageDir);
+      return packageDir;
+    } catch (IOException e) {
+      throw new UncheckedIOException("Failed to create package directory: " + packageDir, e);
+    }
+  }
 
-        Path packageDir = cli.outputDir().resolve(cli.basePackage().replace('.', '/'));
+  private static void writeContract(
+      Path packageDir,
+      ContractClass contract,
+      String basePackage,
+      JavaInterfaceGenerator javaGenerator) {
+    String javaSource = javaGenerator.generate(contract, basePackage);
+    Path outputFile = packageDir.resolve(contract.name() + ".java");
+    try {
+      Files.writeString(outputFile, javaSource);
+    } catch (IOException e) {
+      throw new UncheckedIOException("Failed to write generated source: " + outputFile, e);
+    }
+  }
 
-        try {
-          Files.createDirectories(packageDir);
-        } catch (IOException e) {
-          throw new RuntimeException("Failed to create package directory", e);
-        }
+  private static final class CodegenCliException extends RuntimeException {
 
-        Path outputFile = packageDir.resolve(contract.name() + ".java");
-
-        Files.writeString(outputFile, javaSource);
-      }
-
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to process script: " + scriptPath, e);
+    private CodegenCliException(String message, Throwable cause) {
+      super(message, cause);
     }
   }
 }

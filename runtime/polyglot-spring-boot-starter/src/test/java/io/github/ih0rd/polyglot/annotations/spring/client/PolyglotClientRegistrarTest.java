@@ -7,6 +7,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.core.type.AnnotationMetadata;
 
@@ -74,15 +75,25 @@ class PolyglotClientRegistrarTest {
 
     assertThrows(
         InvalidPolyglotClientTypeException.class,
-        () -> {
-          try {
-            method.invoke(registrar, InvalidClient.class.getName(), getClass().getClassLoader());
-          } catch (InvocationTargetException e) {
-            if (e.getCause() instanceof RuntimeException runtimeException) {
-              throw runtimeException;
-            }
-            throw new RuntimeException(e.getCause());
-          }
-        });
+        validationInvocation(method, registrar, InvalidClient.class.getName()));
+  }
+
+  private Executable validationInvocation(
+      Method method, PolyglotClientRegistrar registrar, String className) {
+    return () -> invokeValidateClientType(method, registrar, className);
+  }
+
+  private void invokeValidateClientType(
+      Method method, PolyglotClientRegistrar registrar, String className) {
+    try {
+      method.invoke(registrar, className, getClass().getClassLoader());
+    } catch (InvocationTargetException e) {
+      if (e.getCause() instanceof RuntimeException runtimeException) {
+        throw runtimeException;
+      }
+      throw new IllegalStateException(e.getCause());
+    } catch (IllegalAccessException e) {
+      throw new IllegalStateException(e);
+    }
   }
 }

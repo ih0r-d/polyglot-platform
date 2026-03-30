@@ -45,6 +45,11 @@ import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties
  */
 public final class PolyglotStartupLifecycle implements SmartLifecycle {
 
+  private static final String METADATA_AVAILABLE = "available";
+  private static final String METADATA_EXECUTOR_TYPE = "executorType";
+  private static final String METADATA_LANGUAGE_ID = "languageId";
+  private static final String METADATA_SOURCE_CACHE_SIZE = "sourceCacheSize";
+
   private static final Logger log = LoggerFactory.getLogger(PolyglotStartupLifecycle.class);
 
   private final PolyglotProperties properties;
@@ -251,30 +256,42 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
 
   private static Map<String, Object> pythonMetadataSummary(PyExecutor executor) {
     if (executor == null) {
-      return Map.of("available", false);
+      return Map.of(METADATA_AVAILABLE, false);
     }
     Map<String, Object> metadata = executor.metadata();
     return Map.of(
-        "available", true,
-        "executorType", metadata.getOrDefault("executorType", executor.getClass().getName()),
-        "languageId", metadata.getOrDefault("languageId", "python"),
-        "sourceCacheSize", metadata.getOrDefault("sourceCacheSize", 0),
-        "contractCacheSize", metadata.getOrDefault("instanceCacheSize", 0),
-        "boundInterfacesCount", size(metadata.get("cachedInterfaces")));
+        METADATA_AVAILABLE,
+        true,
+        METADATA_EXECUTOR_TYPE,
+        metadata.getOrDefault(METADATA_EXECUTOR_TYPE, executor.getClass().getName()),
+        METADATA_LANGUAGE_ID,
+        metadata.getOrDefault(METADATA_LANGUAGE_ID, "python"),
+        METADATA_SOURCE_CACHE_SIZE,
+        metadata.getOrDefault(METADATA_SOURCE_CACHE_SIZE, 0),
+        "contractCacheSize",
+        metadata.getOrDefault("instanceCacheSize", 0),
+        "boundInterfacesCount",
+        size(metadata.get("cachedInterfaces")));
   }
 
   private static Map<String, Object> jsMetadataSummary(JsExecutor executor) {
     if (executor == null) {
-      return Map.of("available", false);
+      return Map.of(METADATA_AVAILABLE, false);
     }
     Map<String, Object> metadata = executor.metadata();
     return Map.of(
-        "available", true,
-        "executorType", metadata.getOrDefault("executorType", executor.getClass().getName()),
-        "languageId", metadata.getOrDefault("languageId", "js"),
-        "sourceCacheSize", metadata.getOrDefault("sourceCacheSize", 0),
-        "contractCacheSize", size(metadata.get("loadedInterfaces")),
-        "loadedInterfacesCount", size(metadata.get("loadedInterfaces")));
+        METADATA_AVAILABLE,
+        true,
+        METADATA_EXECUTOR_TYPE,
+        metadata.getOrDefault(METADATA_EXECUTOR_TYPE, executor.getClass().getName()),
+        METADATA_LANGUAGE_ID,
+        metadata.getOrDefault(METADATA_LANGUAGE_ID, "js"),
+        METADATA_SOURCE_CACHE_SIZE,
+        metadata.getOrDefault(METADATA_SOURCE_CACHE_SIZE, 0),
+        "contractCacheSize",
+        size(metadata.get("loadedInterfaces")),
+        "loadedInterfacesCount",
+        size(metadata.get("loadedInterfaces")));
   }
 
   private static int size(Object value) {

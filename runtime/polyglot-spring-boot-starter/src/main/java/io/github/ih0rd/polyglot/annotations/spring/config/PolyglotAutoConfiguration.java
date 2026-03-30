@@ -32,7 +32,9 @@ import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties
 public class PolyglotAutoConfiguration {
 
   /** Creates the core auto-configuration bean container. */
-  public PolyglotAutoConfiguration() {}
+  public PolyglotAutoConfiguration() {
+    // Default constructor required for Spring Boot auto-configuration instantiation.
+  }
 
   /**
    * Creates the runtime state holder used by startup, actuator, and metrics integrations.

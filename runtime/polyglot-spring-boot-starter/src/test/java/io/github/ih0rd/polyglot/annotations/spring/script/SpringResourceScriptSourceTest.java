@@ -67,11 +67,12 @@ class SpringResourceScriptSourceTest {
 
   @Test
   void openFailsWhenLanguageDoesNotMatchBoundSource() {
-    SpringResourceScriptSource source =
+    SpringResourceScriptSource scriptSource =
         new SpringResourceScriptSource(
             resourceLoader, SupportedLanguage.PYTHON, "classpath:/python/");
 
-    assertThrows(IllegalArgumentException.class, () -> source.open(SupportedLanguage.JS, "demo"));
+    assertThrows(
+        IllegalArgumentException.class, () -> scriptSource.open(SupportedLanguage.JS, "demo"));
   }
 
   @Test

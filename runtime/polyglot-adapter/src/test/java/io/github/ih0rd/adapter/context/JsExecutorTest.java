@@ -142,7 +142,8 @@ class JsExecutorTest {
   void createUsesPolyglotHelperContext() {
     Context createdContext = mock(Context.class);
     ScriptSource createdScriptSource = mock(ScriptSource.class);
-    Consumer<Context.Builder> customizer = mock(Consumer.class);
+    @SuppressWarnings("unchecked")
+    Consumer<Context.Builder> customizer = (Consumer<Context.Builder>) mock(Consumer.class);
 
     try (MockedStatic<PolyglotHelper> polyglotHelper = mockStatic(PolyglotHelper.class)) {
       polyglotHelper

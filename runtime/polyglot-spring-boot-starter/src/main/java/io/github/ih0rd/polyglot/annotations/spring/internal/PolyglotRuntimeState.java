@@ -6,16 +6,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import io.github.ih0rd.adapter.context.JsExecutor;
 import io.github.ih0rd.adapter.context.PyExecutor;
 
-/**
- * Internal runtime state exposed to actuator and Micrometer integrations.
- */
+/** Internal runtime state exposed to actuator and Micrometer integrations. */
 public final class PolyglotRuntimeState {
 
   private final AtomicLong startupDurationMs = new AtomicLong(-1);
   private final AtomicInteger availableExecutors = new AtomicInteger();
 
   /** Creates an empty runtime state snapshot. */
-  public PolyglotRuntimeState() {}
+  public PolyglotRuntimeState() {
+    // State starts in the "not recorded yet" sentinel state.
+  }
 
   /**
    * Records startup state after executor warmup and validation have completed.

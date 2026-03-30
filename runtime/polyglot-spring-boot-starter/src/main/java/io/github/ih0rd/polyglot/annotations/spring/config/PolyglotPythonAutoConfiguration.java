@@ -27,7 +27,9 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
 public class PolyglotPythonAutoConfiguration {
 
   /** Creates the Python auto-configuration bean container. */
-  public PolyglotPythonAutoConfiguration() {}
+  public PolyglotPythonAutoConfiguration() {
+    // Default constructor required for Spring Boot auto-configuration instantiation.
+  }
 
   /**
    * Creates the Python script source backed by Spring resources.

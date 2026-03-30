@@ -34,7 +34,9 @@ public final class JavaInterfaceGenerator {
   private final JavaTypeRenderer renderer = new JavaTypeRenderer();
 
   /** Creates a generator for deterministic Java interface rendering. */
-  public JavaInterfaceGenerator() {}
+  public JavaInterfaceGenerator() {
+    // The renderer field is initialized eagerly for reuse across generations.
+  }
 
   /**
    * Generates a complete Java source file for the given contract.
@@ -95,7 +97,7 @@ public final class JavaInterfaceGenerator {
       }
       return hexString.toString();
     } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException("SHA-256 algorithm not available", e);
+      throw new IllegalStateException("SHA-256 algorithm not available", e);
     }
   }
 

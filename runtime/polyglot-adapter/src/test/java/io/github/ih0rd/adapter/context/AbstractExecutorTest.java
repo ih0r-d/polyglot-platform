@@ -192,8 +192,6 @@ class AbstractExecutorTest {
 
   @Test
   void constructorRejectsNullArguments() {
-    ScriptSource scriptSource = mock(ScriptSource.class);
-
     assertThrows(IllegalArgumentException.class, () -> new TestExecutor(null));
     assertThrows(
         IllegalArgumentException.class,

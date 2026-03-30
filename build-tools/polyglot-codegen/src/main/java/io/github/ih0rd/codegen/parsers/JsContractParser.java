@@ -28,7 +28,9 @@ import io.github.ih0rd.polyglot.model.parser.ScriptDescriptor;
 public final class JsContractParser implements LanguageParser {
 
   /** Creates the JavaScript parser placeholder. */
-  public JsContractParser() {}
+  public JsContractParser() {
+    // This parser is intentionally stateless until JavaScript codegen is implemented.
+  }
 
   @Override
   public SupportedLanguage language() {

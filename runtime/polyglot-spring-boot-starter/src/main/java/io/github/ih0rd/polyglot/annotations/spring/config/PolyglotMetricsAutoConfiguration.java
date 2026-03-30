@@ -14,22 +14,22 @@ import io.github.ih0rd.polyglot.annotations.spring.metrics.PolyglotMetricsBinder
 import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 import io.micrometer.core.instrument.MeterRegistry;
 
-/**
- * Auto-configuration that registers Micrometer meters for the configured polyglot executors.
- */
+/** Auto-configuration that registers Micrometer meters for the configured polyglot executors. */
 @AutoConfiguration
 @ConditionalOnClass(MeterRegistry.class)
 @ConditionalOnProperty(prefix = "polyglot.metrics", name = "enabled", matchIfMissing = true)
 public class PolyglotMetricsAutoConfiguration {
 
   /** Creates the metrics auto-configuration bean container. */
-  public PolyglotMetricsAutoConfiguration() {}
+  public PolyglotMetricsAutoConfiguration() {
+    // Default constructor required for Spring Boot auto-configuration instantiation.
+  }
 
   /**
    * Creates the metrics binder.
    *
-    * @param py optional Python executor
-    * @param js optional JavaScript executor
+   * @param py optional Python executor
+   * @param js optional JavaScript executor
    * @param meterRegistry Micrometer registry used for meter registration
    * @param properties starter properties
    * @param runtimeState runtime state holder
@@ -40,7 +40,7 @@ public class PolyglotMetricsAutoConfiguration {
   public PolyglotMetricsBinder polyglotMetricsBinder(
       ObjectProvider<PyExecutor> py,
       ObjectProvider<JsExecutor> js,
-      MeterRegistry meterRegistry,
+      ObjectProvider<MeterRegistry> meterRegistry,
       PolyglotProperties properties,
       PolyglotRuntimeState runtimeState) {
     return new PolyglotMetricsBinder(py, js, meterRegistry, properties, runtimeState);

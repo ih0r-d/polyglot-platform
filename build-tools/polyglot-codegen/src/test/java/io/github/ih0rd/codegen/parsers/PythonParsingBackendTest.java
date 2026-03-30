@@ -226,6 +226,13 @@ class C:
   }
 
   @Test
+  void parse_ShouldInferReturnTypes_DictComprehension() {
+    PolyType type = getReturnType("return {x: x for x in range(10)}");
+    assertInstanceOf(PolyMap.class, type);
+    assertInstanceOf(PolyUnknown.class, ((PolyMap) type).valueType());
+  }
+
+  @Test
   void parse_ShouldHandleExplicitReturnAnnotation() {
     String source =
 """

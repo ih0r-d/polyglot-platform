@@ -41,34 +41,11 @@ public final class PolyglotHelper {
 
     Objects.requireNonNull(language, "language must not be null");
 
-    Context.Builder builder;
-
-    switch (language) {
-      case PYTHON -> {
-        VirtualFileSystem vfs =
-            VirtualFileSystem.newBuilder().resourceDirectory("org.graalvm.python.vfs").build();
-
-        builder = GraalPyResources.contextBuilder(vfs);
-        if (applyRecommendedDefaults) {
-          builder =
-              builder
-                  .allowAllAccess(true)
-                  .allowExperimentalOptions(true)
-                  .option(ENGINE_WARN_INTERPRETER_ONLY, OPTION_FALSE)
-                  .option(PYTHON_WARN_EXPERIMENTAL_FEATURES, OPTION_FALSE);
-        }
-      }
-
-      case JS -> {
-        builder =
-            Context.newBuilder(language.id())
-                .allowAllAccess(true)
-                .allowExperimentalOptions(true)
-                .option(ENGINE_WARN_INTERPRETER_ONLY, OPTION_FALSE);
-      }
-
-      default -> throw new IllegalStateException("Unsupported language: " + language);
-    }
+    Context.Builder builder =
+        switch (language) {
+          case PYTHON -> pythonBuilder(applyRecommendedDefaults);
+          case JS -> jsBuilder(language);
+        };
 
     if (customizer != null) {
       customizer.accept(builder);
@@ -77,6 +54,28 @@ public final class PolyglotHelper {
     Context context = builder.build();
     context.initialize(language.id());
     return context;
+  }
+
+  private static Context.Builder pythonBuilder(boolean applyRecommendedDefaults) {
+    VirtualFileSystem vfs =
+        VirtualFileSystem.newBuilder().resourceDirectory("org.graalvm.python.vfs").build();
+
+    Context.Builder builder = GraalPyResources.contextBuilder(vfs);
+    if (!applyRecommendedDefaults) {
+      return builder;
+    }
+    return builder
+        .allowAllAccess(true)
+        .allowExperimentalOptions(true)
+        .option(ENGINE_WARN_INTERPRETER_ONLY, OPTION_FALSE)
+        .option(PYTHON_WARN_EXPERIMENTAL_FEATURES, OPTION_FALSE);
+  }
+
+  private static Context.Builder jsBuilder(SupportedLanguage language) {
+    return Context.newBuilder(language.id())
+        .allowAllAccess(true)
+        .allowExperimentalOptions(true)
+        .option(ENGINE_WARN_INTERPRETER_ONLY, OPTION_FALSE);
   }
 
   /**

@@ -29,7 +29,7 @@ public class PolyglotMetricsBinder implements SmartInitializingSingleton {
 
   private final ObjectProvider<PyExecutor> pyExecutor;
   private final ObjectProvider<JsExecutor> jsExecutor;
-  private final MeterRegistry meterRegistry;
+  private final ObjectProvider<MeterRegistry> meterRegistry;
   private final PolyglotProperties properties;
   private final PolyglotRuntimeState runtimeState;
 
@@ -45,7 +45,7 @@ public class PolyglotMetricsBinder implements SmartInitializingSingleton {
   public PolyglotMetricsBinder(
       ObjectProvider<PyExecutor> pyExecutor,
       ObjectProvider<JsExecutor> jsExecutor,
-      MeterRegistry meterRegistry,
+      ObjectProvider<MeterRegistry> meterRegistry,
       PolyglotProperties properties,
       PolyglotRuntimeState runtimeState) {
     this.pyExecutor = pyExecutor;
@@ -57,7 +57,10 @@ public class PolyglotMetricsBinder implements SmartInitializingSingleton {
 
   @Override
   public void afterSingletonsInstantiated() {
-    bindTo(meterRegistry);
+    MeterRegistry registry = meterRegistry.getIfAvailable();
+    if (registry != null) {
+      bindTo(registry);
+    }
   }
 
   /**

@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
@@ -54,8 +55,8 @@ class PolyglotMetricsBinderTest {
         new PolyglotMetricsBinder(
             provider(pyExecutor),
             provider(jsExecutor),
-            registry(),
-            enabledProperties(true, true),
+            provider(registry()),
+            enabledProperties(true),
             runtimeState(42, 2));
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
@@ -63,38 +64,50 @@ class PolyglotMetricsBinderTest {
 
     assertEquals(
         2.0,
-        registry
-            .find("polyglot.executor.source.cache.size")
-            .tag("language", "python")
-            .gauge()
+        Objects.requireNonNull(
+                registry
+                    .find("polyglot.executor.source.cache.size")
+                    .tag("language", "python")
+                    .gauge())
             .value());
     assertEquals(
         3.0,
-        registry
-            .find("polyglot.python.instance.cache.size")
-            .tag("language", "python")
-            .gauge()
+        Objects.requireNonNull(
+                registry
+                    .find("polyglot.python.instance.cache.size")
+                    .tag("language", "python")
+                    .gauge())
             .value());
     assertEquals(
         3.0,
-        registry
-            .find("polyglot.executor.contract.cache.size")
-            .tag("language", "python")
-            .gauge()
+        Objects.requireNonNull(
+                registry
+                    .find("polyglot.executor.contract.cache.size")
+                    .tag("language", "python")
+                    .gauge())
             .value());
     assertEquals(
         1.0,
-        registry.find("polyglot.js.loaded.interfaces.count").tag("language", "js").gauge().value());
+        Objects.requireNonNull(
+                registry.find("polyglot.js.loaded.interfaces.count").tag("language", "js").gauge())
+            .value());
     assertEquals(
         1.0,
-        registry
-            .find("polyglot.executor.contract.cache.size")
-            .tag("language", "js")
-            .gauge()
+        Objects.requireNonNull(
+                registry
+                    .find("polyglot.executor.contract.cache.size")
+                    .tag("language", "js")
+                    .gauge())
             .value());
-    assertEquals(2.0, registry.find("polyglot.executor.available.count").gauge().value());
-    assertEquals(2.0, registry.find("polyglot.executor.configured.count").gauge().value());
-    assertEquals(42.0, registry.find("polyglot.startup.duration").gauge().value());
+    assertEquals(
+        2.0,
+        Objects.requireNonNull(registry.find("polyglot.executor.available.count").gauge()).value());
+    assertEquals(
+        2.0,
+        Objects.requireNonNull(registry.find("polyglot.executor.configured.count").gauge())
+            .value());
+    assertEquals(
+        42.0, Objects.requireNonNull(registry.find("polyglot.startup.duration").gauge()).value());
   }
 
   @Test
@@ -105,8 +118,8 @@ class PolyglotMetricsBinderTest {
         new PolyglotMetricsBinder(
             provider(pyExecutor),
             provider(null),
-            registry(),
-            enabledProperties(true, false),
+            provider(registry()),
+            enabledProperties(false),
             runtimeState(-1, 1));
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
@@ -114,17 +127,19 @@ class PolyglotMetricsBinderTest {
 
     assertEquals(
         0.0,
-        registry
-            .find("polyglot.executor.source.cache.size")
-            .tag("language", "python")
-            .gauge()
+        Objects.requireNonNull(
+                registry
+                    .find("polyglot.executor.source.cache.size")
+                    .tag("language", "python")
+                    .gauge())
             .value());
     assertEquals(
         0.0,
-        registry
-            .find("polyglot.python.bound.interfaces.count")
-            .tag("language", "python")
-            .gauge()
+        Objects.requireNonNull(
+                registry
+                    .find("polyglot.python.bound.interfaces.count")
+                    .tag("language", "python")
+                    .gauge())
             .value());
   }
 
@@ -137,8 +152,8 @@ class PolyglotMetricsBinderTest {
         new PolyglotMetricsBinder(
             pyProvider,
             provider(null),
-            registry(),
-            enabledProperties(true, false),
+            provider(registry()),
+            enabledProperties(false),
             runtimeState(-1, 1));
 
     binder.bindTo(new SimpleMeterRegistry());
@@ -150,17 +165,7 @@ class PolyglotMetricsBinderTest {
     return new ObjectProvider<>() {
       @Override
       public T getObject(Object... args) {
-        return instance;
-      }
-
-      @Override
-      public T getIfAvailable() {
-        return instance;
-      }
-
-      @Override
-      public T getIfUnique() {
-        return instance;
+        return getObject();
       }
 
       @Override
@@ -180,11 +185,10 @@ class PolyglotMetricsBinderTest {
     };
   }
 
-  private static PolyglotProperties enabledProperties(boolean pythonEnabled, boolean jsEnabled) {
+  private static PolyglotProperties enabledProperties(boolean jsEnabled) {
     return new PolyglotProperties(
         null,
-        new PolyglotProperties.PythonProperties(
-            pythonEnabled, "classpath:/python", true, false, List.of()),
+        new PolyglotProperties.PythonProperties(true, "classpath:/python", true, false, List.of()),
         new PolyglotProperties.JsProperties(jsEnabled, "classpath:/js", false, List.of()),
         null,
         null);
@@ -208,20 +212,7 @@ class PolyglotMetricsBinderTest {
     return new ObjectProvider<>() {
       @Override
       public T getObject(Object... args) {
-        accessed.set(true);
-        return instance;
-      }
-
-      @Override
-      public T getIfAvailable() {
-        accessed.set(true);
-        return instance;
-      }
-
-      @Override
-      public T getIfUnique() {
-        accessed.set(true);
-        return instance;
+        return getObject();
       }
 
       @Override

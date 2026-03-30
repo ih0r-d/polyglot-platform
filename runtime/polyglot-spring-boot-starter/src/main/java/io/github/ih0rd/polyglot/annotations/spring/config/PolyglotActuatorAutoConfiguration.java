@@ -25,7 +25,9 @@ import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties
 public class PolyglotActuatorAutoConfiguration {
 
   /** Creates the actuator auto-configuration bean container. */
-  public PolyglotActuatorAutoConfiguration() {}
+  public PolyglotActuatorAutoConfiguration() {
+    // Default constructor required for Spring Boot auto-configuration instantiation.
+  }
 
   /**
    * Creates the actuator info contributor.

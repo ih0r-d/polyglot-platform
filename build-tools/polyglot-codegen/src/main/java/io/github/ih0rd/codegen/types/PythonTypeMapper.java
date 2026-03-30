@@ -45,7 +45,9 @@ public final class PythonTypeMapper implements LanguageTypeMapper {
           "Any", new PolyUnknown());
 
   /** Creates a mapper for Python primitive and generic type hints. */
-  public PythonTypeMapper() {}
+  public PythonTypeMapper() {
+    // Mapping tables are static; the instance remains stateless.
+  }
 
   /**
    * Maps a Python primitive type name or type hint to {@link PolyType}.
@@ -63,65 +65,67 @@ public final class PythonTypeMapper implements LanguageTypeMapper {
   }
 
   private PolyType parseType(String typeStr) {
-    // Handle explicit primitives first
-    if (PRIMITIVES.containsKey(typeStr)) {
-      return PRIMITIVES.get(typeStr);
+    PolyType primitive = PRIMITIVES.get(typeStr);
+    if (primitive != null) {
+      return primitive;
     }
 
-    // Handle generic types: Base[Args]
     int openBracket = typeStr.indexOf('[');
-    if (openBracket > 0 && typeStr.endsWith("]")) {
-      String base = typeStr.substring(0, openBracket).trim();
-      String inner = typeStr.substring(openBracket + 1, typeStr.length() - 1).trim();
-
-      // Normalize base type case (e.g. List vs list)
-      String normalizedBase = base.toLowerCase();
-
-      List<String> args = splitGenericArgs(inner);
-
-      if (normalizedBase.equals("list")
-          || normalizedBase.equals("set")
-          || normalizedBase.equals("tuple")) {
-        // List[T], Set[T], Tuple[T, ...]
-        // For Tuple, we unify or take the first type if uniform.
-        // Fallback to Unknown if empty.
-        if (args.isEmpty()) {
-          return new PolyList(new PolyUnknown());
-        }
-        // Determine element type:
-        // For list/set, usually 1 arg.
-        // For tuple, multiple args. We map to List<Unify<Args>>.
-        PolyType unified = unifyTypes(args);
-        return new PolyList(unified);
-      }
-
-      if (normalizedBase.equals("dict")) {
-        // Dict[K, V]
-        if (args.size() >= 2) {
-          PolyType keyType = parseType(args.get(0));
-          PolyType valueType = parseType(args.get(1));
-
-          // We only support String keys for now in contract model?
-          // PolyMap supports PolyType key.
-          // But if key is not String/Int, Java Map key usage is complex.
-          // For now, let's allow it.
-          return new PolyMap(keyType, valueType);
-        }
-        return new PolyMap(PolyPrimitive.STRING, new PolyUnknown());
-      }
-
-      if (base.equals("Optional")) {
-        if (args.isEmpty()) return new PolyUnknown();
-        return parseType(args.getFirst());
-      }
-
-      if (base.equals("Union")) {
-        // Fallback for Union
-        return new PolyUnknown();
-      }
+    if (openBracket <= 0 || !typeStr.endsWith("]")) {
+      return new PolyUnknown();
     }
 
+    return parseGenericType(typeStr, openBracket);
+  }
+
+  private PolyType parseGenericType(String typeStr, int openBracket) {
+    String base = typeStr.substring(0, openBracket).trim();
+    String inner = typeStr.substring(openBracket + 1, typeStr.length() - 1).trim();
+    List<String> args = splitGenericArgs(inner);
+    String normalizedBase = base.toLowerCase();
+
+    if (isCollectionType(normalizedBase)) {
+      return mapCollectionType(args);
+    }
+    if (normalizedBase.equals("dict")) {
+      return mapDictType(args);
+    }
+    if (base.equals("Optional")) {
+      return mapOptionalType(args);
+    }
+    if (base.equals("Union")) {
+      return new PolyUnknown();
+    }
     return new PolyUnknown();
+  }
+
+  private boolean isCollectionType(String normalizedBase) {
+    return normalizedBase.equals("list")
+        || normalizedBase.equals("set")
+        || normalizedBase.equals("tuple");
+  }
+
+  private PolyType mapCollectionType(List<String> args) {
+    if (args.isEmpty()) {
+      return new PolyList(new PolyUnknown());
+    }
+    return new PolyList(unifyTypes(args));
+  }
+
+  private PolyType mapDictType(List<String> args) {
+    if (args.size() < 2) {
+      return new PolyMap(PolyPrimitive.STRING, new PolyUnknown());
+    }
+    PolyType keyType = parseType(args.get(0));
+    PolyType valueType = parseType(args.get(1));
+    return new PolyMap(keyType, valueType);
+  }
+
+  private PolyType mapOptionalType(List<String> args) {
+    if (args.isEmpty()) {
+      return new PolyUnknown();
+    }
+    return parseType(args.getFirst());
   }
 
   private List<String> splitGenericArgs(String inner) {

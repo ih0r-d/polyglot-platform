@@ -27,7 +27,9 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
 public class PolyglotJsAutoConfiguration {
 
   /** Creates the JavaScript auto-configuration bean container. */
-  public PolyglotJsAutoConfiguration() {}
+  public PolyglotJsAutoConfiguration() {
+    // Default constructor required for Spring Boot auto-configuration instantiation.
+  }
 
   /**
    * Creates the JavaScript script source backed by Spring resources.

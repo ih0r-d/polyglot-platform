@@ -14,7 +14,9 @@ public final class JavaTypeRenderer {
   private final Set<String> imports = new HashSet<>();
 
   /** Creates a fresh renderer with an empty import collection. */
-  public JavaTypeRenderer() {}
+  public JavaTypeRenderer() {
+    // The import set starts empty and is populated lazily during rendering.
+  }
 
   /**
    * Renders a portable type as a Java source type.

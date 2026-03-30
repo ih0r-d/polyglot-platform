@@ -575,13 +575,16 @@ class PyExecutorTest {
 
     AtomicInteger active = new AtomicInteger();
     AtomicInteger maxActive = new AtomicInteger();
+    CountDownLatch started = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
     when(member.execute("x"))
         .thenAnswer(
             invocation -> {
               int current = active.incrementAndGet();
               maxActive.updateAndGet(previous -> Math.max(previous, current));
               try {
-                Thread.sleep(100);
+                started.countDown();
+                release.await(2, TimeUnit.SECONDS);
               } finally {
                 active.decrementAndGet();
               }
@@ -592,9 +595,11 @@ class PyExecutorTest {
     try {
       Future<Value> first =
           pool.submit(() -> exec.evaluate(Convention.DEFAULT, "hello", Api.class, "x"));
+      assertTrue(started.await(1, TimeUnit.SECONDS));
       Future<Value> second =
           pool.submit(() -> exec.evaluate(Convention.DEFAULT, "hello", Api.class, "x"));
 
+      release.countDown();
       assertNotNull(first.get(2, TimeUnit.SECONDS));
       assertNotNull(second.get(2, TimeUnit.SECONDS));
     } finally {
@@ -627,6 +632,7 @@ class PyExecutorTest {
 
     CountDownLatch entered = new CountDownLatch(1);
     CountDownLatch release = new CountDownLatch(1);
+    CountDownLatch closeAttempted = new CountDownLatch(1);
     AtomicBoolean closeCalled = new AtomicBoolean(false);
     doAnswer(
             invocation -> {
@@ -652,11 +658,12 @@ class PyExecutorTest {
       Future<?> closeFuture =
           pool.submit(
               () -> {
+                closeAttempted.countDown();
                 exec.close();
                 return null;
               });
 
-      Thread.sleep(100);
+      assertTrue(closeAttempted.await(1, TimeUnit.SECONDS));
       assertFalse(closeCalled.get());
 
       release.countDown();

@@ -42,7 +42,9 @@ import io.github.ih0rd.polyglot.model.parser.ScriptDescriptor;
 public final class PolyglotCodegenMojo extends AbstractMojo {
 
   /** Creates the Maven Mojo instance used by Maven during plugin execution. */
-  public PolyglotCodegenMojo() {}
+  public PolyglotCodegenMojo() {
+    // Maven instantiates Mojos reflectively.
+  }
 
   /**
    * Directory containing polyglot script contracts.
@@ -142,10 +144,12 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
                 try {
                   generateForScript(path, generator, javaGenerator, outputRoot, effectivePackage);
                 } catch (MojoExecutionException e) {
-                  throw new RuntimeException(e);
+                  throw new UncheckedMojoExecutionException(e);
                 }
               });
 
+    } catch (UncheckedMojoExecutionException e) {
+      throw e.mojoExecutionException();
     } catch (IOException e) {
       throw new MojoExecutionException("Failed scanning input directory", e);
     }
@@ -194,8 +198,21 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
         getLog().info("Generated: " + target);
       }
 
-    } catch (Exception e) {
+    } catch (IOException | RuntimeException e) {
       throw new MojoExecutionException("Failed processing script: " + script, e);
+    }
+  }
+
+  private static final class UncheckedMojoExecutionException extends RuntimeException {
+    private final MojoExecutionException mojoExecutionException;
+
+    private UncheckedMojoExecutionException(MojoExecutionException mojoExecutionException) {
+      super(mojoExecutionException);
+      this.mojoExecutionException = mojoExecutionException;
+    }
+
+    private MojoExecutionException mojoExecutionException() {
+      return mojoExecutionException;
     }
   }
 }

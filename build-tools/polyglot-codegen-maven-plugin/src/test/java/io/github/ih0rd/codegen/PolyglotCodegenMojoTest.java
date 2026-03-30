@@ -95,6 +95,31 @@ class PolyglotCodegenMojoTest {
     assertTrue(Files.exists(generatedSource));
   }
 
+  @Test
+  void executeFailsWhenScriptProcessingThrows() throws Exception {
+    Path inputDirectory = Files.createDirectories(tempDir.resolve("scripts-invalid"));
+    Path outputDirectory = tempDir.resolve("generated-invalid");
+    Path script = inputDirectory.resolve("broken.py");
+    Files.writeString(
+        script,
+        """
+        class BrokenApi:
+            def broken(self) -> int:
+                return 1
+        """);
+
+    PolyglotCodegenMojo mojo = new PolyglotCodegenMojo();
+    MavenProject project = new MavenProject();
+
+    setField(mojo, "inputDirectory", inputDirectory.toFile());
+    setField(mojo, "outputDirectory", outputDirectory.toFile());
+    setField(mojo, "basePackage", "com.example.polyglot");
+    setField(mojo, "project", project);
+    setField(mojo, "projectGroupId", "com.example");
+
+    assertThrows(MojoExecutionException.class, mojo::execute);
+  }
+
   private static void setField(Object target, String name, Object value) throws Exception {
     Field field = target.getClass().getDeclaredField(name);
     field.setAccessible(true);

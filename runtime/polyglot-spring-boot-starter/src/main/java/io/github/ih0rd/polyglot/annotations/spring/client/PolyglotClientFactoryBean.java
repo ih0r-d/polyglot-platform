@@ -1,5 +1,6 @@
 package io.github.ih0rd.polyglot.annotations.spring.client;
 
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.FactoryBean;
@@ -47,14 +48,13 @@ public final class PolyglotClientFactoryBean<T> implements FactoryBean<T>, BeanF
   }
 
   @Override
-  public void setBeanFactory(BeanFactory beanFactory) {
+  public void setBeanFactory(@NonNull BeanFactory beanFactory) {
     this.beanFactory = beanFactory;
   }
 
   /** Creates the actual polyglot-backed client bean instance. */
   @Override
   public T getObject() {
-    PolyglotExecutors executors = executors();
     PolyglotClient annotation = clientType.getAnnotation(PolyglotClient.class);
     if (annotation == null) {
       throw new MissingPolyglotClientAnnotationException(clientType.getName());

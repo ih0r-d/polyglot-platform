@@ -31,6 +31,8 @@ import io.github.ih0rd.polyglot.model.types.PolyUnknown;
 public final class PythonContractParser implements LanguageParser {
 
   private static final String PYTHON_DECORATOR_INCLUDE = "@adapter_include";
+  private static final String FOR_CLAUSE = " for ";
+  private static final String IN_CLAUSE = " in ";
 
   private static final String S = "\\s*";
   private static final String W = "\\w+";
@@ -47,7 +49,9 @@ public final class PythonContractParser implements LanguageParser {
   private final PythonTypeMapper mapper = new PythonTypeMapper();
 
   /** Creates a parser with the default Python type mapper. */
-  public PythonContractParser() {}
+  public PythonContractParser() {
+    // The default mapper covers the supported subset of Python type hints.
+  }
 
   @Override
   public SupportedLanguage language() {
@@ -140,40 +144,19 @@ public final class PythonContractParser implements LanguageParser {
       String trimmed = rawLine.trim();
 
       if (!insideClass) {
-        Matcher m = CLASS_DEF.matcher(rawLine);
-        if (m.find() && m.group(1).equals(className)) {
+        if (isTargetClassDefinition(rawLine, className)) {
           insideClass = true;
           classIndent = indentLevel(rawLine);
         }
-        continue;
-      }
-
-      if (!trimmed.isBlank() && indentLevel(rawLine) <= classIndent) {
+      } else if (!trimmed.isBlank() && indentLevel(rawLine) <= classIndent) {
         break;
-      }
-
-      if (trimmed.equals(PYTHON_DECORATOR_INCLUDE)) {
+      } else if (trimmed.equals(PYTHON_DECORATOR_INCLUDE)) {
         includeNext = true;
-        continue;
-      }
-
-      Matcher m = DEF_START.matcher(rawLine);
-      if (!m.find()) {
+      } else {
+        Matcher matcher = DEF_START.matcher(rawLine);
+        appendClassMethod(lines, config, methods, includeNext, i, matcher);
         includeNext = false;
-        continue;
       }
-
-      String methodName = m.group(1);
-      if (shouldSkip(methodName, config, includeNext)) {
-        includeNext = false;
-        continue;
-      }
-      includeNext = false;
-
-      MethodSignature sig = parseSignature(lines, i);
-      PolyType returnType = resolveReturnType(sig, lines, i + 1, indentLevel(rawLine));
-
-      methods.add(new ContractMethod(methodName, sig.params, returnType));
     }
     return methods;
   }
@@ -193,35 +176,82 @@ public final class PythonContractParser implements LanguageParser {
       String trimmed = rawLine.trim();
       if (trimmed.equals(PYTHON_DECORATOR_INCLUDE)) {
         includeNext = true;
-        continue;
+      } else {
+        Matcher matcher = DEF_START.matcher(rawLine);
+        includeNext =
+            appendDictMethods(lines, reverseMap, config, methods, includeNext, i, matcher);
       }
 
-      Matcher m = DEF_START.matcher(rawLine);
-      boolean found = m.find();
-      int indent = indentLevel(rawLine);
-      if (found && indent == 0) {
-        String internalName = m.group(1);
-        if (reverseMap.containsKey(internalName)) {
-          if (shouldSkip(internalName, config, includeNext)) {
-            includeNext = false;
-            continue;
-          }
-
-          MethodSignature sig = parseSignature(lines, i);
-          PolyType returnType = resolveReturnType(sig, lines, i + 1, indentLevel(rawLine));
-
-          for (String exportName : reverseMap.get(internalName)) {
-            methods.add(new ContractMethod(exportName, sig.params, returnType));
-          }
-          includeNext = false;
-        }
-      }
-
-      if (!trimmed.startsWith("def ") && !trimmed.startsWith("@")) {
+      if (!isDefinitionOrDecorator(trimmed)) {
         includeNext = false;
       }
     }
     return methods;
+  }
+
+  private boolean isTargetClassDefinition(String rawLine, String className) {
+    Matcher matcher = CLASS_DEF.matcher(rawLine);
+    return matcher.find() && matcher.group(1).equals(className);
+  }
+
+  private void appendClassMethod(
+      String[] lines,
+      CodegenConfig config,
+      List<ContractMethod> methods,
+      boolean includeNext,
+      int lineIndex,
+      Matcher matcher) {
+    if (!matcher.find()) {
+      return;
+    }
+
+    String methodName = matcher.group(1);
+    if (shouldSkip(methodName, config, includeNext)) {
+      return;
+    }
+
+    methods.add(createMethod(lines, lineIndex, methodName));
+  }
+
+  private boolean appendDictMethods(
+      String[] lines,
+      Map<String, List<String>> reverseMap,
+      CodegenConfig config,
+      List<ContractMethod> methods,
+      boolean includeNext,
+      int lineIndex,
+      Matcher matcher) {
+    String rawLine = lines[lineIndex];
+    if (!matcher.find() || indentLevel(rawLine) != 0) {
+      return includeNext;
+    }
+
+    String internalName = matcher.group(1);
+    List<String> exportNames = reverseMap.get(internalName);
+    if (exportNames == null) {
+      return includeNext;
+    }
+    if (shouldSkip(internalName, config, includeNext)) {
+      return false;
+    }
+
+    MethodSignature sig = parseSignature(lines, lineIndex);
+    PolyType returnType = resolveReturnType(sig, lines, lineIndex + 1, indentLevel(rawLine));
+    for (String exportName : exportNames) {
+      methods.add(new ContractMethod(exportName, sig.params, returnType));
+    }
+    return false;
+  }
+
+  private ContractMethod createMethod(String[] lines, int lineIndex, String methodName) {
+    String rawLine = lines[lineIndex];
+    MethodSignature sig = parseSignature(lines, lineIndex);
+    PolyType returnType = resolveReturnType(sig, lines, lineIndex + 1, indentLevel(rawLine));
+    return new ContractMethod(methodName, sig.params, returnType);
+  }
+
+  private boolean isDefinitionOrDecorator(String trimmed) {
+    return trimmed.startsWith("def ") || trimmed.startsWith("@");
   }
 
   private boolean shouldSkip(String name, CodegenConfig config, boolean hasDecorator) {
@@ -351,99 +381,96 @@ public final class PythonContractParser implements LanguageParser {
       String raw = lines[i];
       String trimmed = raw.trim();
 
-      // stop when leaving method block
-      if (!trimmed.isBlank() && indentLevel(raw) <= methodIndent) {
+      if (leftMethodBlock(raw, trimmed, methodIndent)) {
         break;
       }
+      if (!shouldSkipReturnInferenceLine(trimmed)) {
+        int returnIdx = trimmed.indexOf("return");
+        if (returnIdx >= 0 && isReturnKeyword(trimmed, returnIdx)) {
+          String expr = trimmed.substring(returnIdx + "return".length()).trim();
+          if (expr.isEmpty()) {
+            return new PolyUnknown();
+          }
 
-      // skip comments
-      if (trimmed.startsWith("#")) {
-        continue;
+          return inferExprType(appendBalancedLinesIfNeeded(expr, lines, i + 1, methodIndent));
+        }
       }
-
-      // optional: skip simple docstring lines
-      if (trimmed.startsWith("\"\"\"") || trimmed.startsWith("'''")) {
-        continue;
-      }
-
-      int returnIdx = trimmed.indexOf("return");
-      if (returnIdx < 0) {
-        continue;
-      }
-
-      // ensure it's a real keyword (not part of identifier)
-      if (returnIdx > 0 && Character.isJavaIdentifierPart(trimmed.charAt(returnIdx - 1))) {
-        continue;
-      }
-
-      String expr = trimmed.substring(returnIdx + "return".length()).trim();
-      if (expr.isEmpty()) {
-        return new PolyUnknown();
-      }
-
-      if ((expr.startsWith("[") && notBalanced(expr, '[', ']'))
-          || (expr.startsWith("{") && notBalanced(expr, '{', '}'))
-          || (expr.startsWith("(") && notBalanced(expr, '(', ')'))) {
-
-        char open = expr.charAt(0);
-        char close = (open == '[') ? ']' : (open == '{') ? '}' : ')';
-        expr =
-            expr
-                + "\n"
-                + collectUntilBalanced(
-                    lines, i + 1, methodIndent, open, close, balanceDelta(expr, open, close));
-      }
-
-      return inferExprType(expr);
     }
     return new PolyUnknown();
+  }
+
+  private boolean leftMethodBlock(String rawLine, String trimmed, int methodIndent) {
+    return !trimmed.isBlank() && indentLevel(rawLine) <= methodIndent;
+  }
+
+  private boolean shouldSkipReturnInferenceLine(String trimmed) {
+    return trimmed.startsWith("#") || trimmed.startsWith("\"\"\"") || trimmed.startsWith("'''");
+  }
+
+  private boolean isReturnKeyword(String trimmed, int returnIndex) {
+    return returnIndex == 0 || !Character.isJavaIdentifierPart(trimmed.charAt(returnIndex - 1));
+  }
+
+  private String appendBalancedLinesIfNeeded(
+      String expr, String[] lines, int nextLineIndex, int methodIndent) {
+    if (!startsUnbalancedCollection(expr)) {
+      return expr;
+    }
+
+    char open = expr.charAt(0);
+    char close = matchingClose(open);
+    return expr
+        + "\n"
+        + collectUntilBalanced(
+            lines, nextLineIndex, methodIndent, open, close, balanceDelta(expr, open, close));
+  }
+
+  private boolean startsUnbalancedCollection(String expr) {
+    return (expr.startsWith("[") && notBalanced(expr, '[', ']'))
+        || (expr.startsWith("{") && notBalanced(expr, '{', '}'))
+        || (expr.startsWith("(") && notBalanced(expr, '(', ')'));
+  }
+
+  private char matchingClose(char open) {
+    return switch (open) {
+      case '[' -> ']';
+      case '{' -> '}';
+      default -> ')';
+    };
   }
 
   private PolyType inferExprType(String expr) {
     String e = expr.trim();
 
-    // List literal: [ ... ]
     if (e.startsWith("[")) {
       return inferListType(stripOuter(e, '[', ']'));
     }
 
-    // Dict or Set literal: { ... }
     if (e.startsWith("{")) {
       String inside = stripOuter(e, '{', '}');
-
-      // {} → empty dict
       if (inside.isBlank()) {
         return new PolyMap(PolyPrimitive.STRING, new PolyUnknown());
       }
-
-      // if contains top-level ':' → dict
       if (indexOfTopLevel(inside, ':') >= 0) {
         return inferMapType(e);
       }
-
-      // otherwise it's a set → treat as List
       return new PolyList(unifyTypes(splitTopLevelComma(inside)));
     }
 
-    // list(...), set(...), tuple(...)
     if (e.startsWith("list(") || e.startsWith("set(") || e.startsWith("tuple(")) {
       String arg = extractBalancedBlock(e, e.indexOf('('), '(', ')');
       arg = stripOuter(arg, '(', ')');
       return inferExprType(arg);
     }
 
-    // dict(...)
     if (e.startsWith("dict(")) {
       String args = stripOuter(extractBalancedBlock(e, e.indexOf('('), '(', ')'), '(', ')');
-
       if (args.trim().startsWith("{")) {
         return inferMapType(args);
       }
-
       return inferDictConstructor(args);
     }
 
-    // primitive literals
     return detectLiteralType(e);
   }
 
@@ -452,8 +479,8 @@ public final class PythonContractParser implements LanguageParser {
       return new PolyList(new PolyUnknown());
     }
 
-    if (inside.contains(" for ") && inside.contains(" in ")) {
-      int forIdx = inside.indexOf(" for ");
+    if (isComprehension(inside)) {
+      int forIdx = inside.indexOf(FOR_CLAUSE);
       String body = inside.substring(0, forIdx).trim();
       if (body.startsWith("{") && body.endsWith("}")) {
         PolyType t = inferExprType(body);
@@ -469,7 +496,7 @@ public final class PythonContractParser implements LanguageParser {
 
   private PolyType inferMapType(String expr) {
     String inside = stripOuter(expr, '{', '}');
-    if (inside.contains(" for ") && inside.contains(" in ") && inside.indexOf(':') > 0) {
+    if (isComprehension(inside) && inside.indexOf(':') >= 0) {
       return new PolyMap(PolyPrimitive.STRING, new PolyUnknown());
     }
 
@@ -578,16 +605,18 @@ public final class PythonContractParser implements LanguageParser {
       String[] lines, int start, int methodIndent, char open, char close, int initialDelta) {
     StringBuilder sb = new StringBuilder();
     int balance = initialDelta;
-    for (int i = start; i < lines.length; i++) {
+    for (int i = start; i < lines.length && balance != 0; i++) {
       String raw = lines[i];
       String trimmed = raw.trim();
-      if (!trimmed.isBlank() && indentLevel(raw) <= methodIndent) {
-        break;
+      if (!trimmed.isBlank()
+          && indentLevel(raw) <= methodIndent
+          && (trimmed.isEmpty() || trimmed.charAt(0) != close)) {
+        return sb.toString().trim();
       }
       sb.append(trimmed).append(" ");
       balance += balanceDelta(trimmed, open, close);
       if (balance == 0) {
-        break;
+        return sb.toString().trim();
       }
     }
     return sb.toString().trim();
@@ -705,5 +734,9 @@ public final class PythonContractParser implements LanguageParser {
         }
       }
     }
+  }
+
+  private boolean isComprehension(String value) {
+    return value.contains(FOR_CLAUSE) && value.contains(IN_CLAUSE);
   }
 }
