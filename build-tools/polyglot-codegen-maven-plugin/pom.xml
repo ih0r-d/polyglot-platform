@@ -16,6 +16,7 @@
     <packaging>maven-plugin</packaging>
 
     <name>Polyglot Codegen Maven Plugin</name>
+    <description>Maven plugin for generating Java contracts from polyglot scripts</description>
 
     <dependencies>
 

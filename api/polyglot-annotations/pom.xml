@@ -11,6 +11,7 @@
     <artifactId>polyglot-annotations</artifactId>
     <packaging>jar</packaging>
     <name>polyglot-annotations</name>
+    <description>Public annotations for polyglot client contracts</description>
 
     <dependencies>
         <dependency>

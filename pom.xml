@@ -11,6 +11,7 @@
   <packaging>pom</packaging>
 
   <name>polyglot-aggregator</name>
+  <url>https://github.com/ih0r-d/polyglot-platform</url>
 
   <modules>
     <module>api</module>
@@ -38,6 +39,7 @@
     <sonar-plugin.version>5.5.0.6356</sonar-plugin.version>
     <surefire-plugin.version>3.5.5</surefire-plugin.version>
     <publishing-plugin.version>0.10.0</publishing-plugin.version>
+    <flatten-plugin.version>1.6.0</flatten-plugin.version>
     <javadoc-plugin.version>3.12.0</javadoc-plugin.version>
     <source-plugin.version>3.4.0</source-plugin.version>
     <maven-plugin-plugin.version>3.15.2</maven-plugin-plugin.version>
@@ -241,6 +243,22 @@
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <inherited>false</inherited>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <inherited>false</inherited>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
       </plugin>
     </plugins>
 
@@ -461,6 +479,12 @@
           <artifactId>sonar-maven-plugin</artifactId>
           <version>${sonar-plugin.version}</version>
         </plugin>
+
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>flatten-maven-plugin</artifactId>
+          <version>${flatten-plugin.version}</version>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>
@@ -500,6 +524,31 @@
               <autoPublish>true</autoPublish>
               <waitUntil>published</waitUntil>
             </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>flatten-maven-plugin</artifactId>
+            <configuration>
+              <updatePomFile>true</updatePomFile>
+              <flattenMode>ossrh</flattenMode>
+            </configuration>
+            <executions>
+              <execution>
+                <id>flatten-published-poms</id>
+                <phase>process-resources</phase>
+                <goals>
+                  <goal>flatten</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>flatten-clean</id>
+                <phase>clean</phase>
+                <goals>
+                  <goal>clean</goal>
+                </goals>
+              </execution>
+            </executions>
           </plugin>
 
           <plugin>

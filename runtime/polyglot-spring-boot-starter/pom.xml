@@ -16,7 +16,7 @@
 
     <name>polyglot-spring-boot-starter</name>
     <description>Spring Boot starter for polyglot-adapter</description>
-    <url>https://github.com/ih0r-d/polyglot-adapter</url>
+    <url>https://github.com/ih0r-d/polyglot-platform</url>
 
     <dependencies>
         <!-- core library -->

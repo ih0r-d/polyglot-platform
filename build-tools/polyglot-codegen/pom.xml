@@ -12,6 +12,7 @@
     <packaging>jar</packaging>
 
     <name>polyglot-codegen</name>
+    <description>Contract parsing and Java source generation for polyglot scripts</description>
 
     <dependencies>
         <dependency>
