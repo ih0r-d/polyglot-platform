@@ -41,6 +41,11 @@ tasks:
     cmds:
       - ./bin/release.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
+  dry-run-release:
+    desc: Verify release publication locally without publishing to Maven Central
+    cmds:
+      - ./dry-run-release.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
   clean-remote-tags:
     desc: Delete remote tags that don't exist locally
     cmds:
