@@ -1,3 +1,29 @@
+## [0.2.1] - 2026-03-31
+
+
+### ➕ Added
+- improve startup visibility and demo runtime flags (6883f28)
+
+
+### ⚙️ Changed
+- deduplicate object provider adapters (9ea9ef0)
+- fix sonar issues and raise new code coverage (a883d66)
+
+
+### ✅ Fixed
+- align examples with 0.2.0 usage (88974a8)
+- defer metrics executor resolution (c99038f)
+
+
+### 🧪 Internal
+- avoid direct use of workflow input in shell (12d6ef8)
+- prevent duplicate changelog header on release (33c90fa)
+- use conventional commit messages for release scripts (ed29f60)
+- normalize published API documentation (3ab0836)
+- prepare metadata and skip parent pom publication (6c5cba4)
+- verify dry-run publishing flow (f032722)
+
+
 # Polyglot-adapter changelog
 
 All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be documented in this file.
