@@ -13,6 +13,13 @@ It provides:
 - Spring Boot integration for declarative client binding
 - build-time code generation from contracts
 
+## Runtime Positioning
+
+- Python is the primary and more mature runtime path.
+- JavaScript support is intentionally narrower and runtime-focused.
+- Startup preload is raw script evaluation; it does not prebind contracts or hydrate interface caches.
+- Shared starter executors serialize access to one GraalVM context (safe-by-serialization, not throughput-oriented parallel execution).
+
 ## Table of Contents
 
 - [Requirements](#requirements)

@@ -103,6 +103,15 @@ The executor:
 
 `validateBinding(...)` resolves the instance eagerly, so it is useful at startup when applications want to fail early.
 
+### Python Lifecycle And Cache Semantics
+
+- Source cache is keyed by Java interface type.
+- Instance cache is keyed by Java interface type and stored via weak references.
+- `clearSourceCache()` clears only source entries; live Python instances remain reusable until instance cache is invalidated.
+- `invalidateContractCache(iface)` evicts source + instance entries for that single contract.
+- `reloadContract(iface)` is a focused helper: evict that contract cache and eagerly re-validate it.
+- Script changes are not auto-detected. To pick up changed code, invalidate/reload the affected contract or recreate the executor.
+
 ## JavaScript Runtime Details
 
 `JsExecutor` uses the same script naming convention but a different binding model.
@@ -120,6 +129,8 @@ When a Java interface is validated or called:
 - method calls are executed from language bindings
 
 The runtime does not currently define a separate JavaScript export object convention comparable to Python's class-style and dictionary-style exports.
+
+JavaScript support is intentionally narrower than Python in this release line and should be treated as runtime-only binding support, not parity with Python lifecycle semantics.
 
 ## Adapter API Surface
 
