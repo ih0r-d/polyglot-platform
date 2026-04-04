@@ -148,4 +148,11 @@ class PythonTypeMapperTest {
     // List] -> Unknown
     assertInstanceOf(PolyUnknown.class, mapper.mapPrimitive("List]"));
   }
+
+  @Test
+  void mapPrimitive_ShouldReuseCachedMappingsForNormalizedInput() {
+    PolyType first = mapper.mapPrimitive(" List[int] ");
+    PolyType second = mapper.mapPrimitive("List[int]");
+    assertSame(first, second);
+  }
 }

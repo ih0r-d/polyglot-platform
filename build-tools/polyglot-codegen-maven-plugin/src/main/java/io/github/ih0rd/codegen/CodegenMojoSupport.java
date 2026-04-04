@@ -49,7 +49,7 @@ final class CodegenMojoSupport {
       int skippedUnchangedFiles,
       int driftedFiles) {}
 
-  static Summary execute(Settings settings, Log log, Mode mode) throws MojoExecutionException {
+  static void execute(Settings settings, Log log, Mode mode) throws MojoExecutionException {
     validateInputDirectory(settings.inputDirectory());
 
     Path outputRoot = settings.outputDirectory().toPath();
@@ -94,7 +94,6 @@ final class CodegenMojoSupport {
     if (mode == Mode.CHECK && summary.driftedFiles() == 0) {
       log.info("Codegen check passed: generated contracts are up-to-date.");
     }
-    return summary;
   }
 
   private static void validateInputDirectory(File inputDirectory) throws MojoExecutionException {
@@ -133,43 +132,29 @@ final class CodegenMojoSupport {
     AtomicInteger skippedUnchangedFiles = new AtomicInteger();
     AtomicInteger driftedFiles = new AtomicInteger();
     List<String> driftMessages = new ArrayList<>();
+    List<Path> scriptFiles;
 
     try (Stream<Path> files = Files.walk(settings.inputDirectory().toPath())) {
-      files
-          .filter(Files::isRegularFile)
-          .filter(CodegenMojoSupport::isSupported)
-          .forEach(
-              script -> {
-                supportedScripts.incrementAndGet();
-                try {
-                  ScriptSummary perScript =
-                      processScript(
-                          script,
-                          generator,
-                          javaGenerator,
-                          settings,
-                          mode,
-                          outputRoot,
-                          effectivePackage,
-                          log);
-                  generatedContracts.addAndGet(perScript.generatedContracts());
-                  writtenFiles.addAndGet(perScript.writtenFiles());
-                  skippedUnchangedFiles.addAndGet(perScript.skippedUnchangedFiles());
-                  driftedFiles.addAndGet(perScript.driftedFiles());
-                  if (driftMessages.size() < MAX_DRIFT_MESSAGES) {
-                    driftMessages.addAll(perScript.driftMessages());
-                    if (driftMessages.size() > MAX_DRIFT_MESSAGES) {
-                      driftMessages.subList(MAX_DRIFT_MESSAGES, driftMessages.size()).clear();
-                    }
-                  }
-                } catch (MojoExecutionException e) {
-                  throw new UncheckedMojoExecutionException(e);
-                }
-              });
-    } catch (UncheckedMojoExecutionException e) {
-      throw e.mojoExecutionException();
+      scriptFiles =
+          files.filter(Files::isRegularFile).filter(CodegenMojoSupport::isSupported).toList();
     } catch (IOException e) {
       throw new MojoExecutionException("Failed scanning input directory", e);
+    }
+    for (Path script : scriptFiles) {
+      supportedScripts.incrementAndGet();
+      ScriptSummary perScript =
+          processScript(
+              script, generator, javaGenerator, settings, mode, outputRoot, effectivePackage, log);
+      generatedContracts.addAndGet(perScript.generatedContracts());
+      writtenFiles.addAndGet(perScript.writtenFiles());
+      skippedUnchangedFiles.addAndGet(perScript.skippedUnchangedFiles());
+      driftedFiles.addAndGet(perScript.driftedFiles());
+      if (driftMessages.size() < MAX_DRIFT_MESSAGES) {
+        driftMessages.addAll(perScript.driftMessages());
+        if (driftMessages.size() > MAX_DRIFT_MESSAGES) {
+          driftMessages.subList(MAX_DRIFT_MESSAGES, driftMessages.size()).clear();
+        }
+      }
     }
 
     if (!driftMessages.isEmpty()) {
@@ -177,7 +162,8 @@ final class CodegenMojoSupport {
         log.warn(message);
       }
       if (driftedFiles.get() > driftMessages.size()) {
-        log.warn("... and " + (driftedFiles.get() - driftMessages.size()) + " more drifted file(s).");
+        log.warn(
+            "... and " + (driftedFiles.get() - driftMessages.size()) + " more drifted file(s).");
       }
     }
 
@@ -249,8 +235,9 @@ final class CodegenMojoSupport {
         logInfo(log, "Generated: " + target);
       }
 
-      return new ScriptSummary(model.classes().size(), written, skippedUnchanged, drifted, driftMessages);
-    } catch (IOException | RuntimeException e) {
+      return new ScriptSummary(
+          model.classes().size(), written, skippedUnchanged, drifted, driftMessages);
+    } catch (Exception e) {
       throw new MojoExecutionException("Failed processing script: " + script, e);
     }
   }
@@ -290,17 +277,4 @@ final class CodegenMojoSupport {
       int skippedUnchangedFiles,
       int driftedFiles,
       List<String> driftMessages) {}
-
-  private static final class UncheckedMojoExecutionException extends RuntimeException {
-    private final MojoExecutionException mojoExecutionException;
-
-    private UncheckedMojoExecutionException(MojoExecutionException mojoExecutionException) {
-      super(mojoExecutionException);
-      this.mojoExecutionException = mojoExecutionException;
-    }
-
-    private MojoExecutionException mojoExecutionException() {
-      return mojoExecutionException;
-    }
-  }
 }

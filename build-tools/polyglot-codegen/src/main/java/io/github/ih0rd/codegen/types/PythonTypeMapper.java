@@ -1,6 +1,7 @@
 package io.github.ih0rd.codegen.types;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +44,7 @@ public final class PythonTypeMapper implements LanguageTypeMapper {
           "set", new PolyList(new PolyUnknown()),
           "tuple", new PolyList(new PolyUnknown()),
           "Any", new PolyUnknown());
+  private final Map<String, PolyType> typeCache = new HashMap<>();
 
   /** Creates a mapper for Python primitive and generic type hints. */
   public PythonTypeMapper() {
@@ -60,8 +62,14 @@ public final class PythonTypeMapper implements LanguageTypeMapper {
     if (languageType == null || languageType.isBlank()) {
       return new PolyUnknown();
     }
-
-    return parseType(languageType.trim());
+    String normalized = languageType.trim();
+    PolyType cached = typeCache.get(normalized);
+    if (cached != null) {
+      return cached;
+    }
+    PolyType resolved = parseType(normalized);
+    typeCache.put(normalized, resolved);
+    return resolved;
   }
 
   private PolyType parseType(String typeStr) {

@@ -99,6 +99,7 @@ The Maven plugin goal is:
 ```text
 polyglot:generate
 polyglot:check
+polyglot:doctor
 ```
 
 Default behavior:
@@ -116,6 +117,7 @@ Additional Maven plugin options:
   When enabled, only methods marked with `@adapter_include` are generated.
 - `strictMode` (default: `false`)  
   Fails generation if unresolved/unknown types are detected in parsed contracts.
+  This prevents silently propagating `Object`-like contracts into generated APIs.
 - `failOnNoContracts` (default: `false`)  
   Fails the build if scanning finishes with zero generated contracts.
 - `skipUnchanged` (default: `true`)  
@@ -127,6 +129,7 @@ DX workflow pattern:
 
 - local update: `mvn polyglot:generate`
 - CI verification: `mvn polyglot:check`
+- local diagnostics alias: `mvn polyglot:doctor` (same behavior as `check`)
 
 ## Relationship to Runtime Execution
 
