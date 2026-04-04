@@ -6,6 +6,8 @@ import static org.mockito.Mockito.*;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -29,11 +31,23 @@ import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
-@SuppressWarnings({"unchecked"})
+@SuppressWarnings({"unchecked", "resource"})
 class PyExecutorTest {
 
   interface Api {
     String hello(String arg);
+  }
+
+  static final class NamespaceOne {
+    interface SharedApi {
+      String hello(String arg);
+    }
+  }
+
+  static final class NamespaceTwo {
+    interface SharedApi {
+      String hello(String arg);
+    }
   }
 
   private ScriptSource mockScriptSource() throws Exception {
@@ -83,6 +97,18 @@ class PyExecutorTest {
     } catch (Exception e) {
       Throwable c = e.getCause();
       if (c instanceof RuntimeException r) throw r;
+      throw new RuntimeException(e);
+    }
+  }
+
+  private Source callResolveSource(PyExecutor exec, Class<?> iface) {
+    try {
+      Method method = PyExecutor.class.getDeclaredMethod("resolveSource", Class.class);
+      method.setAccessible(true);
+      return (Source) method.invoke(exec, iface);
+    } catch (Exception e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof RuntimeException runtimeException) throw runtimeException;
       throw new RuntimeException(e);
     }
   }
@@ -372,7 +398,6 @@ class PyExecutorTest {
 
     Field instanceField = PyExecutor.class.getDeclaredField("instanceCache");
     instanceField.setAccessible(true);
-    @SuppressWarnings("unchecked")
     Map<Class<?>, WeakReference<Value>> instanceCache =
         (Map<Class<?>, WeakReference<Value>>) instanceField.get(exec);
     instanceCache.put(Api.class, new WeakReference<>(mock(Value.class)));
@@ -401,7 +426,6 @@ class PyExecutorTest {
 
     Field f = PyExecutor.class.getDeclaredField("instanceCache");
     f.setAccessible(true);
-    @SuppressWarnings("unchecked")
     Map<Class<?>, WeakReference<Value>> cache = (Map<Class<?>, WeakReference<Value>>) f.get(exec);
     cache.put(Api.class, new WeakReference<>(instance));
 
@@ -501,7 +525,6 @@ class PyExecutorTest {
 
     Field f = PyExecutor.class.getDeclaredField("instanceCache");
     f.setAccessible(true);
-    @SuppressWarnings("unchecked")
     Map<Class<?>, WeakReference<Value>> cache = (Map<Class<?>, WeakReference<Value>>) f.get(exec);
     cache.put(Api.class, new WeakReference<>(mock(Value.class)));
 
@@ -513,7 +536,6 @@ class PyExecutorTest {
   void createUsesPolyglotHelperContext() {
     Context createdContext = mock(Context.class);
     ScriptSource createdScriptSource = mock(ScriptSource.class);
-    @SuppressWarnings("unchecked")
     Consumer<Builder> customizer = mock(Consumer.class);
 
     try (MockedStatic<PolyglotHelper> polyglotHelper = mockStatic(PolyglotHelper.class)) {
@@ -554,6 +576,176 @@ class PyExecutorTest {
   }
 
   @Test
+  void preloadScriptDoesNotPopulateInstanceCache() throws Exception {
+    Context ctx = mock(Context.class);
+    PyExecutor exec = spy(newExec(ctx));
+    Source source = mock(Source.class);
+
+    doReturn(source).when(exec).loadScript(SupportedLanguage.PYTHON, "bootstrap");
+
+    exec.preloadScript("bootstrap");
+
+    Field instanceField = PyExecutor.class.getDeclaredField("instanceCache");
+    instanceField.setAccessible(true);
+    Map<Class<?>, WeakReference<Value>> instanceCache =
+        (Map<Class<?>, WeakReference<Value>>) instanceField.get(exec);
+    assertEquals(0, instanceCache.size());
+  }
+
+  @Test
+  void clearSourceCacheDoesNotInvalidateLiveInstanceCache() throws Exception {
+    Context ctx = mock(Context.class);
+    PyExecutor exec = newExec(ctx);
+    Value instance = mock(Value.class);
+    Value member = mock(Value.class);
+    Value result = mock(Value.class);
+
+    when(instance.isNull()).thenReturn(false);
+    when(instance.hasMember("hello")).thenReturn(true);
+    when(instance.getMember("hello")).thenReturn(member);
+    when(member.canExecute()).thenReturn(true);
+    when(member.execute("x")).thenReturn(result);
+
+    Field instanceField = PyExecutor.class.getDeclaredField("instanceCache");
+    instanceField.setAccessible(true);
+    Map<Class<?>, WeakReference<Value>> instanceCache =
+        (Map<Class<?>, WeakReference<Value>>) instanceField.get(exec);
+    instanceCache.put(Api.class, new WeakReference<>(instance));
+
+    exec.clearSourceCache();
+
+    assertSame(result, exec.evaluate(Convention.DEFAULT, "hello", Api.class, "x"));
+    verifyNoInteractions(ctx);
+  }
+
+  @Test
+  void invalidateContractCacheEvictsSourceAndInstanceForInterface() throws Exception {
+    PyExecutor exec = newExec(mock(Context.class));
+
+    exec.sourceCache.put(Api.class, mock(Source.class));
+    exec.sourceCache.put(NamespaceOne.SharedApi.class, mock(Source.class));
+
+    Field instanceField = PyExecutor.class.getDeclaredField("instanceCache");
+    instanceField.setAccessible(true);
+    Map<Class<?>, WeakReference<Value>> instanceCache =
+        (Map<Class<?>, WeakReference<Value>>) instanceField.get(exec);
+    instanceCache.put(Api.class, new WeakReference<>(mock(Value.class)));
+    instanceCache.put(NamespaceOne.SharedApi.class, new WeakReference<>(mock(Value.class)));
+
+    exec.invalidateContractCache(Api.class);
+
+    assertFalse(exec.sourceCache.containsKey(Api.class));
+    assertTrue(exec.sourceCache.containsKey(NamespaceOne.SharedApi.class));
+    assertFalse(instanceCache.containsKey(Api.class));
+    assertTrue(instanceCache.containsKey(NamespaceOne.SharedApi.class));
+  }
+
+  @Test
+  void reloadContractClearsContractCachesAndRevalidates() throws Exception {
+    Context ctx = mock(Context.class);
+    PyExecutor exec = spy(newExec(ctx));
+    Source source = mock(Source.class);
+    Value exported = mock(Value.class);
+    Value bindings = mock(Value.class);
+    Value member = mock(Value.class);
+
+    exec.sourceCache.put(Api.class, mock(Source.class));
+    Field instanceField = PyExecutor.class.getDeclaredField("instanceCache");
+    instanceField.setAccessible(true);
+    Map<Class<?>, WeakReference<Value>> instanceCache =
+        (Map<Class<?>, WeakReference<Value>>) instanceField.get(exec);
+    instanceCache.put(Api.class, new WeakReference<>(mock(Value.class)));
+
+    doReturn(source).when(exec).loadScript(SupportedLanguage.PYTHON, "api");
+    when(ctx.eval(source)).thenReturn(mock(Value.class));
+    when(ctx.getPolyglotBindings()).thenReturn(bindings);
+    when(bindings.getMember("Api")).thenReturn(exported);
+    when(exported.canExecute()).thenReturn(false);
+    when(exported.hasMember("hello")).thenReturn(true);
+    when(exported.getMember("hello")).thenReturn(member);
+    when(member.canExecute()).thenReturn(true);
+
+    exec.reloadContract(Api.class);
+
+    assertTrue(exec.sourceCache.containsKey(Api.class));
+    assertTrue(instanceCache.containsKey(Api.class));
+    verify(ctx).eval(source);
+  }
+
+  @Test
+  void reloadContractRejectsNullInterface() {
+    PyExecutor exec = new PyExecutor(mock(Context.class), mock(ScriptSource.class));
+
+    assertThrows(IllegalArgumentException.class, () -> exec.reloadContract(null));
+  }
+
+  @Test
+  void reloadContractsRevalidatesEachRequestedContract() throws Exception {
+    Context ctx = mock(Context.class);
+    PyExecutor exec = spy(newExec(ctx));
+    Source source = mock(Source.class);
+    Value bindings = mock(Value.class);
+    Value apiExport = mock(Value.class);
+    Value sharedExport = mock(Value.class);
+    Value apiMember = mock(Value.class);
+    Value sharedMember = mock(Value.class);
+
+    doReturn(source).when(exec).loadScript(eq(SupportedLanguage.PYTHON), any());
+    when(ctx.eval(source)).thenReturn(mock(Value.class));
+    when(ctx.getPolyglotBindings()).thenReturn(bindings);
+    when(bindings.getMember("Api")).thenReturn(apiExport);
+    when(bindings.getMember("SharedApi")).thenReturn(sharedExport);
+    when(apiExport.canExecute()).thenReturn(false);
+    when(sharedExport.canExecute()).thenReturn(false);
+    when(apiExport.hasMember("hello")).thenReturn(true);
+    when(sharedExport.hasMember("hello")).thenReturn(true);
+    when(apiExport.getMember("hello")).thenReturn(apiMember);
+    when(sharedExport.getMember("hello")).thenReturn(sharedMember);
+    when(apiMember.canExecute()).thenReturn(true);
+    when(sharedMember.canExecute()).thenReturn(true);
+
+    exec.reloadContracts(java.util.List.of(Api.class, NamespaceOne.SharedApi.class));
+
+    verify(exec).loadScript(SupportedLanguage.PYTHON, "api");
+    verify(exec).loadScript(SupportedLanguage.PYTHON, "shared_api");
+    assertTrue(exec.sourceCache.containsKey(Api.class));
+    assertTrue(exec.sourceCache.containsKey(NamespaceOne.SharedApi.class));
+  }
+
+  @Test
+  void reloadContractsRejectsNullCollection() throws Exception {
+    PyExecutor exec = newExec(mock(Context.class));
+
+    assertThrows(IllegalArgumentException.class, () -> exec.reloadContracts(null));
+  }
+
+  @Test
+  void reloadContractsRejectsNullCollectionItem() throws Exception {
+    PyExecutor exec = newExec(mock(Context.class));
+    List<Class<?>> targets = Arrays.asList(Api.class, null);
+
+    assertThrows(IllegalArgumentException.class, () -> exec.reloadContracts(targets));
+  }
+
+  @Test
+  void sourceCacheIsKeyedByInterfaceClassEvenWhenSimpleNamesMatch() throws Exception {
+    Context ctx = mock(Context.class);
+    PyExecutor exec = spy(newExec(ctx));
+    Source sourceOne = mock(Source.class);
+    Source sourceTwo = mock(Source.class);
+
+    doReturn(sourceOne, sourceTwo).when(exec).loadScript(SupportedLanguage.PYTHON, "shared_api");
+
+    Source loadedOne = callResolveSource(exec, NamespaceOne.SharedApi.class);
+    Source loadedTwo = callResolveSource(exec, NamespaceTwo.SharedApi.class);
+
+    assertSame(sourceOne, loadedOne);
+    assertSame(sourceTwo, loadedTwo);
+    assertEquals(2, exec.sourceCache.size());
+    verify(exec, times(2)).loadScript(SupportedLanguage.PYTHON, "shared_api");
+  }
+
+  @Test
   void concurrentInvocationIsSerializedBySharedExecutorLock() throws Exception {
     Context ctx = mock(Context.class);
     PyExecutor exec = newExec(ctx);
@@ -568,7 +760,6 @@ class PyExecutorTest {
 
     Field field = PyExecutor.class.getDeclaredField("instanceCache");
     field.setAccessible(true);
-    @SuppressWarnings("unchecked")
     Map<Class<?>, WeakReference<Value>> cache =
         (Map<Class<?>, WeakReference<Value>>) field.get(exec);
     cache.put(Api.class, new WeakReference<>(instance));
@@ -625,7 +816,6 @@ class PyExecutorTest {
 
     Field field = PyExecutor.class.getDeclaredField("instanceCache");
     field.setAccessible(true);
-    @SuppressWarnings("unchecked")
     Map<Class<?>, WeakReference<Value>> cache =
         (Map<Class<?>, WeakReference<Value>>) field.get(exec);
     cache.put(Api.class, new WeakReference<>(instance));

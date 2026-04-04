@@ -108,7 +108,13 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
 
   @Override
   public void start() {
+    if (running) {
+      return;
+    }
+
     if (!properties.core().enabled()) {
+      running = false;
+      runtimeState.clearStartup();
       return;
     }
 
@@ -131,6 +137,8 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
       running = true;
 
     } catch (Exception ex) {
+      running = false;
+      runtimeState.clearStartup();
       if (properties.core().failFast()) {
         throw new IllegalStateException("Polyglot startup initialization failed", ex);
       }
@@ -322,6 +330,7 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
 
   @Override
   public void stop() {
-    // no-op
+    running = false;
+    runtimeState.clearStartup();
   }
 }

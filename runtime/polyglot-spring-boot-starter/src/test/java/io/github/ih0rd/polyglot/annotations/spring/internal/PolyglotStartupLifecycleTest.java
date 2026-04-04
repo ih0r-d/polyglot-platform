@@ -72,6 +72,8 @@ class PolyglotStartupLifecycleTest {
     verify(pyExecutor, never()).evaluate(PolyglotWarmupConstants.NOOP_EXPRESSION);
     verifyNoInteractions(beanFactory);
     assertFalse(lifecycle.isRunning());
+    assertEquals(-1, runtimeState.startupDurationMs());
+    assertEquals(0, runtimeState.availableExecutors());
   }
 
   @Test
@@ -107,6 +109,37 @@ class PolyglotStartupLifecycleTest {
 
     assertDoesNotThrow(lifecycle::start);
     assertFalse(lifecycle.isRunning());
+    assertEquals(-1, runtimeState.startupDurationMs());
+    assertEquals(0, runtimeState.availableExecutors());
+  }
+
+  @Test
+  void startIsIdempotentWhenAlreadyRunning() {
+    PolyglotStartupLifecycle lifecycle =
+        new PolyglotStartupLifecycle(
+            enabledProperties(true, true, false), beanFactory, runtimeState, pyExecutor, null);
+
+    lifecycle.start();
+    lifecycle.start();
+
+    verify(pyExecutor).evaluate(PolyglotWarmupConstants.NOOP_EXPRESSION);
+  }
+
+  @Test
+  void stopClearsRunningFlagAndRuntimeState() {
+    PolyglotStartupLifecycle lifecycle =
+        new PolyglotStartupLifecycle(
+            enabledProperties(true, false, false), beanFactory, runtimeState, pyExecutor, null);
+
+    lifecycle.start();
+    assertEquals(true, lifecycle.isRunning());
+    assertEquals(1, runtimeState.availableExecutors());
+
+    lifecycle.stop();
+
+    assertFalse(lifecycle.isRunning());
+    assertEquals(-1, runtimeState.startupDurationMs());
+    assertEquals(0, runtimeState.availableExecutors());
   }
 
   @Test

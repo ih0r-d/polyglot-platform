@@ -1,6 +1,7 @@
 package io.github.ih0rd.polyglot.annotations.spring.client;
 
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.FactoryBean;
@@ -130,6 +131,8 @@ public final class PolyglotClientFactoryBean<T> implements FactoryBean<T>, BeanF
 
   /** Returns the Java type produced by this factory bean. */
   @Override
+  @SuppressWarnings("java:S2638")
+  @Nullable
   public Class<?> getObjectType() {
     return clientType;
   }

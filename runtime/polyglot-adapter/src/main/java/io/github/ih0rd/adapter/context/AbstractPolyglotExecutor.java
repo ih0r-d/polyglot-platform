@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import org.graalvm.polyglot.Context;
@@ -54,6 +55,9 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
 
   /** Monitor used to serialize guest context access. */
   protected final Object contextMonitor = new Object();
+
+  /** Tracks whether the executor has been closed. */
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   /**
    * Creates a new executor instance.
@@ -105,6 +109,11 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
       Source source =
           Source.newBuilder(languageId(), code, "inline." + languageId()).buildLiteral();
       return withContextLock(() -> context.eval(source));
+    } catch (IllegalStateException e) {
+      if (isClosed()) {
+        throw e;
+      }
+      throw new InvocationException("Error during " + languageId() + " inline code execution", e);
     } catch (Exception e) {
       throw new InvocationException("Error during " + languageId() + " inline code execution", e);
     }
@@ -138,6 +147,7 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
     if (iface == null) {
       throw new IllegalArgumentException("Interface type must not be null");
     }
+    ensureOpen();
     Convention effectiveConvention = requireConvention(convention);
 
     return (T)
@@ -181,6 +191,7 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
     if (iface == null) {
       throw new IllegalArgumentException("Interface type must not be null");
     }
+    ensureOpen();
     requireConvention(convention);
     throw new UnsupportedOperationException(
         "Binding validation is not implemented for executor: " + getClass().getSimpleName());
@@ -227,6 +238,11 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
             }
             return fn.execute(args);
           });
+    } catch (IllegalStateException e) {
+      if (isClosed()) {
+        throw e;
+      }
+      throw new InvocationException("Error executing function: " + methodName, e);
     } catch (BindingException e) {
       throw e;
     } catch (Exception e) {
@@ -257,12 +273,39 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
 
   /** Clears the per-interface source cache. */
   public void clearSourceCache() {
+    ensureOpen();
     sourceCache.clear();
+  }
+
+  /**
+   * Invalidates cache entries associated with a single Java contract type.
+   *
+   * <p>Base behavior removes only source cache entries. Language-specific executors may override
+   * this method to evict additional per-contract caches.
+   *
+   * @param iface contract interface type
+   * @param <T> interface type
+   */
+  public <T> void invalidateContractCache(Class<T> iface) {
+    if (iface == null) {
+      throw new IllegalArgumentException("Interface type must not be null");
+    }
+    ensureOpen();
+    sourceCache.remove(iface);
   }
 
   /** Clears all caches maintained by this executor. */
   public void clearAllCaches() {
     clearSourceCache();
+  }
+
+  /**
+   * Indicates whether this executor has been closed.
+   *
+   * @return {@code true} when the executor is closed
+   */
+  public boolean isClosed() {
+    return closed.get();
   }
 
   /**
@@ -275,6 +318,7 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
     info.put("executorType", getClass().getName());
     info.put("languageId", languageId());
     info.put("sourceCacheSize", sourceCache.size());
+    info.put("closed", closed.get());
     return info;
   }
 
@@ -282,6 +326,9 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
   @Override
   public void close() {
     synchronized (contextMonitor) {
+      if (!closed.compareAndSet(false, true)) {
+        return;
+      }
       context.close();
     }
   }
@@ -295,6 +342,7 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
    */
   protected final <T> T withContextLock(Supplier<T> action) {
     synchronized (contextMonitor) {
+      ensureOpen();
       return action.get();
     }
   }
@@ -306,7 +354,15 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
    */
   protected final void withContextLock(Runnable action) {
     synchronized (contextMonitor) {
+      ensureOpen();
       action.run();
+    }
+  }
+
+  /** Ensures that the executor has not been closed. */
+  protected final void ensureOpen() {
+    if (closed.get()) {
+      throw new IllegalStateException("Executor is closed: " + getClass().getSimpleName());
     }
   }
 }

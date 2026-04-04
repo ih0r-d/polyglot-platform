@@ -4,7 +4,10 @@ import static io.github.ih0rd.adapter.utils.StringCaseConverter.camelToSnake;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -240,7 +243,90 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
 
   /** Clears cached Python instances resolved for bound contract types. */
   public void clearInstanceCache() {
+    ensureOpen();
     instanceCache.clear();
+  }
+
+  /**
+   * Invalidates both source and instance cache entries for a single Python contract interface.
+   *
+   * @param iface contract interface type
+   * @param <T> interface type
+   */
+  @Override
+  public <T> void invalidateContractCache(Class<T> iface) {
+    if (iface == null) {
+      throw new IllegalArgumentException("Interface type must not be null");
+    }
+    ensureOpen();
+    instanceCache.remove(iface);
+    super.invalidateContractCache(iface);
+  }
+
+  /**
+   * Reloads a single Python contract by evicting its caches and eagerly re-validating the binding.
+   *
+   * <p>This method is useful when callers update one script and want deterministic pickup without
+   * clearing all executor caches.
+   *
+   * @param iface contract interface type
+   * @param <T> interface type
+   */
+  public <T> void reloadContract(Class<T> iface) {
+    reloadContract(iface, Convention.DEFAULT);
+  }
+
+  /**
+   * Reloads a single Python contract for the provided binding convention.
+   *
+   * @param iface contract interface type
+   * @param convention binding convention used during re-validation
+   * @param <T> interface type
+   */
+  public <T> void reloadContract(Class<T> iface, Convention convention) {
+    if (iface == null) {
+      throw new IllegalArgumentException("Interface type must not be null");
+    }
+    Convention effectiveConvention = requireConvention(convention);
+
+    withContextLock(() -> reloadSingleUnchecked(iface, effectiveConvention));
+  }
+
+  /**
+   * Reloads multiple Python contracts in one operation using {@link Convention#DEFAULT}.
+   *
+   * @param interfaces contract interfaces to reload
+   */
+  public void reloadContracts(Collection<Class<?>> interfaces) {
+    reloadContracts(interfaces, Convention.DEFAULT);
+  }
+
+  /**
+   * Reloads multiple Python contracts for the provided binding convention.
+   *
+   * @param interfaces contract interfaces to reload
+   * @param convention binding convention used during re-validation
+   */
+  public void reloadContracts(Collection<Class<?>> interfaces, Convention convention) {
+    if (interfaces == null) {
+      throw new IllegalArgumentException("Interfaces must not be null");
+    }
+    Convention effectiveConvention = requireConvention(convention);
+
+    List<Class<?>> targets = new ArrayList<>(interfaces.size());
+    for (Class<?> iface : interfaces) {
+      if (iface == null) {
+        throw new IllegalArgumentException("Interfaces must not contain null items");
+      }
+      targets.add(iface);
+    }
+
+    withContextLock(
+        () -> {
+          for (Class<?> iface : targets) {
+            reloadSingleUnchecked(iface, effectiveConvention);
+          }
+        });
   }
 
   private <T> void validateInterfaceExportBinding(Class<T> iface) {
@@ -311,7 +397,20 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   /** Clears both the source cache and the Python instance cache. */
   @Override
   public void clearAllCaches() {
-    clearInstanceCache();
-    super.clearAllCaches();
+    withContextLock(
+        () -> {
+          instanceCache.clear();
+          sourceCache.clear();
+        });
+  }
+
+  private void reloadSingleUnchecked(Class<?> iface, Convention convention) {
+    instanceCache.remove(iface);
+    sourceCache.remove(iface);
+
+    switch (convention) {
+      case DEFAULT, BY_INTERFACE_EXPORT -> validateInterfaceExportBinding(iface);
+      case BY_METHOD_NAME -> validateMethodNameBinding(iface);
+    }
   }
 }

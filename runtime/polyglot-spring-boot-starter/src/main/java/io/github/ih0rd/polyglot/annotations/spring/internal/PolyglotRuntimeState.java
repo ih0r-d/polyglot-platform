@@ -36,6 +36,12 @@ public final class PolyglotRuntimeState {
     availableExecutors.set(count);
   }
 
+  /** Resets startup state to the initial "not recorded yet" values. */
+  public void clearStartup() {
+    startupDurationMs.set(-1);
+    availableExecutors.set(0);
+  }
+
   /**
    * Returns the recorded startup duration.
    *

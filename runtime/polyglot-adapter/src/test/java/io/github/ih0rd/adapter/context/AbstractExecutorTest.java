@@ -191,6 +191,18 @@ class AbstractExecutorTest {
   }
 
   @Test
+  void closeIsIdempotentAndMarksExecutorClosed() {
+    Context ctx = mock(Context.class);
+    TestExecutor exec = new TestExecutor(ctx);
+
+    exec.close();
+    exec.close();
+
+    assertTrue(exec.isClosed());
+    verify(ctx, times(1)).close();
+  }
+
+  @Test
   void constructorRejectsNullArguments() {
     assertThrows(IllegalArgumentException.class, () -> new TestExecutor(null));
     assertThrows(
@@ -354,7 +366,42 @@ class AbstractExecutorTest {
             "languageId",
             "python",
             "sourceCacheSize",
-            0),
+            0,
+            "closed",
+            false),
         exec.metadata());
+  }
+
+  @Test
+  void operationsFailAfterClose() {
+    TestExecutor exec = new TestExecutor(mock(Context.class));
+    exec.close();
+
+    assertThrows(IllegalStateException.class, () -> exec.bind(Runnable.class));
+    assertThrows(IllegalStateException.class, () -> exec.callFunction("foo"));
+    assertThrows(IllegalStateException.class, () -> exec.evaluate("x=1"));
+    assertThrows(IllegalStateException.class, exec::clearSourceCache);
+    assertThrows(IllegalStateException.class, exec::clearAllCaches);
+    assertThrows(IllegalStateException.class, () -> exec.invalidateContractCache(Runnable.class));
+  }
+
+  @Test
+  void invalidateContractCacheRemovesOnlyRequestedSourceEntry() {
+    TestExecutor exec = new TestExecutor(mock(Context.class));
+    exec.sourceCache.put(Runnable.class, mock(Source.class));
+    exec.sourceCache.put(AutoCloseable.class, mock(Source.class));
+
+    exec.invalidateContractCache(Runnable.class);
+
+    assertEquals(1, exec.sourceCache.size());
+    assertTrue(exec.sourceCache.containsKey(AutoCloseable.class));
+    assertFalse(exec.sourceCache.containsKey(Runnable.class));
+  }
+
+  @Test
+  void invalidateContractCacheRejectsNullInterface() {
+    TestExecutor exec = new TestExecutor(mock(Context.class));
+
+    assertThrows(IllegalArgumentException.class, () -> exec.invalidateContractCache(null));
   }
 }
