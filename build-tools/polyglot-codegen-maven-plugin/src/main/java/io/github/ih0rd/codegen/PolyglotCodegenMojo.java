@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.apache.maven.plugin.AbstractMojo;
@@ -82,6 +83,30 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
   private String projectGroupId;
 
   /**
+   * When enabled, only methods marked with {@code @adapter_include} are generated.
+   *
+   * <p>Default: {@code false}
+   */
+  @Parameter(property = "polyglot.codegen.onlyIncludedMethods", defaultValue = "false")
+  private boolean onlyIncludedMethods;
+
+  /**
+   * Fails the build when no contracts were generated.
+   *
+   * <p>Default: {@code false}
+   */
+  @Parameter(property = "polyglot.codegen.failOnNoContracts", defaultValue = "false")
+  private boolean failOnNoContracts;
+
+  /**
+   * Skips writing a generated file when its content did not change.
+   *
+   * <p>Default: {@code true}
+   */
+  @Parameter(property = "polyglot.codegen.skipUnchanged", defaultValue = "true")
+  private boolean skipUnchanged;
+
+  /**
    * Executes the plugin.
    *
    * @throws MojoExecutionException if validation or generation fails
@@ -95,7 +120,23 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
 
     String effectivePackage = resolveBasePackage();
 
-    generateContracts(outputRoot, effectivePackage);
+    GenerationSummary summary = generateContracts(outputRoot, effectivePackage);
+
+    if (failOnNoContracts && summary.generatedContracts() == 0) {
+      throw new MojoExecutionException(
+          "No contracts generated from input directory: " + inputDirectory);
+    }
+
+    getLog()
+        .info(
+            "Codegen summary: scripts="
+                + summary.supportedScripts()
+                + ", contracts="
+                + summary.generatedContracts()
+                + ", writtenFiles="
+                + summary.writtenFiles()
+                + ", skippedUnchanged="
+                + summary.skippedUnchangedFiles());
 
     project.addCompileSourceRoot(outputRoot.toAbsolutePath().toString());
   }
@@ -128,11 +169,15 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
     return basePackage;
   }
 
-  private void generateContracts(Path outputRoot, String effectivePackage)
+  private GenerationSummary generateContracts(Path outputRoot, String effectivePackage)
       throws MojoExecutionException {
 
     ContractGenerator generator = new DefaultContractGenerator();
     JavaInterfaceGenerator javaGenerator = new JavaInterfaceGenerator();
+    AtomicInteger supportedScripts = new AtomicInteger();
+    AtomicInteger generatedContracts = new AtomicInteger();
+    AtomicInteger writtenFiles = new AtomicInteger();
+    AtomicInteger skippedUnchangedFiles = new AtomicInteger();
 
     try (Stream<Path> files = Files.walk(inputDirectory.toPath())) {
 
@@ -142,7 +187,12 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
           .forEach(
               path -> {
                 try {
-                  generateForScript(path, generator, javaGenerator, outputRoot, effectivePackage);
+                  supportedScripts.incrementAndGet();
+                  ScriptGenerationSummary scriptSummary =
+                      generateForScript(path, generator, javaGenerator, outputRoot, effectivePackage);
+                  generatedContracts.addAndGet(scriptSummary.generatedContracts());
+                  writtenFiles.addAndGet(scriptSummary.writtenFiles());
+                  skippedUnchangedFiles.addAndGet(scriptSummary.skippedUnchangedFiles());
                 } catch (MojoExecutionException e) {
                   throw new UncheckedMojoExecutionException(e);
                 }
@@ -153,6 +203,12 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
     } catch (IOException e) {
       throw new MojoExecutionException("Failed scanning input directory", e);
     }
+
+    return new GenerationSummary(
+        supportedScripts.get(),
+        generatedContracts.get(),
+        writtenFiles.get(),
+        skippedUnchangedFiles.get());
   }
 
   private boolean isSupported(Path path) {
@@ -164,7 +220,7 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
     }
   }
 
-  private void generateForScript(
+  private ScriptGenerationSummary generateForScript(
       Path script,
       ContractGenerator generator,
       JavaInterfaceGenerator javaGenerator,
@@ -180,7 +236,9 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
 
       ScriptDescriptor descriptor = new ScriptDescriptor(language, source, scriptFileName);
 
-      ContractModel model = generator.generate(descriptor, new CodegenConfig(false));
+      ContractModel model = generator.generate(descriptor, new CodegenConfig(onlyIncludedMethods));
+      int writtenFiles = 0;
+      int skippedUnchangedFiles = 0;
 
       for (ContractClass contract : model.classes()) {
 
@@ -193,14 +251,29 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
 
         Path targetDirectory = Objects.requireNonNull(target.getParent());
         Files.createDirectories(targetDirectory);
-        Files.writeString(target, javaSource);
-
-        getLog().info("Generated: " + target);
+        if (shouldSkipWrite(target, javaSource)) {
+          skippedUnchangedFiles++;
+          getLog().debug("Unchanged: " + target);
+        } else {
+          Files.writeString(target, javaSource);
+          writtenFiles++;
+          getLog().info("Generated: " + target);
+        }
       }
+
+      return new ScriptGenerationSummary(model.classes().size(), writtenFiles, skippedUnchangedFiles);
 
     } catch (IOException | RuntimeException e) {
       throw new MojoExecutionException("Failed processing script: " + script, e);
     }
+  }
+
+  private boolean shouldSkipWrite(Path target, String javaSource) throws IOException {
+    if (!skipUnchanged || !Files.exists(target)) {
+      return false;
+    }
+    String existing = Files.readString(target);
+    return existing.equals(javaSource);
   }
 
   private static final class UncheckedMojoExecutionException extends RuntimeException {
@@ -215,4 +288,10 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
       return mojoExecutionException;
     }
   }
+
+  private record ScriptGenerationSummary(
+      int generatedContracts, int writtenFiles, int skippedUnchangedFiles) {}
+
+  private record GenerationSummary(
+      int supportedScripts, int generatedContracts, int writtenFiles, int skippedUnchangedFiles) {}
 }

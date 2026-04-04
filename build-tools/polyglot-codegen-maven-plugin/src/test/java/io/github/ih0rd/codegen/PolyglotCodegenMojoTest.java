@@ -3,6 +3,7 @@ package io.github.ih0rd.codegen;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.lang.reflect.Field;
 import java.nio.file.Files;
@@ -118,6 +119,97 @@ class PolyglotCodegenMojoTest {
     setField(mojo, "projectGroupId", "com.example");
 
     assertThrows(MojoExecutionException.class, mojo::execute);
+  }
+
+  @Test
+  void executeRespectsOnlyIncludedMethodsFlag() throws Exception {
+    Path inputDirectory = Files.createDirectories(tempDir.resolve("scripts-only-included"));
+    Path outputDirectory = tempDir.resolve("generated-only-included");
+    Path script = inputDirectory.resolve("include_api.py");
+    Files.writeString(
+        script,
+        """
+        polyglot.export_value("IncludeApi", IncludeApi)
+
+        class IncludeApi:
+            @adapter_include
+            def included(self) -> int:
+                return 1
+
+            def excluded(self) -> int:
+                return 2
+        """);
+
+    PolyglotCodegenMojo mojo = new PolyglotCodegenMojo();
+    MavenProject project = new MavenProject();
+
+    setField(mojo, "inputDirectory", inputDirectory.toFile());
+    setField(mojo, "outputDirectory", outputDirectory.toFile());
+    setField(mojo, "basePackage", "com.example.polyglot");
+    setField(mojo, "onlyIncludedMethods", true);
+    setField(mojo, "project", project);
+    setField(mojo, "projectGroupId", "com.example");
+
+    mojo.execute();
+
+    Path generatedSource = outputDirectory.resolve("com/example/polyglot/IncludeApi.java");
+    String generated = Files.readString(generatedSource);
+    assertTrue(generated.contains("included("));
+    assertFalse(generated.contains("excluded("));
+  }
+
+  @Test
+  void executeFailsWhenFailOnNoContractsIsEnabledAndNothingGenerated() throws Exception {
+    Path inputDirectory = Files.createDirectories(tempDir.resolve("scripts-empty"));
+    Path outputDirectory = tempDir.resolve("generated-empty");
+
+    PolyglotCodegenMojo mojo = new PolyglotCodegenMojo();
+    MavenProject project = new MavenProject();
+
+    setField(mojo, "inputDirectory", inputDirectory.toFile());
+    setField(mojo, "outputDirectory", outputDirectory.toFile());
+    setField(mojo, "failOnNoContracts", true);
+    setField(mojo, "project", project);
+    setField(mojo, "projectGroupId", "com.example");
+
+    MojoExecutionException exception = assertThrows(MojoExecutionException.class, mojo::execute);
+    assertTrue(exception.getMessage().contains("No contracts generated"));
+  }
+
+  @Test
+  void executeSkipsWritingWhenGeneratedContentIsUnchanged() throws Exception {
+    Path inputDirectory = Files.createDirectories(tempDir.resolve("scripts-unchanged"));
+    Path outputDirectory = tempDir.resolve("generated-unchanged");
+    Path script = inputDirectory.resolve("stable_api.py");
+    Files.writeString(
+        script,
+        """
+        polyglot.export_value("StableApi", StableApi)
+
+        class StableApi:
+            def ping(self) -> int:
+                return 1
+        """);
+
+    PolyglotCodegenMojo mojo = new PolyglotCodegenMojo();
+    MavenProject project = new MavenProject();
+
+    setField(mojo, "inputDirectory", inputDirectory.toFile());
+    setField(mojo, "outputDirectory", outputDirectory.toFile());
+    setField(mojo, "basePackage", "com.example.polyglot");
+    setField(mojo, "skipUnchanged", true);
+    setField(mojo, "project", project);
+    setField(mojo, "projectGroupId", "com.example");
+
+    mojo.execute();
+    Path generatedSource = outputDirectory.resolve("com/example/polyglot/StableApi.java");
+    long firstModified = Files.getLastModifiedTime(generatedSource).toMillis();
+
+    Thread.sleep(1100);
+    mojo.execute();
+
+    long secondModified = Files.getLastModifiedTime(generatedSource).toMillis();
+    assertEquals(firstModified, secondModified);
   }
 
   private static void setField(Object target, String name, Object value) throws Exception {

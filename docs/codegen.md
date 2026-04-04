@@ -109,6 +109,15 @@ Default behavior:
 
 The plugin adds the output directory as a compile source root, so generated interfaces are compiled automatically in the same build.
 
+Additional Maven plugin options:
+
+- `onlyIncludedMethods` (default: `false`)  
+  When enabled, only methods marked with `@adapter_include` are generated.
+- `failOnNoContracts` (default: `false`)  
+  Fails the build if scanning finishes with zero generated contracts.
+- `skipUnchanged` (default: `true`)  
+  Skips rewriting generated files when rendered content is unchanged.
+
 ## Relationship to Runtime Execution
 
 The code generation layer and the runtime adapter are separate by design, but they are intended to be used together.
