@@ -9,7 +9,7 @@
     <parent>
         <groupId>io.github.ih0r-d</groupId>
         <artifactId>polyglot-build-tools</artifactId>
-        <version>0.2.1</version>
+        <version>0.3.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>polyglot-codegen-maven-plugin</artifactId>
