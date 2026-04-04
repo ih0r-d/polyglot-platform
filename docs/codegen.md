@@ -113,6 +113,8 @@ Additional Maven plugin options:
 
 - `onlyIncludedMethods` (default: `false`)  
   When enabled, only methods marked with `@adapter_include` are generated.
+- `strictMode` (default: `false`)  
+  Fails generation if unresolved/unknown types are detected in parsed contracts.
 - `failOnNoContracts` (default: `false`)  
   Fails the build if scanning finishes with zero generated contracts.
 - `skipUnchanged` (default: `true`)  

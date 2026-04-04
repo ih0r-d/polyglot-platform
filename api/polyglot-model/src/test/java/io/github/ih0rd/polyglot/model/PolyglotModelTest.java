@@ -93,6 +93,7 @@ class PolyglotModelTest {
     assertEquals("print('x')", descriptor.source());
     assertEquals("demo.py", descriptor.fileName());
     assertEquals(true, config.onlyIncludedMethods());
+    assertEquals(false, config.strictMode());
     assertEquals(PolyPrimitive.STRING, list.elementType());
     assertEquals(PolyPrimitive.STRING, map.keyType());
     assertEquals(PolyPrimitive.INT, map.valueType());

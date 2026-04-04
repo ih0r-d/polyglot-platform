@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 import io.github.ih0rd.codegen.ContractGenerator;
+import io.github.ih0rd.codegen.ContractModelValidator;
 import io.github.ih0rd.codegen.DefaultContractGenerator;
 import io.github.ih0rd.codegen.JavaInterfaceGenerator;
 import io.github.ih0rd.polyglot.SupportedLanguage;
@@ -62,6 +63,7 @@ public final class CodegenMain {
                             Usage:
                               CodegenMain <inputDir> <outputDir> --package=<basePackage>
                               [--only-included-methods=true|false]
+                              [--strict-mode=true|false]
                             """);
     }
 
@@ -70,6 +72,7 @@ public final class CodegenMain {
 
     String basePackage = null;
     boolean onlyIncludedMethods = false;
+    boolean strictMode = false;
 
     for (String arg : args) {
 
@@ -81,6 +84,10 @@ public final class CodegenMain {
         onlyIncludedMethods =
             Boolean.parseBoolean(arg.substring("--only-included-methods=".length()));
       }
+
+      if (arg.startsWith("--strict-mode=")) {
+        strictMode = Boolean.parseBoolean(arg.substring("--strict-mode=".length()));
+      }
     }
 
     if (basePackage == null || basePackage.isBlank()) {
@@ -88,7 +95,7 @@ public final class CodegenMain {
     }
 
     return new CliArguments(
-        inputDir, outputDir, basePackage, new CodegenConfig(onlyIncludedMethods));
+        inputDir, outputDir, basePackage, new CodegenConfig(onlyIncludedMethods, strictMode));
   }
 
   private static void validate(CliArguments cli) {
@@ -133,6 +140,9 @@ public final class CodegenMain {
     ContractModel model;
     try {
       model = generator.generate(descriptor, cli.config());
+      if (cli.config().strictMode()) {
+        ContractModelValidator.requireNoUnknownTypes(model);
+      }
     } catch (RuntimeException e) {
       throw new CodegenCliException("Failed to process script: " + scriptPath, e);
     }

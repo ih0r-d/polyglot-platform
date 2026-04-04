@@ -141,6 +141,36 @@ class CodegenMainTest {
     assertTrue(exception.getMessage().contains("Failed to process script"));
   }
 
+  @Test
+  void mainFailsInStrictModeWhenUnknownTypesArePresent() throws Exception {
+    Path inputDirectory = Files.createDirectories(tempDir.resolve("scripts-strict-mode"));
+    Path outputDirectory = tempDir.resolve("generated-strict-mode");
+
+    Files.writeString(
+        inputDirectory.resolve("strict_unknown.py"),
+        """
+        polyglot.export_value("StrictApi", StrictApi)
+
+        class StrictApi:
+            def ping(self, payload):
+                return payload
+        """);
+
+    RuntimeException exception =
+        assertThrows(
+            RuntimeException.class,
+            invokeMain(
+                new String[] {
+                  inputDirectory.toString(),
+                  outputDirectory.toString(),
+                  "--package=com.example.generated",
+                  "--strict-mode=true"
+                }));
+
+    assertTrue(exception.getMessage().contains("Failed to process script"));
+    assertTrue(exception.getCause().getMessage().contains("Unknown"));
+  }
+
   private static Executable invokeMain(String[] arguments) {
     return () -> CodegenMain.main(arguments);
   }

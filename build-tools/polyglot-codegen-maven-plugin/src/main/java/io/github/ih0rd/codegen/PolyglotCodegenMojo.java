@@ -91,6 +91,14 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
   private boolean onlyIncludedMethods;
 
   /**
+   * Fails generation when unresolved/unknown types are discovered.
+   *
+   * <p>Default: {@code false}
+   */
+  @Parameter(property = "polyglot.codegen.strictMode", defaultValue = "false")
+  private boolean strictMode;
+
+  /**
    * Fails the build when no contracts were generated.
    *
    * <p>Default: {@code false}
@@ -236,7 +244,11 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
 
       ScriptDescriptor descriptor = new ScriptDescriptor(language, source, scriptFileName);
 
-      ContractModel model = generator.generate(descriptor, new CodegenConfig(onlyIncludedMethods));
+      ContractModel model =
+          generator.generate(descriptor, new CodegenConfig(onlyIncludedMethods, strictMode));
+      if (strictMode) {
+        ContractModelValidator.requireNoUnknownTypes(model);
+      }
       int writtenFiles = 0;
       int skippedUnchangedFiles = 0;
 

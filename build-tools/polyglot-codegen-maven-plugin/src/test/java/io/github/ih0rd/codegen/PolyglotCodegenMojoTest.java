@@ -212,6 +212,36 @@ class PolyglotCodegenMojoTest {
     assertEquals(firstModified, secondModified);
   }
 
+  @Test
+  void executeFailsInStrictModeWhenUnknownTypesExist() throws Exception {
+    Path inputDirectory = Files.createDirectories(tempDir.resolve("scripts-strict"));
+    Path outputDirectory = tempDir.resolve("generated-strict");
+    Path script = inputDirectory.resolve("strict_api.py");
+    Files.writeString(
+        script,
+        """
+        polyglot.export_value("StrictApi", StrictApi)
+
+        class StrictApi:
+            def hello(self, payload):
+                return payload
+        """);
+
+    PolyglotCodegenMojo mojo = new PolyglotCodegenMojo();
+    MavenProject project = new MavenProject();
+
+    setField(mojo, "inputDirectory", inputDirectory.toFile());
+    setField(mojo, "outputDirectory", outputDirectory.toFile());
+    setField(mojo, "basePackage", "com.example.polyglot");
+    setField(mojo, "strictMode", true);
+    setField(mojo, "project", project);
+    setField(mojo, "projectGroupId", "com.example");
+
+    MojoExecutionException exception = assertThrows(MojoExecutionException.class, mojo::execute);
+    assertTrue(exception.getMessage().contains("Failed processing script"));
+    assertTrue(exception.getCause().getMessage().contains("Unknown"));
+  }
+
   private static void setField(Object target, String name, Object value) throws Exception {
     Field field = target.getClass().getDeclaredField(name);
     field.setAccessible(true);
