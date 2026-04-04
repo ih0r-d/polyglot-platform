@@ -7,11 +7,10 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.project.MavenProject;
 
-/** Maven goal that generates Java contracts from supported scripts. */
-@Mojo(name = "generate", defaultPhase = LifecyclePhase.GENERATE_SOURCES, threadSafe = true)
-public final class PolyglotCodegenMojo extends AbstractMojo {
+/** Maven goal that checks generated contracts for drift without writing files. */
+@Mojo(name = "check", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true)
+public final class PolyglotCodegenCheckMojo extends AbstractMojo {
 
   @Parameter(defaultValue = "${project.basedir}/src/main/resources")
   private File inputDirectory;
@@ -20,9 +19,6 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
   private File outputDirectory;
 
   @Parameter private String basePackage;
-
-  @Parameter(defaultValue = "${project}", readonly = true, required = true)
-  private MavenProject project;
 
   @Parameter(defaultValue = "${project.groupId}", readonly = true)
   private String projectGroupId;
@@ -36,12 +32,6 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
   @Parameter(property = "polyglot.codegen.failOnNoContracts", defaultValue = "false")
   private boolean failOnNoContracts;
 
-  @Parameter(property = "polyglot.codegen.skipUnchanged", defaultValue = "true")
-  private boolean skipUnchanged;
-
-  @Parameter(property = "polyglot.codegen.failOnContractDrift", defaultValue = "false")
-  private boolean failOnContractDrift;
-
   @Override
   public void execute() throws MojoExecutionException {
     CodegenMojoSupport.execute(
@@ -53,11 +43,9 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
             onlyIncludedMethods,
             strictMode,
             failOnNoContracts,
-            skipUnchanged,
-            failOnContractDrift),
+            false,
+            true),
         getLog(),
-        CodegenMojoSupport.Mode.GENERATE);
-
-    project.addCompileSourceRoot(outputDirectory.toPath().toAbsolutePath().toString());
+        CodegenMojoSupport.Mode.CHECK);
   }
 }

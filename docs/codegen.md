@@ -98,6 +98,7 @@ The Maven plugin goal is:
 
 ```text
 polyglot:generate
+polyglot:check
 ```
 
 Default behavior:
@@ -119,6 +120,13 @@ Additional Maven plugin options:
   Fails the build if scanning finishes with zero generated contracts.
 - `skipUnchanged` (default: `true`)  
   Skips rewriting generated files when rendered content is unchanged.
+- `failOnContractDrift` (default: `false`)  
+  In `polyglot:generate`, switches to drift-check behavior and fails when generated files differ.
+
+DX workflow pattern:
+
+- local update: `mvn polyglot:generate`
+- CI verification: `mvn polyglot:check`
 
 ## Relationship to Runtime Execution
 

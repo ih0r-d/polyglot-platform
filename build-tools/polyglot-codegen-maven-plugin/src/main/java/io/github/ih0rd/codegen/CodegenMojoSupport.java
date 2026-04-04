@@ -1,0 +1,306 @@
+package io.github.ih0rd.codegen;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.logging.Log;
+
+import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.model.ContractClass;
+import io.github.ih0rd.polyglot.model.ContractModel;
+import io.github.ih0rd.polyglot.model.config.CodegenConfig;
+import io.github.ih0rd.polyglot.model.parser.ScriptDescriptor;
+
+/** Shared execution logic for Maven codegen goals. */
+final class CodegenMojoSupport {
+
+  private static final int MAX_DRIFT_MESSAGES = 10;
+
+  private CodegenMojoSupport() {}
+
+  enum Mode {
+    GENERATE,
+    CHECK
+  }
+
+  record Settings(
+      File inputDirectory,
+      File outputDirectory,
+      String basePackage,
+      String projectGroupId,
+      boolean onlyIncludedMethods,
+      boolean strictMode,
+      boolean failOnNoContracts,
+      boolean skipUnchanged,
+      boolean failOnContractDrift) {}
+
+  record Summary(
+      int supportedScripts,
+      int generatedContracts,
+      int writtenFiles,
+      int skippedUnchangedFiles,
+      int driftedFiles) {}
+
+  static Summary execute(Settings settings, Log log, Mode mode) throws MojoExecutionException {
+    validateInputDirectory(settings.inputDirectory());
+
+    Path outputRoot = settings.outputDirectory().toPath();
+    if (mode == Mode.GENERATE && !settings.failOnContractDrift()) {
+      createOutputDirectory(outputRoot);
+    }
+
+    String effectivePackage = resolveBasePackage(settings.basePackage(), settings.projectGroupId());
+    Summary summary = runGeneration(settings, log, mode, outputRoot, effectivePackage);
+
+    if (settings.failOnNoContracts() && summary.generatedContracts() == 0) {
+      throw new MojoExecutionException(
+          "No contracts generated from input directory: " + settings.inputDirectory());
+    }
+
+    if (mode == Mode.CHECK && summary.driftedFiles() > 0) {
+      throw new MojoExecutionException(
+          "Detected "
+              + summary.driftedFiles()
+              + " generated file drift(s). Run "
+              + "'mvn polyglot:generate' to refresh generated sources.");
+    }
+
+    if (settings.failOnContractDrift() && summary.driftedFiles() > 0) {
+      throw new MojoExecutionException(
+          "Detected "
+              + summary.driftedFiles()
+              + " generated file drift(s) with failOnContractDrift=true.");
+    }
+
+    log.info(
+        "Codegen summary: scripts="
+            + summary.supportedScripts()
+            + ", contracts="
+            + summary.generatedContracts()
+            + ", writtenFiles="
+            + summary.writtenFiles()
+            + ", skippedUnchanged="
+            + summary.skippedUnchangedFiles()
+            + ", drifted="
+            + summary.driftedFiles());
+    if (mode == Mode.CHECK && summary.driftedFiles() == 0) {
+      log.info("Codegen check passed: generated contracts are up-to-date.");
+    }
+    return summary;
+  }
+
+  private static void validateInputDirectory(File inputDirectory) throws MojoExecutionException {
+    if (inputDirectory == null || !inputDirectory.exists()) {
+      throw new MojoExecutionException("Input directory does not exist: " + inputDirectory);
+    }
+    if (!inputDirectory.isDirectory()) {
+      throw new MojoExecutionException("Input path is not a directory: " + inputDirectory);
+    }
+  }
+
+  private static void createOutputDirectory(Path outputRoot) throws MojoExecutionException {
+    try {
+      Files.createDirectories(outputRoot);
+    } catch (IOException e) {
+      throw new MojoExecutionException("Failed to create output directory", e);
+    }
+  }
+
+  private static String resolveBasePackage(String basePackage, String projectGroupId) {
+    if (basePackage == null || basePackage.isBlank()) {
+      return projectGroupId + ".polyglot";
+    }
+    return basePackage;
+  }
+
+  private static Summary runGeneration(
+      Settings settings, Log log, Mode mode, Path outputRoot, String effectivePackage)
+      throws MojoExecutionException {
+    ContractGenerator generator = new DefaultContractGenerator();
+    JavaInterfaceGenerator javaGenerator = new JavaInterfaceGenerator();
+
+    AtomicInteger supportedScripts = new AtomicInteger();
+    AtomicInteger generatedContracts = new AtomicInteger();
+    AtomicInteger writtenFiles = new AtomicInteger();
+    AtomicInteger skippedUnchangedFiles = new AtomicInteger();
+    AtomicInteger driftedFiles = new AtomicInteger();
+    List<String> driftMessages = new ArrayList<>();
+
+    try (Stream<Path> files = Files.walk(settings.inputDirectory().toPath())) {
+      files
+          .filter(Files::isRegularFile)
+          .filter(CodegenMojoSupport::isSupported)
+          .forEach(
+              script -> {
+                supportedScripts.incrementAndGet();
+                try {
+                  ScriptSummary perScript =
+                      processScript(
+                          script,
+                          generator,
+                          javaGenerator,
+                          settings,
+                          mode,
+                          outputRoot,
+                          effectivePackage,
+                          log);
+                  generatedContracts.addAndGet(perScript.generatedContracts());
+                  writtenFiles.addAndGet(perScript.writtenFiles());
+                  skippedUnchangedFiles.addAndGet(perScript.skippedUnchangedFiles());
+                  driftedFiles.addAndGet(perScript.driftedFiles());
+                  if (driftMessages.size() < MAX_DRIFT_MESSAGES) {
+                    driftMessages.addAll(perScript.driftMessages());
+                    if (driftMessages.size() > MAX_DRIFT_MESSAGES) {
+                      driftMessages.subList(MAX_DRIFT_MESSAGES, driftMessages.size()).clear();
+                    }
+                  }
+                } catch (MojoExecutionException e) {
+                  throw new UncheckedMojoExecutionException(e);
+                }
+              });
+    } catch (UncheckedMojoExecutionException e) {
+      throw e.mojoExecutionException();
+    } catch (IOException e) {
+      throw new MojoExecutionException("Failed scanning input directory", e);
+    }
+
+    if (!driftMessages.isEmpty()) {
+      for (String message : driftMessages) {
+        log.warn(message);
+      }
+      if (driftedFiles.get() > driftMessages.size()) {
+        log.warn("... and " + (driftedFiles.get() - driftMessages.size()) + " more drifted file(s).");
+      }
+    }
+
+    return new Summary(
+        supportedScripts.get(),
+        generatedContracts.get(),
+        writtenFiles.get(),
+        skippedUnchangedFiles.get(),
+        driftedFiles.get());
+  }
+
+  private static ScriptSummary processScript(
+      Path script,
+      ContractGenerator generator,
+      JavaInterfaceGenerator javaGenerator,
+      Settings settings,
+      Mode mode,
+      Path outputRoot,
+      String effectivePackage,
+      Log log)
+      throws MojoExecutionException {
+    try {
+      String source = Files.readString(script);
+      String fileName = Objects.requireNonNull(script.getFileName()).toString();
+      SupportedLanguage language = SupportedLanguage.fromFileName(fileName);
+      ScriptDescriptor descriptor = new ScriptDescriptor(language, source, fileName);
+      ContractModel model =
+          generator.generate(
+              descriptor, new CodegenConfig(settings.onlyIncludedMethods(), settings.strictMode()));
+      if (settings.strictMode()) {
+        ContractModelValidator.requireNoUnknownTypes(model);
+      }
+
+      int written = 0;
+      int skippedUnchanged = 0;
+      int drifted = 0;
+      List<String> driftMessages = new ArrayList<>();
+
+      for (ContractClass contract : model.classes()) {
+        String javaSource = javaGenerator.generate(contract, effectivePackage);
+        Path target =
+            outputRoot
+                .resolve(effectivePackage.replace('.', '/'))
+                .resolve(contract.name() + ".java");
+
+        boolean trackDrift = mode == Mode.CHECK || settings.failOnContractDrift();
+        boolean drift = false;
+        if (trackDrift) {
+          drift = isDrift(target, javaSource);
+          if (drift) {
+            drifted++;
+            driftMessages.add("Drift detected: " + target);
+          }
+        }
+
+        if (trackDrift) {
+          continue;
+        }
+
+        Path targetDirectory = Objects.requireNonNull(target.getParent());
+        Files.createDirectories(targetDirectory);
+        if (settings.skipUnchanged() && Files.exists(target) && !isDrift(target, javaSource)) {
+          skippedUnchanged++;
+          logDebug(log, "Unchanged: " + target);
+          continue;
+        }
+        Files.writeString(target, javaSource);
+        written++;
+        logInfo(log, "Generated: " + target);
+      }
+
+      return new ScriptSummary(model.classes().size(), written, skippedUnchanged, drifted, driftMessages);
+    } catch (IOException | RuntimeException e) {
+      throw new MojoExecutionException("Failed processing script: " + script, e);
+    }
+  }
+
+  private static boolean isSupported(Path path) {
+    try {
+      SupportedLanguage.fromFileName(path.getFileName().toString());
+      return true;
+    } catch (IllegalArgumentException e) {
+      return false;
+    }
+  }
+
+  private static boolean isDrift(Path target, String expectedContent) throws IOException {
+    if (!Files.exists(target)) {
+      return true;
+    }
+    String current = Files.readString(target);
+    return !current.equals(expectedContent);
+  }
+
+  private static void logInfo(Log log, String message) {
+    if (log != null) {
+      log.info(message);
+    }
+  }
+
+  private static void logDebug(Log log, String message) {
+    if (log != null) {
+      log.debug(message);
+    }
+  }
+
+  private record ScriptSummary(
+      int generatedContracts,
+      int writtenFiles,
+      int skippedUnchangedFiles,
+      int driftedFiles,
+      List<String> driftMessages) {}
+
+  private static final class UncheckedMojoExecutionException extends RuntimeException {
+    private final MojoExecutionException mojoExecutionException;
+
+    private UncheckedMojoExecutionException(MojoExecutionException mojoExecutionException) {
+      super(mojoExecutionException);
+      this.mojoExecutionException = mojoExecutionException;
+    }
+
+    private MojoExecutionException mojoExecutionException() {
+      return mojoExecutionException;
+    }
+  }
+}
