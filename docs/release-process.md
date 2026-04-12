@@ -2,6 +2,13 @@
 
 This project should publish releases as repeatable, reviewable changes rather than ad hoc tag pushes.
 
+Use this page together with:
+
+- [`release-checklist.md`](release-checklist.md) for the operator checklist
+- [`release-gates.md`](release-gates.md) for ship / no-ship criteria
+- [`public-api.md`](public-api.md) and [`stability.md`](stability.md) when evaluating compatibility
+  and experimental scope
+
 ## Release Checklist
 
 1. Ensure `main` is green in CI.
@@ -17,7 +24,8 @@ This project should publish releases as repeatable, reviewable changes rather th
 ## Release Automation
 
 - Pushing a tag that matches `v*` runs `.github/workflows/release.yaml`.
-- That workflow verifies the tag matches the Maven project release version and creates or updates the GitHub Release.
+- That workflow verifies the tag matches the Maven project release version, runs the quality
+  verification profile, and only then creates or updates the GitHub Release.
 - Maven Central publishing is intentionally not part of the tag-push workflow.
 - Publishing to Maven Central runs only from `.github/workflows/publish-maven-central.yaml`, triggered with `workflow_dispatch`.
 - The manual publish workflow checks out the requested tag, verifies it matches the Maven project version, and deploys with the existing Maven `release` profile and signing configuration.
