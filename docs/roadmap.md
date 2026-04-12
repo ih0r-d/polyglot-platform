@@ -4,7 +4,7 @@
 
 The repository currently provides:
 
-- Python and JavaScript runtime execution
+- Python runtime execution and experimental JavaScript runtime execution
 - Spring Boot integration for typed clients
 - Python contract parsing and Java interface generation
 - module-level separation between runtime and build tooling
@@ -12,7 +12,7 @@ The repository currently provides:
 Current positioning is intentionally conservative:
 
 - Python is the primary and more mature runtime path.
-- JavaScript support remains narrower and runtime-focused.
+- JavaScript support remains narrower, runtime-focused, and experimental.
 - Build-time code generation is real and growing more reliable, but still intentionally scoped to a
   Python-oriented contract subset.
 
@@ -34,7 +34,7 @@ Current `0.3.0` direction:
 - make Python runtime semantics explicit enough to be trusted
 - keep Spring startup/fail-fast/preload behavior aligned with those semantics
 - improve code generation reliability with stricter type handling and drift checks
-- keep JavaScript claims bounded to the runtime surface that actually exists
+- keep JavaScript claims bounded to the experimental runtime surface that actually exists
 
 Not the focus of `0.3.0`:
 

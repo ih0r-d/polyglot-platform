@@ -46,7 +46,7 @@ Less suitable today:
 Current maturity is best described as:
 
 - late-beta for the Python-first runtime/starter path
-- narrower and still limited for JavaScript
+- experimental and still limited for JavaScript
 - not yet ready to present itself as a full “polyglot platform”
 
 Current strengths:
@@ -64,7 +64,7 @@ Current weaknesses:
 - cache invalidation and source identity semantics are still coarse
 - preload is easy to misunderstand without careful docs
 - codegen remains intentionally narrow and parser-fragile outside the documented Python subset
-- JavaScript support is real but narrow
+- JavaScript support is real but explicitly experimental and narrow
 
 ## 5. Product Priorities
 
@@ -73,7 +73,7 @@ Near-term product priorities should be:
 1. Make the Python-first path boring, predictable, and trustworthy.
 2. Keep Spring Boot integration coherent and honest.
 3. Reduce ambiguity around runtime behavior.
-4. Position JavaScript support conservatively and accurately.
+4. Position JavaScript support conservatively, accurately, and explicitly as experimental.
 5. Avoid new promises that outpace implementation maturity.
 
 This means product value should come from:
@@ -128,7 +128,7 @@ Keep out of scope:
 - the release that stabilizes Python runtime behavior enough to support stronger confidence
 - the release that makes codegen strictness and drift checks credible in CI
 - the release that makes docs and semantics line up tightly
-- the release that keeps JS support bounded and honest
+- the release that keeps JS support bounded, honest, and explicitly experimental
 
 It should not be positioned as:
 

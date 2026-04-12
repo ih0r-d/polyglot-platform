@@ -16,6 +16,7 @@ Use this site in the following order:
 - [Concepts](concepts.md)
 - [Architecture](architecture.md)
 - [Compatibility](compatibility.md)
+- [Stability](stability.md)
 - [Runtime](runtime.md)
 - [Runtime Semantics](runtime-semantics.md)
 - [Code Generation](codegen.md)

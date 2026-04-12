@@ -2,7 +2,8 @@
 
 ## Overview
 
-The runtime layer provides the adapter API on top of GraalVM Polyglot for Python and JavaScript execution.
+The runtime layer provides the adapter API on top of GraalVM Polyglot for Python and experimental
+JavaScript execution.
 
 Its core purpose is simple: bind a Java interface to a guest-language implementation and call it as normal Java code.
 
@@ -17,7 +18,7 @@ Its core purpose is simple: bind a Java interface to a guest-language implementa
 
 - `AbstractPolyglotExecutor`: shared proxy binding, source caching, metadata, and common invocation helpers
 - `PyExecutor`: Python-specific script loading, export resolution, instance caching, and binding validation
-- `JsExecutor`: JavaScript-specific script loading, function lookup, and binding validation
+- `JsExecutor`: experimental JavaScript-specific script loading, function lookup, and binding validation
 - `PolyglotHelper`: language-specific `Context` creation and initialization
 - `ScriptSource` implementations: classpath, filesystem, in-memory, and composite resolution
 
@@ -133,14 +134,15 @@ When a Java interface is validated or called:
 
 The runtime does not currently define a separate JavaScript export object convention comparable to Python's class-style and dictionary-style exports.
 
-JavaScript support is intentionally narrower than Python in this release line and should be treated as runtime-only binding support, not parity with Python lifecycle semantics.
+JavaScript support is intentionally narrower than Python in this release line and is currently
+treated as experimental runtime-only binding support, not parity with Python lifecycle semantics.
 
 ## Adapter API Surface
 
 Applications normally interact with the runtime through:
 
 - `PyExecutor.create(...)` or `PyExecutor.createWithContext(...)`
-- `JsExecutor.create(...)` or `JsExecutor.createWithContext(...)`
+- `JsExecutor.create(...)` or `JsExecutor.createWithContext(...)` for the experimental JavaScript path
 - `bind(...)`
 - `bind(..., convention)`
 - `validateBinding(...)`
@@ -274,7 +276,8 @@ If Micrometer is present, the starter registers gauges for:
 ## Current Runtime Limits
 
 - The runtime is intended for trusted application embedding, not untrusted sandbox execution.
-- JavaScript execution is supported, but JavaScript contract generation is not.
+- JavaScript execution is supported as an experimental bounded path, but JavaScript contract
+  generation is not.
 - Startup preloading evaluates named scripts but does not provide hot reload or source versioning.
 - Startup preloading is raw script evaluation, not true contract prebinding.
 - The binding convention is currently opinionated and name-based; alternative conventions are not implemented yet.

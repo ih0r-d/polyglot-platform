@@ -78,7 +78,11 @@ This is why the adapter is best described as a runtime adapter or lightweight wr
 
 ## Python and JavaScript Differences
 
-The runtime adapter supports both Python and JavaScript, but their binding models are not identical.
+The runtime adapter supports both Python and JavaScript, but their binding models are not
+identical.
+
+Python is the primary stabilization target. JavaScript is currently an experimental bounded runtime
+path.
 
 ### Python
 

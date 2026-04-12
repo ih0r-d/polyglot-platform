@@ -26,7 +26,7 @@ What is still weak:
   framing.
 - Cache invalidation and source identity semantics remain coarse.
 - JavaScript support is usable only in a narrower runtime-only sense and should stay described that
-  way.
+  way as experimental support before `1.0.0`.
 - Executor concurrency is safe via serialization, but still intentionally limited.
 
 ## 2. Roadmap Principles
@@ -45,7 +45,7 @@ The immediate post-`0.2.1` runtime-hardening batch is largely done:
 - Python lifecycle semantics are clearer in code, docs, and targeted tests.
 - Preload semantics are now documented more honestly.
 - Cache invalidation gained a more focused runtime API shape.
-- JavaScript support is positioned more conservatively.
+- JavaScript support is positioned more conservatively and explicitly marked experimental.
 - A focused real-context Python lifecycle test has been added.
 
 That batch should now be treated as completed baseline, not as open roadmap scope.
@@ -72,7 +72,7 @@ Must-focus topics:
 - Codegen reliability:
   strict mode, contract drift detection, and a documented supported parser subset.
 - JavaScript support boundaries:
-  freeze and document the supported runtime surface honestly.
+  freeze and document the supported runtime surface honestly as experimental support.
 
 What `0.3.0` should deliver:
 
@@ -112,7 +112,7 @@ Before `1.0.0`, the project should have:
 
 - A clearly stable public API surface.
 - Deliberately specified runtime semantics for Python.
-- Honest, bounded JavaScript support claims.
+- Honest, bounded JavaScript support claims, with experimental status made explicit.
 - Predictable Spring Boot behavior under fail-fast and warmup/preload scenarios.
 - Strong enough tests to trust behavior changes.
 - Documentation that matches the implementation closely.

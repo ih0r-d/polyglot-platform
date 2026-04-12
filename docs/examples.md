@@ -14,7 +14,7 @@ Examples are included here as supporting material after the main onboarding and 
 
 | Example                                                                        | What it demonstrates                                                                    | Integration style                 |
 |--------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|-----------------------------------|
-| [`samples/java-maven-example`](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/java-maven-example)                 | Direct use of `PyExecutor` and `JsExecutor` with explicit `ScriptSource` wiring         | Framework-neutral runtime adapter |
+| [`samples/java-maven-example`](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/java-maven-example)                 | Direct use of `PyExecutor` and the experimental `JsExecutor` with explicit `ScriptSource` wiring | Framework-neutral runtime adapter |
 | [`samples/java-maven-codegen-example`](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/java-maven-codegen-example) | Build-time Java interface generation from Python contracts, followed by runtime binding | Code generation + runtime adapter |
 | [`samples/spring-boot-example`](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/spring-boot-example)               | Spring Boot auto-configuration, `@PolyglotClient` registration, actuator, and metrics   | Spring Boot integration layer     |
 
@@ -28,7 +28,7 @@ It demonstrates:
 
 - manual executor creation
 - filesystem-backed script loading
-- Python and JavaScript execution
+- Python execution and experimental JavaScript execution
 - binding validation and metadata
 
 ### Java Maven Codegen Example

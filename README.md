@@ -5,7 +5,8 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ih0r-d_polyglot-adapter&metric=coverage)](https://sonarcloud.io/summary/new_code?id=ih0r-d_polyglot-adapter)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-`polyglot-adapter` provides runtime and build-time support for executing Python and JavaScript on the JVM through GraalVM Polyglot.
+`polyglot-adapter` provides runtime and build-time support for executing Python and JavaScript on
+the JVM through GraalVM Polyglot.
 
 It provides:
 
@@ -16,7 +17,7 @@ It provides:
 ## Runtime Positioning
 
 - Python is the primary and more mature runtime path.
-- JavaScript support is intentionally narrower and runtime-focused.
+- JavaScript support is intentionally narrower and currently treated as experimental.
 - Startup preload is raw script evaluation; it does not prebind contracts or hydrate interface caches.
 - Shared starter executors serialize access to one GraalVM context (safe-by-serialization, not throughput-oriented parallel execution).
 
@@ -195,6 +196,7 @@ Project documentation is maintained in [`docs/`](docs/). Start with [`docs/index
 - [`docs/overview.md`](docs/overview.md)
 - [`docs/architecture.md`](docs/architecture.md)
 - [`docs/compatibility.md`](docs/compatibility.md)
+- [`docs/stability.md`](docs/stability.md)
 - [`docs/runtime.md`](docs/runtime.md)
 - [`docs/runtime-semantics.md`](docs/runtime-semantics.md)
 - [`docs/codegen.md`](docs/codegen.md)

@@ -92,7 +92,9 @@ The build-tools layer performs static contract extraction and Java source genera
 
 `polyglot-codegen-maven-plugin` integrates the generator into Maven and registers generated sources during `generate-sources`.
 
-JavaScript contract generation is not implemented yet. The runtime supports JavaScript execution, but the current code generator throws `UnsupportedOperationException` for JavaScript contracts.
+JavaScript contract generation is not implemented yet. The runtime supports JavaScript execution as
+an experimental bounded path, but the current code generator throws
+`UnsupportedOperationException` for JavaScript contracts.
 
 ## Adapter Flow On Top of GraalVM
 
@@ -130,7 +132,8 @@ caches.
 
 It evaluates the script once per interface and expects interface methods to map to executable
 JavaScript functions in language bindings. There is no separate exported-object convention like the
-Python path currently uses.
+Python path currently uses. This JavaScript path should be treated as experimental support before
+`1.0.0`.
 
 Starter-managed executors are singleton beans that serialize access to their shared GraalVM
 `Context`. This makes them suitable for normal concurrent Spring application use, but it does not
