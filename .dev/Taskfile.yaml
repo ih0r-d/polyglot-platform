@@ -46,6 +46,13 @@ tasks:
     cmds:
       - ./bin/release-preflight.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
+  release-preflight-clean:
+    desc: Run release preflight and remove the temporary docs virtualenv afterwards
+    env:
+      RELEASE_PREFLIGHT_CLEAN_DOCS_VENV: "1"
+    cmds:
+      - ./bin/release-preflight.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
   dry-run-release:
     desc: Verify release publication locally without publishing to Maven Central
     cmds:
