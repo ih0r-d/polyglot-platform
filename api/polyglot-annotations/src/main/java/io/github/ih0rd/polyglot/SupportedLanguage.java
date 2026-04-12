@@ -2,6 +2,8 @@ package io.github.ih0rd.polyglot;
 
 import java.util.Arrays;
 
+import io.github.ih0rd.polyglot.annotations.ExperimentalApi;
+
 /**
  * Supported guest languages for both runtime execution and build-time tooling.
  *
@@ -23,6 +25,7 @@ public enum SupportedLanguage {
   /** Python guest-language support. */
   PYTHON("python", ".py"),
   /** JavaScript guest-language support. Currently treated as experimental. */
+  @ExperimentalApi
   JS("js", ".js");
 
   private final String id;

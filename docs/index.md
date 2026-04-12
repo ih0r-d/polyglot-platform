@@ -22,3 +22,5 @@ Use this site in the following order:
 - [Runtime Semantics](runtime-semantics.md)
 - [Code Generation](codegen.md)
 - [Examples](examples.md)
+- [Release Checklist](release-checklist.md)
+- [Release Gates](release-gates.md)

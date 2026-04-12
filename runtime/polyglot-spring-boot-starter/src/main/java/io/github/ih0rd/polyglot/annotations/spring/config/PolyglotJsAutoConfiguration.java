@@ -10,6 +10,7 @@ import org.springframework.core.io.ResourceLoader;
 
 import io.github.ih0rd.adapter.context.JsExecutor;
 import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.annotations.ExperimentalApi;
 import io.github.ih0rd.polyglot.annotations.spring.context.SpringPolyglotContextFactory;
 import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 import io.github.ih0rd.polyglot.annotations.spring.script.SpringResourceScriptSource;
@@ -23,6 +24,7 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  *
  * <p>The JavaScript integration path is currently experimental.
  */
+@ExperimentalApi
 @AutoConfiguration
 @ConditionalOnClass(JsExecutor.class)
 @ConditionalOnProperty(prefix = "polyglot.js", name = "enabled", havingValue = "true")

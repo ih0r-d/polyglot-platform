@@ -202,6 +202,8 @@ Project documentation is maintained in [`docs/`](docs/). Start with [`docs/index
 - [`docs/runtime-semantics.md`](docs/runtime-semantics.md)
 - [`docs/codegen.md`](docs/codegen.md)
 - [`docs/concepts.md`](docs/concepts.md)
+- [`docs/release-checklist.md`](docs/release-checklist.md)
+- [`docs/release-gates.md`](docs/release-gates.md)
 - [`docs/release-process.md`](docs/release-process.md)
 - [`docs/roadmap.md`](docs/roadmap.md)
 

@@ -14,6 +14,7 @@ import org.graalvm.polyglot.Value;
 import io.github.ih0rd.adapter.exceptions.BindingException;
 import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.annotations.ExperimentalApi;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
 /**
@@ -28,6 +29,7 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  * <p>This executor is part of the repository's experimental JavaScript support surface. It is a
  * bounded runtime path and is not a parity target with the Python executor before {@code 1.0.0}.
  */
+@ExperimentalApi
 public final class JsExecutor extends AbstractPolyglotExecutor {
 
   /**

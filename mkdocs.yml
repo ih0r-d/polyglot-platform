@@ -37,6 +37,8 @@ nav:
   - Runtime Semantics: runtime-semantics.md
   - Code Generation: codegen.md
   - Examples: examples.md
+  - Release Checklist: release-checklist.md
+  - Release Gates: release-gates.md
   - Release Process: release-process.md
   - Roadmap: roadmap.md
 

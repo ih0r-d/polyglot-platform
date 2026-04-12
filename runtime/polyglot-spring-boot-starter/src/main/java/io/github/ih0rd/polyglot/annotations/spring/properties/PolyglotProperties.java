@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import io.github.ih0rd.polyglot.annotations.ExperimentalApi;
+
 /**
  * Root configuration properties for the Polyglot Spring Boot starter.
  *
@@ -114,6 +116,7 @@ public record PolyglotProperties(
    *     warmup; this does not populate interface caches or prebind Java contracts, so repeated
    *     evaluation and repeated script side effects remain possible
    */
+  @ExperimentalApi
   public record JsProperties(
       boolean enabled, String resourcesPath, boolean warmupOnStartup, List<String> preloadScripts) {
 
