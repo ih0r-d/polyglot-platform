@@ -41,6 +41,11 @@ tasks:
     cmds:
       - ./bin/release.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
+  release-preflight:
+    desc: Run the required verification checks before preparing a release
+    cmds:
+      - ./bin/release-preflight.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
   dry-run-release:
     desc: Verify release publication locally without publishing to Maven Central
     cmds:

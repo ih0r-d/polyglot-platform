@@ -48,6 +48,8 @@ if ! git diff-index --quiet HEAD --; then
 fi
 
 if [ "$already_prepared" = false ]; then
+  "$SCRIPT_DIR/release-preflight.sh"
+
   run_mvn versions:set \
     -DnewVersion="$VERSION" \
     -DprocessAllModules=true \
