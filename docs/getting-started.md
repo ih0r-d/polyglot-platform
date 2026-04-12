@@ -76,6 +76,12 @@ Without the exported value and the naming convention, the runtime adapter would 
 - Build tools: JDK 21+, Maven 3.9+
 - add only the GraalVM language runtimes you use
 
+When working from this repository checkout, activate the pinned SDKMAN environment first:
+
+```bash
+sdk env
+```
+
 If you want aligned runtime dependency versions, import `polyglot-bom` first.
 
 ## Package and Run on a JVM
@@ -88,13 +94,16 @@ Add the runtime BOM:
     <dependency>
       <groupId>io.github.ih0r-d</groupId>
       <artifactId>polyglot-bom</artifactId>
-      <version>0.2.0</version>
+      <version>${polyglot.version}</version>
       <type>pom</type>
       <scope>import</scope>
     </dependency>
   </dependencies>
 </dependencyManagement>
 ```
+
+Use the latest published release for `${polyglot.version}`. The `main` branch currently prepares
+the next minor release line, `0.3.0`.
 
 Add the adapter and the language runtime:
 

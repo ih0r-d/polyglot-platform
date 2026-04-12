@@ -112,6 +112,9 @@ The executor:
 - `reloadContract(iface)` is a focused helper: evict that contract cache and eagerly re-validate it.
 - Script changes are not auto-detected. To pick up changed code, invalidate/reload the affected contract or recreate the executor.
 
+The more explicit repository-level contract for these behaviors is documented in
+[`runtime-semantics.md`](runtime-semantics.md).
+
 ## JavaScript Runtime Details
 
 `JsExecutor` uses the same script naming convention but a different binding model.

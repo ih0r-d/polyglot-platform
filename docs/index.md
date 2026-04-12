@@ -17,5 +17,6 @@ Use this site in the following order:
 - [Architecture](architecture.md)
 - [Compatibility](compatibility.md)
 - [Runtime](runtime.md)
+- [Runtime Semantics](runtime-semantics.md)
 - [Code Generation](codegen.md)
 - [Examples](examples.md)

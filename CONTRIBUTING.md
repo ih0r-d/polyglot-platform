@@ -11,6 +11,7 @@
    ```
 2. Build the repository with the Maven wrapper:
    ```bash
+   sdk env
    ./mvnw clean verify
    ```
 3. Install local pre-commit checks if you use them:
@@ -25,6 +26,13 @@
 - Build tooling modules: JDK 21+
 - Runtime modules: JDK 25+
 - GraalVM runtime integrations: GraalVM 25.x
+
+The repository root includes [`.sdkmanrc`](.sdkmanrc). For full test execution and any runtime or
+sample work, use:
+
+```bash
+sdk env
+```
 
 If you change the supported matrix, update [`README.md`](README.md), [`docs/compatibility.md`](docs/compatibility.md), and CI workflows in the same change.
 
@@ -42,6 +50,7 @@ If you change the supported matrix, update [`README.md`](README.md), [`docs/comp
 Prefer the Maven wrapper for all contributor-facing commands:
 
 ```bash
+sdk env
 ./mvnw clean verify
 ./mvnw -B -ntp -Pquality verify
 ./mvnw spotless:apply
@@ -63,8 +72,9 @@ Before opening a pull request:
 
 1. Run `./mvnw clean verify`.
 2. Run `./mvnw -B -ntp -Pquality verify` for changes that affect runtime, build tooling, or release logic.
-3. Update docs, samples, or changelog entries when the change affects users.
-4. Describe the motivation, scope, and compatibility impact in the PR.
+3. Run the relevant sample smoke build when changing public runtime, starter, or codegen behavior.
+4. Update docs, samples, or changelog entries when the change affects users.
+5. Describe the motivation, scope, and compatibility impact in the PR.
 
 PRs should target `main` unless you are asked to contribute to a release branch.
 

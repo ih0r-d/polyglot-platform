@@ -9,6 +9,10 @@
 - Runtime modules: JDK 25+
 - GraalVM runtime dependencies: 25.x
 
+The repository root pins the expected local Java runtime in `.sdkmanrc`. For runtime work,
+examples, and full test execution, contributors are expected to run `sdk env` before using the
+Maven wrapper.
+
 ## Compatibility Contract
 
 - The root build must keep explicit Maven plugin versions and reproducible build settings.
@@ -18,13 +22,13 @@
 
 ## Modules and Expectations
 
-| Area | Baseline | Notes |
-| --- | --- | --- |
-| `api/*` | JDK 21+ | Public API surface should remain small and stable |
-| `build-tools/*` | JDK 21+ | Maven plugin and codegen behavior changes should be documented |
-| `runtime/polyglot-adapter` | JDK 25+, GraalVM 25.x | Core execution layer |
-| `runtime/polyglot-spring-boot-starter` | JDK 25+, GraalVM 25.x | Aligns with current Spring Boot baseline |
-| `samples/*` | Follows the module they demonstrate | Convenience examples, not release contracts |
+| Area                                   | Baseline              | Notes                                                                        |
+|----------------------------------------|-----------------------|------------------------------------------------------------------------------|
+| `api/*`                                | JDK 21+               | Public API surface should remain small and stable                            |
+| `build-tools/*`                        | JDK 21+               | Maven plugin and codegen behavior changes should be documented               |
+| `runtime/polyglot-adapter`             | JDK 25+, GraalVM 25.x | Core execution layer                                                         |
+| `runtime/polyglot-spring-boot-starter` | JDK 25+, GraalVM 25.x | Aligns with current Spring Boot baseline                                     |
+| `samples/*`                            | JDK 25+, GraalVM 25.x | Maintained smoke-test applications aligned with the current development line |
 
 ## When You Change the Baseline
 

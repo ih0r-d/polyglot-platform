@@ -40,6 +40,12 @@ It provides:
 - Runtime modules: JDK 25+, GraalVM 25.x+, Maven 3.9+
 - CI and local quality checks assume the Maven wrapper: `./mvnw`
 
+When working from this repository, load the pinned SDKMAN environment first:
+
+```bash
+sdk env
+```
+
 ## Repository Layout
 
 The repository is organized into three layers:
@@ -75,13 +81,16 @@ Import the runtime BOM:
     <dependency>
       <groupId>io.github.ih0r-d</groupId>
       <artifactId>polyglot-bom</artifactId>
-      <version>0.2.0</version>
+      <version>${polyglot.version}</version>
       <type>pom</type>
       <scope>import</scope>
     </dependency>
   </dependencies>
 </dependencyManagement>
 ```
+
+Use the latest published version for `${polyglot.version}`. The current development line on
+`main` targets `0.3.0`.
 
 Add the core adapter:
 
@@ -173,6 +182,7 @@ If present, start with [`.dev/README.md`](.dev/README.md) for local workflows, h
 Main project commands use the Maven wrapper:
 
 ```bash
+sdk env
 ./mvnw clean verify
 ./mvnw -B -ntp -Pquality verify
 ```
@@ -186,6 +196,7 @@ Project documentation is maintained in [`docs/`](docs/). Start with [`docs/index
 - [`docs/architecture.md`](docs/architecture.md)
 - [`docs/compatibility.md`](docs/compatibility.md)
 - [`docs/runtime.md`](docs/runtime.md)
+- [`docs/runtime-semantics.md`](docs/runtime-semantics.md)
 - [`docs/codegen.md`](docs/codegen.md)
 - [`docs/concepts.md`](docs/concepts.md)
 - [`docs/release-process.md`](docs/release-process.md)
@@ -193,7 +204,9 @@ Project documentation is maintained in [`docs/`](docs/). Start with [`docs/index
 
 ## Samples
 
-The `samples/` directory contains maintained example applications pinned to `io.github.ih0r-d` version `0.2.0`.
+The `samples/` directory contains maintained example applications aligned with the current
+development line on `main`. On this branch they target `0.3.0-SNAPSHOT`, so run a local
+`./mvnw -DskipTests install` first when building them from source.
 
 - `samples/java-maven-example`: framework-neutral runtime API with `FileSystemScriptSource`
 - `samples/java-maven-codegen-example`: code generation plus runtime binding

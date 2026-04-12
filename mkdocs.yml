@@ -32,6 +32,7 @@ nav:
   - Architecture: architecture.md
   - Compatibility: compatibility.md
   - Runtime: runtime.md
+  - Runtime Semantics: runtime-semantics.md
   - Code Generation: codegen.md
   - Examples: examples.md
   - Release Process: release-process.md

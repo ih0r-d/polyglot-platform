@@ -47,6 +47,12 @@ Use Task only as a convenience alias layer:
 - `./mvnw`
 - `git cliff` for releases
 
+For repository work, prefer the pinned SDKMAN environment first:
+
+```bash
+sdk env
+```
+
 ## Safety
 
 - `release.sh` expects a clean working tree.
