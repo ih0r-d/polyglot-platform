@@ -4,19 +4,30 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 
 ## [Unreleased]
 
-### ➕ Added
-- add Python contract reload helpers and focused real-context lifecycle coverage
-- add code generation strict mode, drift-check goal, and doctor goal for Maven workflows
-- add repository-level runtime semantics documentation and sample smoke coverage
+## [0.3.0] - 2026-04-12
 
-### ⚙️ Changed
-- position `0.3.0` as a Python-first runtime semantics plus codegen reliability release
-- align samples and docs with the current `0.3.0-SNAPSHOT` development line
-- document SDKMAN/GraalVM 25 as the expected local runtime workflow for repository work
+### ➕ Added
+- add strict generation and incremental write controls (9277a32)
+- extend CodegenConfig with strict mode and enforce unknown-type checks (d366ee6)
+- add check goal and contract drift enforcement (fbc4bea)
+- add doctor goal and harden strict type resolution (1dd69df)
 
 ### ✅ Fixed
-- clarify preload semantics and cache invalidation behavior across runtime docs and starter guidance
-- remove stale sample/version messaging that implied older coordinates as the current line
+- harden lifecycle, cache reload semantics, and nullability checks (a016064)
+- clear 0.3.0 release blockers (906afda)
+
+### 🧪 Internal
+- bump 0.2.1 to 0.3.0-SNAPSHOT (a144056)
+- clarify python-first scope and lifecycle/cache/preload semantics (77a87b8)
+- add real-context python preload and cache lifecycle coverage (400fd9c)
+- align toolchain guidance and runtime semantics (6f814a7)
+- align 0.3.0 positioning with current scope (8ccc35f)
+- align examples with 0.3.0-SNAPSHOT (0e91e20)
+- fix existing spotless import order (e4893ea)
+- mark JavaScript support as experimental (c176bcc)
+- mark JavaScript path experimental in JavaDoc (786a442)
+- add experimental API marker and release gates (e543c92)
+- enforce quality gate before github release (f8646d0)
 
 ## [0.2.1] - 2026-03-31
 

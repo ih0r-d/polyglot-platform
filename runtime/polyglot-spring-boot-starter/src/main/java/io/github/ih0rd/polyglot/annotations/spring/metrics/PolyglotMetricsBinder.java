@@ -2,6 +2,8 @@ package io.github.ih0rd.polyglot.annotations.spring.metrics;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.function.IntSupplier;
+import java.util.function.LongSupplier;
 
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
@@ -31,7 +33,8 @@ public class PolyglotMetricsBinder implements SmartInitializingSingleton {
   private final ObjectProvider<JsExecutor> jsExecutor;
   private final ObjectProvider<MeterRegistry> meterRegistry;
   private final PolyglotProperties properties;
-  private final PolyglotRuntimeState runtimeState;
+  private final IntSupplier availableExecutors;
+  private final LongSupplier startupDurationMs;
 
   /**
    * Creates the binder.
@@ -52,7 +55,8 @@ public class PolyglotMetricsBinder implements SmartInitializingSingleton {
     this.jsExecutor = jsExecutor;
     this.meterRegistry = meterRegistry;
     this.properties = properties;
-    this.runtimeState = runtimeState;
+    this.availableExecutors = runtimeState::availableExecutors;
+    this.startupDurationMs = runtimeState::startupDurationMs;
   }
 
   @Override
@@ -69,20 +73,17 @@ public class PolyglotMetricsBinder implements SmartInitializingSingleton {
    * @param registry registry that receives the created meters
    */
   public void bindTo(@NonNull MeterRegistry registry) {
-    Gauge.builder(
-            "polyglot.executor.available.count", runtimeState, state -> state.availableExecutors())
+    Gauge.builder("polyglot.executor.available.count", availableExecutors, IntSupplier::getAsInt)
         .description("Number of currently available polyglot executors")
         .register(registry);
 
     Gauge.builder(
-            "polyglot.executor.configured.count", this, binder -> binder.configuredExecutors())
+            "polyglot.executor.configured.count", this, PolyglotMetricsBinder::configuredExecutors)
         .description("Number of polyglot executors enabled by configuration")
         .register(registry);
 
     Gauge.builder(
-            "polyglot.startup.duration",
-            runtimeState,
-            state -> nonNegative(state.startupDurationMs()))
+            "polyglot.startup.duration", startupDurationMs, state -> nonNegative(state.getAsLong()))
         .description("Polyglot startup initialization duration in milliseconds")
         .baseUnit("milliseconds")
         .register(registry);
