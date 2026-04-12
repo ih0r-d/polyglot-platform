@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.github.ih0r-d</groupId>
         <artifactId>polyglot-api</artifactId>
-        <version>0.3.0</version>
+        <version>0.3.1-SNAPSHOT</version>
     </parent>
     <artifactId>polyglot-annotations</artifactId>
     <packaging>jar</packaging>
