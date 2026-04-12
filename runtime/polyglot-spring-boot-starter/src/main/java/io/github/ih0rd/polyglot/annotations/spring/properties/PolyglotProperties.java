@@ -101,10 +101,12 @@ public record PolyglotProperties(
 
   /**
    * JavaScript executor settings.
-   *
-   * <p>Prefix: {@code polyglot.js.*}
-   *
-   * @param enabled enables JavaScript executor bean
+ *
+ * <p>Prefix: {@code polyglot.js.*}
+ *
+ * <p>This configuration group controls the repository's experimental JavaScript support path.
+ *
+ * @param enabled enables JavaScript executor bean
    * @param resourcesPath base script location expressed as a Spring Resource location (e.g. {@code
    *     classpath:/js/}, {@code file:./js/})
    * @param warmupOnStartup performs lightweight warmup during application startup

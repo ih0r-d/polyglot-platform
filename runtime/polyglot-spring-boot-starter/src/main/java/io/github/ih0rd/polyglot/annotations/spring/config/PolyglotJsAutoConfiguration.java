@@ -20,6 +20,8 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  *
  * <p>This configuration binds a JavaScript-specific {@link ScriptSource} and creates a {@link
  * JsExecutor} backed by a context from {@link SpringPolyglotContextFactory}.
+ *
+ * <p>The JavaScript integration path is currently experimental.
  */
 @AutoConfiguration
 @ConditionalOnClass(JsExecutor.class)

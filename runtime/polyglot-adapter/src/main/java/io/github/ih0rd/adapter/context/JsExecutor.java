@@ -24,11 +24,16 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  *
  * <p>Sources are cached per Java interface. Script changes are not observed automatically after a
  * module has been loaded into the executor.
+ *
+ * <p>This executor is part of the repository's experimental JavaScript support surface. It is a
+ * bounded runtime path and is not a parity target with the Python executor before {@code 1.0.0}.
  */
 public final class JsExecutor extends AbstractPolyglotExecutor {
 
   /**
    * Creates a JavaScript executor.
+   *
+   * <p>JavaScript support is currently experimental.
    *
    * @param context GraalJS context
    * @param scriptSource script source abstraction
@@ -56,6 +61,8 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
 
   /**
    * Validates that each Java contract method has a corresponding executable JavaScript function.
+   *
+   * <p>This validation applies to the repository's experimental JavaScript runtime path.
    */
   @Override
   public <T> void validateBinding(Class<T> iface, Convention convention) {
@@ -94,6 +101,8 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
   /**
    * Creates a JavaScript executor with a new internally managed context.
    *
+   * <p>JavaScript support is currently experimental.
+   *
    * @param scriptSource script source implementation
    * @param customizer optional context-builder customizer
    * @return configured executor
@@ -107,6 +116,8 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
   /**
    * Creates a JavaScript executor using a caller-provided context.
    *
+   * <p>JavaScript support is currently experimental.
+   *
    * @param context externally managed GraalJS context
    * @param scriptSource script source implementation
    * @return configured executor bound to the provided context
@@ -119,12 +130,14 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
   /**
    * Resolves and evaluates a JavaScript script by logical name without binding it to a Java
    * contract.
-   *
-   * <p>This is raw script evaluation only. It does not populate the per-interface source cache or
-   * prebind a Java contract, so later contract binding can still evaluate the same script again.
-   *
-   * @param scriptName logical script name resolved through {@link ScriptSource}
-   */
+ *
+ * <p>This is raw script evaluation only. It does not populate the per-interface source cache or
+ * prebind a Java contract, so later contract binding can still evaluate the same script again.
+ *
+ * <p>This behavior belongs to the repository's experimental JavaScript runtime path.
+ *
+ * @param scriptName logical script name resolved through {@link ScriptSource}
+ */
   public void preloadScript(String scriptName) {
     Source source = loadScript(SupportedLanguage.JS, scriptName);
     withContextLock(() -> context.eval(source));

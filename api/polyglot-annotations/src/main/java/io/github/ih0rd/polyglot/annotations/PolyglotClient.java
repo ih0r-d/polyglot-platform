@@ -20,6 +20,9 @@ import io.github.ih0rd.polyglot.SupportedLanguage;
  * </ul>
  *
  * <p>Binding currently follows {@link Convention#DEFAULT}.
+ *
+ * <p>Python is the primary stabilization target. JavaScript-backed clients are currently treated as
+ * experimental and should be used with a narrower support expectation.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -30,6 +33,9 @@ public @interface PolyglotClient {
    * Allowed guest languages for this client.
    *
    * <p>An empty array enables automatic resolution based on the executors available at runtime.
+   *
+   * <p>When using {@link SupportedLanguage#JS}, treat the client as part of the experimental
+   * JavaScript support surface.
    *
    * @return explicitly allowed guest languages, or an empty array for automatic resolution
    */

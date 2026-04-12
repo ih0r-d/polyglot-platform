@@ -5,6 +5,13 @@ import java.util.Arrays;
 /**
  * Supported guest languages for both runtime execution and build-time tooling.
  *
+ * <p>Status notes:
+ *
+ * <ul>
+ *   <li>Python is the primary stabilization target for the current release line
+ *   <li>JavaScript support exists, but is currently treated as experimental and bounded
+ * </ul>
+ *
  * <p>Each enum value exposes:
  *
  * <ul>
@@ -15,7 +22,7 @@ import java.util.Arrays;
 public enum SupportedLanguage {
   /** Python guest-language support. */
   PYTHON("python", ".py"),
-  /** JavaScript guest-language support. */
+  /** JavaScript guest-language support. Currently treated as experimental. */
   JS("js", ".js");
 
   private final String id;

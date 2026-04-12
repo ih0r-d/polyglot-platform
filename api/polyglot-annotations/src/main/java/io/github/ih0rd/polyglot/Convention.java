@@ -3,6 +3,9 @@ package io.github.ih0rd.polyglot;
 /**
  * Defines the naming and binding convention between a Java interface and its guest-language
  * implementation.
+ *
+ * <p>Convention support is language-dependent. In particular, JavaScript support remains
+ * experimental and more limited than the Python path.
  */
 public enum Convention {
 
@@ -14,7 +17,7 @@ public enum Convention {
    * <ul>
    *   <li>the script name is derived from the Java interface simple name in snake case
    *   <li>the exported Python contract name must match the Java interface simple name
-   *   <li>JavaScript functions must match the Java method names
+   *   <li>JavaScript functions must match the Java method names on the experimental JS path
    * </ul>
    *
    * <p>This value preserves the repository's historical default behavior. For Python, it uses the
@@ -30,6 +33,8 @@ public enum Convention {
    *
    * <p>For Python, this is the explicit form of the existing export-based model that {@link
    * #DEFAULT} already uses for backward compatibility.
+   *
+   * <p>JavaScript does not support this convention.
    */
   BY_INTERFACE_EXPORT,
 
@@ -37,6 +42,9 @@ public enum Convention {
    * Method-name convention.
    *
    * <p>Each Java interface method is resolved directly from guest-language bindings by method name.
+   *
+   * <p>This is the only supported JavaScript binding style today, and JavaScript remains
+   * experimental in the current release line.
    */
   BY_METHOD_NAME
 }

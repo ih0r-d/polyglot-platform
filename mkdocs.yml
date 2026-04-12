@@ -31,6 +31,7 @@ nav:
   - Concepts: concepts.md
   - Architecture: architecture.md
   - Compatibility: compatibility.md
+  - Public API: public-api.md
   - Stability: stability.md
   - Runtime: runtime.md
   - Runtime Semantics: runtime-semantics.md

@@ -196,6 +196,7 @@ Project documentation is maintained in [`docs/`](docs/). Start with [`docs/index
 - [`docs/overview.md`](docs/overview.md)
 - [`docs/architecture.md`](docs/architecture.md)
 - [`docs/compatibility.md`](docs/compatibility.md)
+- [`docs/public-api.md`](docs/public-api.md)
 - [`docs/stability.md`](docs/stability.md)
 - [`docs/runtime.md`](docs/runtime.md)
 - [`docs/runtime-semantics.md`](docs/runtime-semantics.md)
