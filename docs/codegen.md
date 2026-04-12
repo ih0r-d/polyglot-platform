@@ -70,6 +70,19 @@ Language parsers convert source syntax into the adapter’s language-neutral con
 
 The Python parser is intentionally lightweight and convention-oriented. It is designed for adapter contracts, not for full Python semantic analysis.
 
+Supported subset today:
+
+- `polyglot.export_value(...)` with a class export or dictionary-style export
+- top-level Python functions used in exported dictionaries
+- class methods and basic type hints aligned with the repository type model
+
+Not promised today:
+
+- full Python parsing fidelity
+- semantic import resolution
+- runtime-equivalent understanding of arbitrary Python constructs
+- JavaScript contract generation
+
 ### JavaScript Parser
 
 `JsContractParser` exists as an extension point only. It currently throws `UnsupportedOperationException`, so JavaScript code generation is not supported in the current version.
@@ -130,6 +143,12 @@ DX workflow pattern:
 - local update: `mvn polyglot:generate`
 - CI verification: `mvn polyglot:check`
 - local diagnostics alias: `mvn polyglot:doctor` (same behavior as `check`)
+
+Recommended policy:
+
+- use `strictMode=true` for contracts that are intended to become stable Java-facing APIs
+- use `polyglot:check` in CI to detect drift without rewriting files
+- treat `polyglot:doctor` as a local diagnostic convenience, not as a separate behavior contract
 
 ## Relationship to Runtime Execution
 

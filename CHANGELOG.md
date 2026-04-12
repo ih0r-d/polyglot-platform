@@ -1,19 +1,35 @@
-## [0.2.1] - 2026-03-31
+# Polyglot-adapter changelog
 
+All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be documented in this file.
+
+## [Unreleased]
+
+### ➕ Added
+- add Python contract reload helpers and focused real-context lifecycle coverage
+- add code generation strict mode, drift-check goal, and doctor goal for Maven workflows
+- add repository-level runtime semantics documentation and sample smoke coverage
+
+### ⚙️ Changed
+- position `0.3.0` as a Python-first runtime semantics plus codegen reliability release
+- align samples and docs with the current `0.3.0-SNAPSHOT` development line
+- document SDKMAN/GraalVM 25 as the expected local runtime workflow for repository work
+
+### ✅ Fixed
+- clarify preload semantics and cache invalidation behavior across runtime docs and starter guidance
+- remove stale sample/version messaging that implied older coordinates as the current line
+
+## [0.2.1] - 2026-03-31
 
 ### ➕ Added
 - improve startup visibility and demo runtime flags (6883f28)
-
 
 ### ⚙️ Changed
 - deduplicate object provider adapters (9ea9ef0)
 - fix sonar issues and raise new code coverage (a883d66)
 
-
 ### ✅ Fixed
 - align examples with 0.2.0 usage (88974a8)
 - defer metrics executor resolution (c99038f)
-
 
 ### 🧪 Internal
 - avoid direct use of workflow input in shell (12d6ef8)
@@ -22,11 +38,6 @@
 - normalize published API documentation (3ab0836)
 - prepare metadata and skip parent pom publication (6c5cba4)
 - verify dry-run publishing flow (f032722)
-
-
-# Polyglot-adapter changelog
-
-All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be documented in this file.
 
 ## [0.2.0] - 2026-03-29
 
@@ -153,21 +164,6 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - fix maven pom files (7818f48)
 - update root documentation file (100a845)
 - update release script (c85857c)
-
-
-## [Unreleased]
-
-
-### ⚙️ Changed
-- make `@PolyglotClient.convention()` active in runtime binding and validation; add `BY_METHOD_NAME`, keep `DEFAULT` backward-compatible for invocation, and fail explicitly for unsupported JavaScript `BY_INTERFACE_EXPORT`
-- make Spring starter properties real for `0.2.0`: support startup preload, eager fail-fast client validation, package-default client scanning, configurable startup logging, and explicit actuator enablement
-- clarify startup preload semantics as raw script evaluation rather than contract prebinding, and add Spring/concurrency stabilization tests
-
-
-### ✅ Fixed
-- update dependency org.bouncycastle:bcpg-jdk18on to v1.82 (6dcd747)
-- stabilize library logic with small refactoring (67899d8)
-- update java example with using new library API (a3da9c5)
 
 
 ## [v0.0.20] - 2025-11-22

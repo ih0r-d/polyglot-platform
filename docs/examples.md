@@ -1,6 +1,7 @@
 # Examples
 
-The repository contains three maintained sample projects that demonstrate how the runtime adapter is used in practice.
+The repository contains maintained sample projects that demonstrate how the runtime adapter is used
+in practice.
 The `samples/polyglot-ai-demo` module is intentionally excluded from the documentation set.
 
 Examples are included here as supporting material after the main onboarding and conceptual documentation.
@@ -52,14 +53,13 @@ It demonstrates:
 - Spring-managed executors
 - actuator and metrics integration
 
-## Notes About Sample Drift
+## Notes About Sample Versioning
 
-The samples are useful reference material, but some of them still contain older package names or coordinates that do not
-fully match the current repository structure.
+Samples on the `main` branch track the current development line. That means they may target the
+next snapshot version before it is published to Maven Central.
 
-Use the documentation in this `docs/` directory as the source of truth for:
+When building samples from this repository checkout:
 
-- terminology
-- architecture
-- module responsibilities
-- current runtime adapter behavior
+1. run `sdk env`
+2. run `./mvnw -DskipTests install` from the repository root
+3. build the sample module you want to inspect

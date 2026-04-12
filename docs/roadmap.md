@@ -9,6 +9,13 @@ The repository currently provides:
 - Python contract parsing and Java interface generation
 - module-level separation between runtime and build tooling
 
+Current positioning is intentionally conservative:
+
+- Python is the primary and more mature runtime path.
+- JavaScript support remains narrower and runtime-focused.
+- Build-time code generation is real and growing more reliable, but still intentionally scoped to a
+  Python-oriented contract subset.
+
 ## Documentation Goals
 
 The immediate documentation goals are:
@@ -20,14 +27,22 @@ The immediate documentation goals are:
 
 ## Near-Term Technical Work
 
-Likely areas of future expansion include:
+The next release line is focused on credibility and release quality, not platform expansion.
 
-- richer contract type inference
-- JavaScript contract generation
-- broader Spring reference documentation
-- real script preload behavior for startup warmup
-- expanded runtime configuration examples
-- stronger alignment of sample code with the published module coordinates
+Current `0.3.0` direction:
+
+- make Python runtime semantics explicit enough to be trusted
+- keep Spring startup/fail-fast/preload behavior aligned with those semantics
+- improve code generation reliability with stricter type handling and drift checks
+- keep JavaScript claims bounded to the runtime surface that actually exists
+
+Not the focus of `0.3.0`:
+
+- JavaScript code generation
+- JavaScript parity work
+- concurrency redesign
+- hot reload or live source replacement semantics
+- broad “platform” expansion claims
 
 ## Contribution Guidance
 
