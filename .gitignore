@@ -73,6 +73,7 @@ local/
 *.asc
 settings-local.xml
 .venv/
+.venv-docs/
 docs/.venv/
 
 # ===============================

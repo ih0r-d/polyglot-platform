@@ -5,7 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
 
 run_docs_check() {
+  local docs_venv
+
   cd_repo_root
+  docs_venv="$REPO_ROOT/.venv-docs"
 
   if command -v mkdocs >/dev/null 2>&1; then
     echo "[INFO] Running strict docs build with mkdocs"
@@ -13,14 +16,16 @@ run_docs_check() {
     return
   fi
 
-  if python3 -m mkdocs --version >/dev/null 2>&1; then
-    echo "[INFO] Running strict docs build with python3 -m mkdocs"
-    python3 -m mkdocs build --strict
-    return
+  echo "[INFO] Preparing docs virtual environment: $docs_venv"
+  if [ ! -x "$docs_venv/bin/python" ]; then
+    python3 -m venv "$docs_venv"
   fi
 
-  echo "❌ mkdocs is not available. Install mkdocs and mkdocs-material before running release."
-  exit 1
+  # shellcheck disable=SC1091
+  source "$docs_venv/bin/activate"
+  python -m pip install --upgrade pip
+  python -m pip install mkdocs mkdocs-material
+  python -m mkdocs build --strict
 }
 
 run_sample_check() {
