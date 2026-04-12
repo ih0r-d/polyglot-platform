@@ -15,7 +15,7 @@
     <description>polyglot-springboot-example</description>
     <properties>
         <java.version>25</java.version>
-        <polyglot.version>0.2.1-SNAPSHOT</polyglot.version>
+        <polyglot.version>0.3.0-SNAPSHOT</polyglot.version>
         <!-- Python packages for GraalPy -->
         <python.package.1>faker==26.0.0</python.package.1>
         <python.package.2>tabulate==0.9.0</python.package.2>

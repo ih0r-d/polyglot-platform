@@ -46,7 +46,7 @@ Without `polyglot.export_value`, the adapter would have nothing named `QuoteApi`
 
 - GraalVM 25. You can install it with SDKMAN!:
     ```bash
-    sdk install java 25.0.2-graal
+    sdk install java 25-graalce
     ```
 - Clone the Polyglot Platform repository and run the setup steps.
     ```bash
@@ -54,9 +54,11 @@ Without `polyglot.export_value`, the adapter would have nothing named `QuoteApi`
     ```
     From the root directory, run:
     ```bash
+    sdk env
     ./mvnw -DskipTests install
     ```
-    The sample POM pins `io.github.ih0r-d` dependencies to `0.2.0`, so the published release must be available in your Maven repository configuration.
+    The sample POM on `main` tracks the current `0.3.0-SNAPSHOT` development line, so installing
+    the repository locally first is the expected workflow.
 
 ## Package and Run on a JVM
 

@@ -1,0 +1,108 @@
+name: Samples / Smoke
+
+on:
+  pull_request:
+    branches:
+      - main
+      - release/*
+    paths:
+      - ".github/workflows/samples.yml"
+      - ".mvn/**"
+      - "mvnw"
+      - "mvnw.cmd"
+      - "pom.xml"
+      - "api/**"
+      - "runtime/**"
+      - "build-tools/**"
+      - "samples/**"
+      - "README.md"
+  push:
+    branches:
+      - main
+      - release/*
+    paths:
+      - ".github/workflows/samples.yml"
+      - ".mvn/**"
+      - "mvnw"
+      - "mvnw.cmd"
+      - "pom.xml"
+      - "api/**"
+      - "runtime/**"
+      - "build-tools/**"
+      - "samples/**"
+      - "README.md"
+  workflow_dispatch:
+
+concurrency:
+  group: samples-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  java-maven-example:
+    name: Java Maven Example
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up GraalVM JDK 25
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: graalvm-community
+          java-version: "25"
+          cache: maven
+
+      - name: Install local platform artifacts
+        run: ./mvnw -B -ntp -DskipTests install
+
+      - name: Verify sample
+        run: mvn -B -ntp -DskipTests verify
+        working-directory: samples/java-maven-example
+
+  java-maven-codegen-example:
+    name: Java Maven Codegen Example
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up GraalVM JDK 25
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: graalvm-community
+          java-version: "25"
+          cache: maven
+
+      - name: Install local platform artifacts
+        run: ./mvnw -B -ntp -DskipTests install
+
+      - name: Verify sample
+        run: mvn -B -ntp -DskipTests verify
+        working-directory: samples/java-maven-codegen-example
+
+  spring-boot-example:
+    name: Spring Boot Example
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up GraalVM JDK 25
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: graalvm-community
+          java-version: "25"
+          cache: maven
+
+      - name: Install local platform artifacts
+        run: ./mvnw -B -ntp -DskipTests install
+
+      - name: Verify sample
+        run: mvn -B -ntp -DskipTests verify
+        working-directory: samples/spring-boot-example
