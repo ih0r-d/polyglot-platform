@@ -1,3 +1,36 @@
+## [0.3.0] - 2026-04-12
+
+
+### ➕ Added
+- add strict generation and incremental write controls (9277a32)
+- extend CodegenConfig with strict mode and enforce unknown-type checks (d366ee6)
+- add check goal and contract drift enforcement (fbc4bea)
+- add doctor goal and harden strict type resolution (1dd69df)
+
+
+### ✅ Fixed
+- harden lifecycle, cache reload semantics, and nullability checks (a016064)
+- clear 0.3.0 release blockers (f64a669)
+
+
+### 🧪 Internal
+- bump 0.2.1 to 0.3.0-SNAPSHOT (a144056)
+- clarify python-first scope and lifecycle/cache/preload semantics (77a87b8)
+- add real-context python preload and cache lifecycle coverage (400fd9c)
+- align toolchain guidance and runtime semantics (6f814a7)
+- align 0.3.0 positioning with current scope (8ccc35f)
+- align examples with 0.3.0-SNAPSHOT (0e91e20)
+- fix existing spotless import order (e4893ea)
+- mark JavaScript support as experimental (c176bcc)
+- mark JavaScript path experimental in JavaDoc (786a442)
+- add experimental API marker and release gates (e543c92)
+- enforce quality gate before github release (f8646d0)
+- harden preflight automation (d7592b7)
+- provision mkdocs venv in release preflight (d1e42e6)
+- improve preflight output and cleanup (d551686)
+- document preflight-first release flow (2a4a04c)
+
+
 # Polyglot-adapter changelog
 
 All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be documented in this file.
