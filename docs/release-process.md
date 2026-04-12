@@ -12,14 +12,36 @@ Use this page together with:
 ## Release Checklist
 
 1. Ensure `main` is green in CI.
-2. Run `./mvnw -B -ntp -Pquality verify`.
+2. Run `task -t .dev/Taskfile.yaml release-preflight`.
 3. Review dependency, security, and CodeQL workflow results.
-4. Update `CHANGELOG.md` and any release notes.
+4. Update `CHANGELOG.md` and any release notes if the preflight surfaced missing scope notes.
 5. Confirm documentation and samples match the released API.
 6. Run `task -t .dev/Taskfile.yaml release -- <version>` to set the release version, update `CHANGELOG.md`, commit, tag, and push.
 7. Run `task -t .dev/Taskfile.yaml bump -- patch` after the release if you want to move `main` to the next patch snapshot.
 8. Push the snapshot bump commit if you created one locally.
 9. Run the `Publish Maven Central` workflow manually with the exact release tag after the tag is in GitHub.
+
+## Release Preflight
+
+`release-preflight` is the required local gate before `release`.
+
+It runs, in order:
+
+1. `./mvnw -B -ntp -Pquality verify`
+2. strict documentation build
+3. `./mvnw -B -ntp -DskipTests install`
+4. maintained sample verification for:
+   - `samples/java-maven-example`
+   - `samples/java-maven-codegen-example`
+   - `samples/spring-boot-example`
+
+Use:
+
+- `task -t .dev/Taskfile.yaml release-preflight`
+- `task -t .dev/Taskfile.yaml release-preflight-clean`
+
+`release-preflight-clean` removes the local docs virtual environment after the run. The default
+preflight keeps `.venv-docs/` to make repeated runs faster.
 
 ## Release Automation
 
@@ -29,7 +51,8 @@ Use this page together with:
 - Maven Central publishing is intentionally not part of the tag-push workflow.
 - Publishing to Maven Central runs only from `.github/workflows/publish-maven-central.yaml`, triggered with `workflow_dispatch`.
 - The manual publish workflow checks out the requested tag, verifies it matches the Maven project version, and deploys with the existing Maven `release` profile and signing configuration.
-- Local `.dev/bin/release.sh` no longer runs Maven `deploy`; it only prepares and pushes the Git commit and tag for the release.
+- Local `.dev/bin/release.sh` no longer runs Maven `deploy`; it first runs the release preflight and
+  then prepares and pushes the Git commit and tag for the release.
 
 ## Release Expectations
 

@@ -10,10 +10,23 @@ Use it together with [`release-process.md`](release-process.md) and
 1. Confirm the target version and release intent are explicit.
 2. Confirm `CHANGELOG.md` reflects the release scope honestly.
 3. Confirm docs, samples, and version references are aligned with the target release line.
-4. Confirm the repository builds under the pinned Java 25 / GraalVM 25 environment.
+4. Confirm `task -t .dev/Taskfile.yaml release-preflight` passes under the pinned Java 25 / GraalVM
+   25 environment.
 5. Confirm the relevant CI workflows are green.
 6. Confirm no accidental scope drift remains in roadmap or planning notes.
 7. Confirm release notes describe public behavior changes and compatibility impact.
+
+## Preflight Notes
+
+`release-preflight` is the canonical local verification entrypoint before `release`.
+
+It is expected to:
+
+- load the pinned SDKMAN Java environment automatically
+- build docs with a local `.venv-docs/` environment when `mkdocs` is not already installed
+- verify the maintained release-path samples after local artifact installation
+
+Use `release-preflight-clean` only when you explicitly want `.venv-docs/` removed after the run.
 
 ## `0.3.0` Checklist
 

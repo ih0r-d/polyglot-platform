@@ -188,6 +188,16 @@ sdk env
 ./mvnw -B -ntp -Pquality verify
 ```
 
+Release preparation flow:
+
+```bash
+task -t .dev/Taskfile.yaml release-preflight
+task -t .dev/Taskfile.yaml release -- <version>
+```
+
+`release-preflight` is the required local gate before `release`. It verifies the quality profile,
+strict docs build, local artifact installation, and maintained samples.
+
 ## Documentation
 
 Project documentation is maintained in [`docs/`](docs/). Start with [`docs/index.md`](docs/index.md).
