@@ -83,8 +83,19 @@ class PolyglotCodegenDoctorMojoTest {
   }
 
   private static void setField(Object target, String name, Object value) throws Exception {
-    Field field = target.getClass().getDeclaredField(name);
-    field.setAccessible(true);
-    field.set(target, value);
+    Class<?> type = target.getClass();
+
+    while (type != null) {
+      try {
+        Field field = type.getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+        return;
+      } catch (NoSuchFieldException ignored) {
+        type = type.getSuperclass();
+      }
+    }
+
+    throw new NoSuchFieldException(name);
   }
 }
