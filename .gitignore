@@ -86,3 +86,13 @@ docs/.venv/
 # ===============================
 *.swp
 *.swo
+
+# ===============================
+# Local contributor notes and overrides
+# ===============================
+.planning/
+.dev/sonar.sh
+.dev/sonar.yml
+AUDIT.md
+HANDOFF-SESSION-STATE.md
+PLAN.md
