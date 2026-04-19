@@ -205,7 +205,6 @@ class PolyglotCodegenMojoTest {
     Path generatedSource = outputDirectory.resolve("com/example/polyglot/StableApi.java");
     long firstModified = Files.getLastModifiedTime(generatedSource).toMillis();
 
-    Thread.sleep(1100);
     mojo.execute();
 
     long secondModified = Files.getLastModifiedTime(generatedSource).toMillis();

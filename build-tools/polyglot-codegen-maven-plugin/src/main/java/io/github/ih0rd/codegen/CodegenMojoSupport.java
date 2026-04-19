@@ -13,6 +13,8 @@ import java.util.stream.Stream;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 
+import io.github.ih0rd.codegen.model.ScriptProcessingContext;
+import io.github.ih0rd.codegen.model.SummaryCounters;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.ContractClass;
 import io.github.ih0rd.polyglot.model.ContractModel;
@@ -91,6 +93,7 @@ final class CodegenMojoSupport {
             + summary.skippedUnchangedFiles()
             + ", drifted="
             + summary.driftedFiles());
+
     if (mode == Mode.CHECK && summary.driftedFiles() == 0) {
       log.info("Codegen check passed: generated contracts are up-to-date.");
     }
@@ -126,11 +129,21 @@ final class CodegenMojoSupport {
     ContractGenerator generator = new DefaultContractGenerator();
     JavaInterfaceGenerator javaGenerator = new JavaInterfaceGenerator();
 
-    AtomicInteger supportedScripts = new AtomicInteger();
-    AtomicInteger generatedContracts = new AtomicInteger();
-    AtomicInteger writtenFiles = new AtomicInteger();
-    AtomicInteger skippedUnchangedFiles = new AtomicInteger();
-    AtomicInteger driftedFiles = new AtomicInteger();
+    ScriptProcessingContext context =
+        new ScriptProcessingContext(
+            generator,
+            javaGenerator,
+            outputRoot,
+            mode == Mode.CHECK || settings.failOnContractDrift());
+
+    SummaryCounters counters =
+        new SummaryCounters(
+            new AtomicInteger(),
+            new AtomicInteger(),
+            new AtomicInteger(),
+            new AtomicInteger(),
+            new AtomicInteger());
+
     List<String> driftMessages = new ArrayList<>();
     List<Path> scriptFiles;
 
@@ -140,15 +153,17 @@ final class CodegenMojoSupport {
     } catch (IOException e) {
       throw new MojoExecutionException("Failed scanning input directory", e);
     }
+
     for (Path script : scriptFiles) {
-      supportedScripts.incrementAndGet();
-      ScriptSummary perScript =
-          processScript(
-              script, generator, javaGenerator, settings, mode, outputRoot, effectivePackage, log);
-      generatedContracts.addAndGet(perScript.generatedContracts());
-      writtenFiles.addAndGet(perScript.writtenFiles());
-      skippedUnchangedFiles.addAndGet(perScript.skippedUnchangedFiles());
-      driftedFiles.addAndGet(perScript.driftedFiles());
+      counters.supportedScripts().incrementAndGet();
+
+      ScriptSummary perScript = processScript(script, context, settings, effectivePackage, log);
+
+      counters.generatedContracts().addAndGet(perScript.generatedContracts());
+      counters.writtenFiles().addAndGet(perScript.writtenFiles());
+      counters.skippedUnchangedFiles().addAndGet(perScript.skippedUnchangedFiles());
+      counters.driftedFiles().addAndGet(perScript.driftedFiles());
+
       if (driftMessages.size() < MAX_DRIFT_MESSAGES) {
         driftMessages.addAll(perScript.driftMessages());
         if (driftMessages.size() > MAX_DRIFT_MESSAGES) {
@@ -161,27 +176,26 @@ final class CodegenMojoSupport {
       for (String message : driftMessages) {
         log.warn(message);
       }
-      if (driftedFiles.get() > driftMessages.size()) {
+      if (counters.driftedFiles().get() > driftMessages.size()) {
         log.warn(
-            "... and " + (driftedFiles.get() - driftMessages.size()) + " more drifted file(s).");
+            "... and "
+                + (counters.driftedFiles().get() - driftMessages.size())
+                + " more drifted file(s).");
       }
     }
 
     return new Summary(
-        supportedScripts.get(),
-        generatedContracts.get(),
-        writtenFiles.get(),
-        skippedUnchangedFiles.get(),
-        driftedFiles.get());
+        counters.supportedScripts().get(),
+        counters.generatedContracts().get(),
+        counters.writtenFiles().get(),
+        counters.skippedUnchangedFiles().get(),
+        counters.driftedFiles().get());
   }
 
   private static ScriptSummary processScript(
       Path script,
-      ContractGenerator generator,
-      JavaInterfaceGenerator javaGenerator,
+      ScriptProcessingContext context,
       Settings settings,
-      Mode mode,
-      Path outputRoot,
       String effectivePackage,
       Log log)
       throws MojoExecutionException {
@@ -190,9 +204,14 @@ final class CodegenMojoSupport {
       String fileName = Objects.requireNonNull(script.getFileName()).toString();
       SupportedLanguage language = SupportedLanguage.fromFileName(fileName);
       ScriptDescriptor descriptor = new ScriptDescriptor(language, source, fileName);
+
       ContractModel model =
-          generator.generate(
-              descriptor, new CodegenConfig(settings.onlyIncludedMethods(), settings.strictMode()));
+          context
+              .generator()
+              .generate(
+                  descriptor,
+                  new CodegenConfig(settings.onlyIncludedMethods(), settings.strictMode()));
+
       if (settings.strictMode()) {
         ContractModelValidator.requireNoUnknownTypes(model);
       }
@@ -203,36 +222,36 @@ final class CodegenMojoSupport {
       List<String> driftMessages = new ArrayList<>();
 
       for (ContractClass contract : model.classes()) {
-        String javaSource = javaGenerator.generate(contract, effectivePackage);
+        String javaSource = context.javaGenerator().generate(contract, effectivePackage);
         Path target =
-            outputRoot
+            context
+                .outputDir()
                 .resolve(effectivePackage.replace('.', '/'))
                 .resolve(contract.name() + ".java");
 
-        boolean trackDrift = mode == Mode.CHECK || settings.failOnContractDrift();
         boolean drift = false;
-        if (trackDrift) {
+        if (context.failOnDrift()) {
           drift = isDrift(target, javaSource);
           if (drift) {
             drifted++;
             driftMessages.add("Drift detected: " + target);
           }
-        }
+        } else {
+          Path targetDirectory = Objects.requireNonNull(target.getParent());
+          Files.createDirectories(targetDirectory);
 
-        if (trackDrift) {
-          continue;
-        }
+          boolean unchanged =
+              settings.skipUnchanged() && Files.exists(target) && !isDrift(target, javaSource);
 
-        Path targetDirectory = Objects.requireNonNull(target.getParent());
-        Files.createDirectories(targetDirectory);
-        if (settings.skipUnchanged() && Files.exists(target) && !isDrift(target, javaSource)) {
-          skippedUnchanged++;
-          logDebug(log, "Unchanged: " + target);
-          continue;
+          if (unchanged) {
+            skippedUnchanged++;
+            logDebug(log, "Unchanged: " + target);
+          } else {
+            Files.writeString(target, javaSource);
+            written++;
+            logInfo(log, "Generated: " + target);
+          }
         }
-        Files.writeString(target, javaSource);
-        written++;
-        logInfo(log, "Generated: " + target);
       }
 
       return new ScriptSummary(
