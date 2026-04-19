@@ -6,31 +6,13 @@ on:
       - main
       - release/*
     paths:
-      - ".github/workflows/samples.yml"
-      - ".mvn/**"
-      - "mvnw"
-      - "mvnw.cmd"
-      - "pom.xml"
-      - "api/**"
-      - "runtime/**"
-      - "build-tools/**"
       - "samples/**"
-      - "README.md"
   push:
     branches:
       - main
       - release/*
     paths:
-      - ".github/workflows/samples.yml"
-      - ".mvn/**"
-      - "mvnw"
-      - "mvnw.cmd"
-      - "pom.xml"
-      - "api/**"
-      - "runtime/**"
-      - "build-tools/**"
       - "samples/**"
-      - "README.md"
   workflow_dispatch:
 
 concurrency:
