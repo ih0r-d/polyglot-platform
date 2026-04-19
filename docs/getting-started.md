@@ -72,8 +72,8 @@ Without the exported value and the naming convention, the runtime adapter would 
 
 ## Prerequisites
 
-- Runtime modules: JDK 25, GraalVM 25.x, Maven 3.9+
-- Build tools: JDK 21+, Maven 3.9+
+- Repository minimum Java: JDK 21, Maven 3.9+
+- Verified runtime line: GraalVM JDK 25.x
 - add only the GraalVM language runtimes you use
 
 When working from this repository checkout, activate the pinned SDKMAN environment first:

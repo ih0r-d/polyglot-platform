@@ -37,19 +37,18 @@ It provides:
 
 ## Requirements
 
-- Build tooling modules: JDK 21+, Maven 3.9+
-- Runtime modules: JDK 25+, GraalVM 25.x+, Maven 3.9+
+- Repository minimum Java: JDK 21+, Maven 3.9+
+- Verified runtime line: GraalVM JDK 25.x, Maven 3.9+
 - CI and local quality checks assume the Maven wrapper: `./mvnw`
 
 Current verified repository line:
 
-- `api/*` and `build-tools/*` compile and test on Java 21+ with CI currently running on Java 25
-- `runtime/*` and maintained sample verification currently run on Java 25 / GraalVM 25.x
+- repository modules compile against Java 21
+- runtime modules and maintained sample verification currently run on Java 25 / GraalVM 25.x
 - the repository currently verifies a Spring Boot 4.0.x line, not Spring Boot 3.x
 
 Current target, not yet verified support:
 
-- Java 17 minimum support
 - Spring Boot 3.x support
 
 When working from this repository, load the pinned SDKMAN environment first:

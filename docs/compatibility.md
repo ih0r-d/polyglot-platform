@@ -10,9 +10,9 @@ The current `0.3.1-SNAPSHOT` repository line verifies the following:
 
 - Maven wrapper and CI workflows on Maven 3.9+
 - pinned local SDKMAN runtime: Java `25-graalce`
+- repository minimum Java version: 21
 - root CI workflows on Java 25
-- `api/*` and `build-tools/*` compiled with `maven.compiler.release=21`
-- `runtime/*` compiled with `maven.compiler.release=25`
+- all modules compiled with `maven.compiler.release=21`
 - root enforcer minimum Java version: 21
 - GraalVM dependency line: `25.0.2`
 - Spring Boot repository dependency-management line: `4.0.4`
@@ -22,13 +22,13 @@ The current `0.3.1-SNAPSHOT` repository line verifies the following:
   - `samples/java-maven-codegen-example`
   - `samples/spring-boot-example`
 
-This means the repository currently verifies a mixed Java baseline:
+This means the repository currently carries a unified minimum Java baseline with two exercised
+verification lines:
 
-- Java 21+ for `api/*` and `build-tools/*`
-- Java 25 / GraalVM 25.x for `runtime/*` and maintained sample verification
+- Java 21 as the repository minimum compile baseline
+- Java 25 / GraalVM 25.x as the currently exercised runtime and maintained-sample verification line
 
-It does not currently verify a Java 17 baseline, and it does not currently verify a Spring Boot
-3.x line.
+It does not currently verify a Spring Boot 3.x line.
 
 The repository root pins the expected local Java runtime in [`.sdkmanrc`](../.sdkmanrc). For
 runtime work, maintained samples, and full test execution, contributors are expected to run
@@ -39,9 +39,8 @@ runtime work, maintained samples, and full test execution, contributors are expe
 | Area                                 | Current verified line | Evidence in repository                                              | Notes                                                                       |
 |--------------------------------------|-----------------------|---------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | Maven                                | 3.9+                  | root enforcer and wrapper usage                                     | Release and CI assume the wrapper                                           |
-| Java for `api/*`                     | 21+                   | `api/pom.xml`, root enforcer, CI on 25                              | Verified at 21+ compile level, exercised in CI on 25                        |
-| Java for `build-tools/*`             | 21+                   | `build-tools/pom.xml`, root enforcer, CI on 25                      | Same current story as `api/*`                                               |
-| Java for `runtime/*`                 | 25                    | root `maven.compiler.release=25`, CI on 25                          | This is the current runtime baseline                                        |
+| Java minimum for repository modules  | 21                    | root `pom.xml`, module POMs, module builds on 21                    | The repository contract now uses Java 21 as the minimum baseline            |
+| Java runtime verification line       | 25                    | `.sdkmanrc`, CI on 25, runtime and sample verification on 25        | GraalVM 25.x remains the current verified runtime lane                      |
 | GraalVM runtime deps                 | 25.0.2                | root dependency management, sample POMs, sample workflows           | Current maintained runtime line                                             |
 | Spring Boot starter line             | 4.0.4                 | root dependency management, starter build, maintained Spring sample | Verified in the current repository line, not a broad historical range claim |
 | Maintained sample smoke verification | Java 25 / GraalVM 25  | `samples.yml`, sample POMs                                          | Samples are verification inputs, not independent support guarantees         |
@@ -50,19 +49,10 @@ runtime work, maintained samples, and full test execution, contributors are expe
 
 The stabilization path toward `1.0.0` may still aim for:
 
-- Java 17 minimum support
 - Spring Boot 3.x support
 
-These are targets only. They should not be described as supported until the repository actually
-verifies them.
-
-Required work before claiming Java 17 minimum support:
-
-1. lower the intended compiler/enforcer baseline where needed
-2. compile all affected modules on Java 17
-3. run the relevant tests on Java 17
-4. verify maintained samples that are part of the support story on Java 17
-5. add CI coverage for that baseline
+This remains a target only. It should not be described as supported until the repository actually
+verifies it.
 
 Required work before claiming Spring Boot 3.x support:
 
@@ -76,10 +66,9 @@ Required work before claiming Spring Boot 3.x support:
 
 Do not currently claim:
 
-- Java 17 minimum support
 - Spring Boot 3.x support
-- a single uniform Java baseline across all modules
 - support for GraalVM lines other than the currently exercised 25.x line
+- broad runtime verification on Java lines other than the currently exercised 25 line
 
 Do not infer support from:
 
@@ -103,6 +92,15 @@ Do not infer support from:
 - Samples are reference verification inputs, not compatibility guarantees by themselves.
 - Experimental or incubating APIs should be documented as such before release.
 - Support claims must follow verified automation, not aspiration.
+
+## Current Java Support Story
+
+- The repository minimum Java baseline is 21.
+- Repository modules compile against Java 21.
+- Runtime execution, starter verification, and maintained samples are currently exercised on
+  GraalVM JDK 25.
+- Java 25 remains the pinned local SDKMAN runtime for full repository work because it matches the
+  current verified GraalVM runtime line.
 
 ## When You Change the Baseline
 
