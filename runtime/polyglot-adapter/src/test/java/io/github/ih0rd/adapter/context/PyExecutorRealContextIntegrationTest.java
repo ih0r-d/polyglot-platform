@@ -57,6 +57,69 @@ class PyExecutorRealContextIntegrationTest {
     }
   }
 
+  @Test
+  void preloadAndLaterBindingCanRepeatScriptSideEffectsInRealContext() {
+    Map<String, String> scripts =
+        new ConcurrentHashMap<>(
+            Map.of(
+                "python/greeting_api",
+                """
+                try:
+                    eval_counter = eval_counter + 1
+                except NameError:
+                    eval_counter = 1
+
+                class GreetingApi:
+                    def hello(self, name):
+                        return f"{eval_counter}:{name}"
+
+                import polyglot
+                polyglot.export_value('GreetingApi', GreetingApi)
+                """));
+
+    try (PyExecutor executor = createExecutor(scripts)) {
+      executor.preloadScript("greeting_api");
+
+      GreetingApi client = executor.bind(GreetingApi.class);
+
+      assertEquals("2:Ada", client.hello("Ada"));
+    }
+  }
+
+  @Test
+  void clearAllCachesPicksUpChangedCodeInRealContext() {
+    Map<String, String> scripts = new ConcurrentHashMap<>();
+    scripts.put("python/greeting_api", greetingScript("v1"));
+
+    try (PyExecutor executor = createExecutor(scripts)) {
+      GreetingApi client = executor.bind(GreetingApi.class);
+      assertEquals("v1:Ada", client.hello("Ada"));
+
+      scripts.put("python/greeting_api", greetingScript("v2"));
+
+      executor.clearAllCaches();
+
+      assertEquals("v2:Ada", client.hello("Ada"));
+    }
+  }
+
+  @Test
+  void reloadContractPicksUpChangedCodeInRealContext() {
+    Map<String, String> scripts = new ConcurrentHashMap<>();
+    scripts.put("python/greeting_api", greetingScript("v1"));
+
+    try (PyExecutor executor = createExecutor(scripts)) {
+      GreetingApi client = executor.bind(GreetingApi.class);
+      assertEquals("v1:Ada", client.hello("Ada"));
+
+      scripts.put("python/greeting_api", greetingScript("v2"));
+
+      executor.reloadContract(GreetingApi.class);
+
+      assertEquals("v2:Ada", client.hello("Ada"));
+    }
+  }
+
   private static String greetingScript(String prefix) {
     return """
         class GreetingApi:
