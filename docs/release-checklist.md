@@ -34,8 +34,9 @@ Use `release-preflight-clean` only when you explicitly want `.venv-docs/` remove
 2. Spring fail-fast, preload, and warmup behavior remain aligned with those semantics.
 3. Code generation strict mode, drift checks, and doctor/check workflows are documented and tested.
 4. JavaScript is still documented as experimental and non-parity.
-5. Maintained samples are aligned with `0.3.0-SNAPSHOT` and have smoke verification in CI.
-6. Release-facing docs do not imply broader platform scope than the implementation supports.
+5. Maintained samples are aligned with the current snapshot line and have smoke verification in CI.
+6. Release-facing compatibility docs distinguish current verified support from target-only support.
+7. Release-facing docs do not imply broader platform scope than the implementation supports.
 
 ## `1.0.0` Pre-Checklist
 

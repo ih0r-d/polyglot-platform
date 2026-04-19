@@ -57,7 +57,7 @@ Without `polyglot.export_value`, the adapter would have nothing named `QuoteApi`
     sdk env
     ./mvnw -DskipTests install
     ```
-    The sample POM on `main` tracks the current `0.3.0-SNAPSHOT` development line, so installing
+    The sample POM on `main` tracks the current `0.3.1-SNAPSHOT` development line, so installing
     the repository locally first is the expected workflow.
 
 ## Package and Run on a JVM

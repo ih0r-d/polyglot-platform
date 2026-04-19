@@ -41,6 +41,17 @@ It provides:
 - Runtime modules: JDK 25+, GraalVM 25.x+, Maven 3.9+
 - CI and local quality checks assume the Maven wrapper: `./mvnw`
 
+Current verified repository line:
+
+- `api/*` and `build-tools/*` compile and test on Java 21+ with CI currently running on Java 25
+- `runtime/*` and maintained sample verification currently run on Java 25 / GraalVM 25.x
+- the repository currently verifies a Spring Boot 4.0.x line, not Spring Boot 3.x
+
+Current target, not yet verified support:
+
+- Java 17 minimum support
+- Spring Boot 3.x support
+
 When working from this repository, load the pinned SDKMAN environment first:
 
 ```bash
@@ -91,7 +102,7 @@ Import the runtime BOM:
 ```
 
 Use the latest published version for `${polyglot.version}`. The current development line on
-`main` targets `0.3.0`.
+`main` is `0.3.1-SNAPSHOT`.
 
 Add the core adapter:
 
@@ -220,7 +231,7 @@ Project documentation is maintained in [`docs/`](docs/). Start with [`docs/index
 ## Samples
 
 The `samples/` directory contains maintained example applications aligned with the current
-development line on `main`. On this branch they target `0.3.0-SNAPSHOT`, so run a local
+development line on `main`. On this branch they target `0.3.1-SNAPSHOT`, so run a local
 `./mvnw -DskipTests install` first when building them from source.
 
 - `samples/java-maven-example`: framework-neutral runtime API with `FileSystemScriptSource`

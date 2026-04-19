@@ -102,8 +102,8 @@ Add the runtime BOM:
 </dependencyManagement>
 ```
 
-Use the latest published release for `${polyglot.version}`. The `main` branch currently prepares
-the next minor release line, `0.3.0`.
+Use the latest published release for `${polyglot.version}`. The `main` branch currently carries
+the open `0.3.1-SNAPSHOT` development line.
 
 Add the adapter and the language runtime:
 
