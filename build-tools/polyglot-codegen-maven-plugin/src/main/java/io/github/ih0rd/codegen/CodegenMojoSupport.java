@@ -7,13 +7,13 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 
 import io.github.ih0rd.codegen.model.ScriptProcessingContext;
+import io.github.ih0rd.codegen.model.ScriptSummary;
 import io.github.ih0rd.codegen.model.SummaryCounters;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.ContractClass;
@@ -136,13 +136,7 @@ final class CodegenMojoSupport {
             outputRoot,
             mode == Mode.CHECK || settings.failOnContractDrift());
 
-    SummaryCounters counters =
-        new SummaryCounters(
-            new AtomicInteger(),
-            new AtomicInteger(),
-            new AtomicInteger(),
-            new AtomicInteger(),
-            new AtomicInteger());
+    SummaryCounters counters = SummaryCounters.empty();
 
     List<String> driftMessages = new ArrayList<>();
     List<Path> scriptFiles;
@@ -155,14 +149,10 @@ final class CodegenMojoSupport {
     }
 
     for (Path script : scriptFiles) {
-      counters.supportedScripts().incrementAndGet();
-
+      counters = counters.incrementSupportedScripts();
       ScriptSummary perScript = processScript(script, context, settings, effectivePackage, log);
 
-      counters.generatedContracts().addAndGet(perScript.generatedContracts());
-      counters.writtenFiles().addAndGet(perScript.writtenFiles());
-      counters.skippedUnchangedFiles().addAndGet(perScript.skippedUnchangedFiles());
-      counters.driftedFiles().addAndGet(perScript.driftedFiles());
+      counters = counters.add(perScript);
 
       if (driftMessages.size() < MAX_DRIFT_MESSAGES) {
         driftMessages.addAll(perScript.driftMessages());
@@ -176,20 +166,20 @@ final class CodegenMojoSupport {
       for (String message : driftMessages) {
         log.warn(message);
       }
-      if (counters.driftedFiles().get() > driftMessages.size()) {
+      if (counters.driftedFiles() > driftMessages.size()) {
         log.warn(
             "... and "
-                + (counters.driftedFiles().get() - driftMessages.size())
+                + (counters.driftedFiles() - driftMessages.size())
                 + " more drifted file(s).");
       }
     }
 
     return new Summary(
-        counters.supportedScripts().get(),
-        counters.generatedContracts().get(),
-        counters.writtenFiles().get(),
-        counters.skippedUnchangedFiles().get(),
-        counters.driftedFiles().get());
+        counters.supportedScripts(),
+        counters.generatedContracts(),
+        counters.writtenFiles(),
+        counters.skippedUnchangedFiles(),
+        counters.driftedFiles());
   }
 
   private static ScriptSummary processScript(
@@ -289,11 +279,4 @@ final class CodegenMojoSupport {
       log.debug(message);
     }
   }
-
-  private record ScriptSummary(
-      int generatedContracts,
-      int writtenFiles,
-      int skippedUnchangedFiles,
-      int driftedFiles,
-      List<String> driftMessages) {}
 }
