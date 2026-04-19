@@ -1,5 +1,6 @@
 package io.github.ih0rd.polyglot.model;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -92,9 +93,12 @@ class RepositoryArchitectureTest {
     Set<String> visited = new LinkedHashSet<>();
     Set<String> visiting = new LinkedHashSet<>();
 
-    for (String module : graph.keySet()) {
-      detectCycle(module, graph, visited, visiting, new ArrayDeque<>());
-    }
+    assertDoesNotThrow(
+        () -> {
+          for (String module : graph.keySet()) {
+            detectCycle(module, graph, visited, visiting, new ArrayDeque<>());
+          }
+        });
   }
 
   @Test
@@ -151,14 +155,18 @@ class RepositoryArchitectureTest {
       throws IOException {
     Map<String, Path> modulePoms =
         Map.of(
-            "polyglot-annotations", root.resolve("api/polyglot-annotations/pom.xml"),
-            "polyglot-model", root.resolve("api/polyglot-model/pom.xml"),
-            "polyglot-adapter", root.resolve("runtime/polyglot-adapter/pom.xml"),
+            "polyglot-annotations",
+            root.resolve("api/polyglot-annotations/pom.xml"),
+            "polyglot-model",
+            root.resolve("api/polyglot-model/pom.xml"),
+            "polyglot-adapter",
+            root.resolve("runtime/polyglot-adapter/pom.xml"),
             "polyglot-spring-boot-starter",
-                root.resolve("runtime/polyglot-spring-boot-starter/pom.xml"),
-            "polyglot-codegen", root.resolve("build-tools/polyglot-codegen/pom.xml"),
+            root.resolve("runtime/polyglot-spring-boot-starter/pom.xml"),
+            "polyglot-codegen",
+            root.resolve("build-tools/polyglot-codegen/pom.xml"),
             "polyglot-codegen-maven-plugin",
-                root.resolve("build-tools/polyglot-codegen-maven-plugin/pom.xml"));
+            root.resolve("build-tools/polyglot-codegen-maven-plugin/pom.xml"));
 
     Map<String, Set<String>> graph = new LinkedHashMap<>();
     Set<String> moduleIds = modulePoms.keySet();
