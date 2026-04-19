@@ -7,6 +7,9 @@ This example shows how to integrate Python code into a Java application using `p
 Instead of interacting directly with the low-level [GraalVM Polyglot API](https://www.graalvm.org/sdk/javadoc/org/graalvm/polyglot/package-summary.html), the application uses the adapter API as a lightweight integration layer.
 The runtime adapter handles script loading and typed method binding so Java code can call dynamic-language logic through normal Java interfaces.
 
+This guide follows the repository's primary Python-first path. JavaScript support exists, but it
+remains experimental and is not the recommended starting point for the `0.3.x` stabilization line.
+
 > Note
 > The adapter API builds on the GraalVM Polyglot API. You still use GraalVM runtimes and language dependencies directly.
 
@@ -73,8 +76,12 @@ Without the exported value and the naming convention, the runtime adapter would 
 ## Prerequisites
 
 - Repository minimum Java: JDK 21, Maven 3.9+
+- Repository verification lanes: Java 21 baseline and Java 25 / GraalVM 25.x runtime
 - Verified runtime line: GraalVM JDK 25.x
 - add only the GraalVM language runtimes you use
+
+If you are using the Spring Boot starter instead of the framework-neutral adapter shown here, stay
+on the repository's currently verified Spring Boot 4.0.4 line.
 
 When working from this repository checkout, activate the pinned SDKMAN environment first:
 

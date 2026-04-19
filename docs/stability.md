@@ -8,14 +8,19 @@ It exists to separate:
 - bounded support that exists but is not on the path to parity before `1.0.0`
 - explicitly unsupported areas
 
+For the current `0.3.x` line, stability work is anchored to the verified Java 21 baseline, the
+verified GraalVM 25.x runtime lane, and the currently verified Spring Boot 4.0.4 starter/sample
+line.
+
 ## Stability Matrix
 
 | Area | Status | Notes |
 | --- | --- | --- |
 | Python runtime binding via `PyExecutor` | target for stabilization | Primary path for the `0.3.x` to `1.0.0` journey |
-| Spring Boot starter on the Python-first path | target for stabilization | Includes fail-fast, preload, warmup, actuator, and metrics behavior |
+| Spring Boot starter on the Python-first path | target for stabilization | Verified on the current Boot 4.0.4 line; includes fail-fast, preload, warmup, actuator, and metrics behavior |
 | Python-oriented code generation | target for stabilization | Limited to the documented supported parser subset |
 | JavaScript runtime binding via `JsExecutor` | experimental | Supported as a bounded runtime path, not a parity target before `1.0.0` |
+| Public API in non-experimental documented Python-first paths | stability-disciplined | Changes should be narrow, reviewed, and reflected in docs and tests |
 | JavaScript code generation | unsupported | Not implemented in the current release line |
 | Hot reload / live source replacement | unsupported | Not part of the current runtime contract |
 | Multi-version source isolation | unsupported | Not part of the current runtime contract |
@@ -29,6 +34,7 @@ For this repository, `experimental` means:
 - bugs in the documented behavior should still be fixed
 - the surface is not a parity target before `1.0.0`
 - the contract may still be narrowed, clarified, or explicitly limited before stabilization
+- support claims for that surface should stay narrower than the Python-first path
 
 ## `1.0.0` Direction
 

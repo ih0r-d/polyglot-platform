@@ -18,6 +18,7 @@ It provides:
 
 - Python is the primary and more mature runtime path.
 - JavaScript support is intentionally narrower and currently treated as experimental.
+- Public contract guidance lives in `README.md`, `docs/public-api.md`, `docs/stability.md`, `docs/compatibility.md`, and `docs/runtime-semantics.md`.
 - Startup preload is raw script evaluation; it does not prebind contracts or hydrate interface caches.
 - Shared starter executors serialize access to one GraalVM context (safe-by-serialization, not throughput-oriented parallel execution).
 
@@ -44,12 +45,15 @@ It provides:
 Current verified repository line:
 
 - repository modules compile against Java 21
+- repository CI explicitly exercises Java 21 as the minimum baseline
 - runtime modules and maintained sample verification currently run on Java 25 / GraalVM 25.x
-- the repository currently verifies a Spring Boot 4.0.x line, not Spring Boot 3.x
+- the repository currently verifies a Spring Boot 4.0.4 starter and maintained sample line
 
-Current target, not yet verified support:
+Current contract boundaries:
 
-- Spring Boot 3.x support
+- Python-first runtime binding and starter usage are the primary stabilization path toward `1.0.0`
+- JavaScript remains part of the published API surface, but only as an explicitly experimental path
+- internal starter types and runtime implementation classes are not supported extension points
 
 When working from this repository, load the pinned SDKMAN environment first:
 
@@ -122,6 +126,9 @@ Add the Spring Boot starter if needed:
 ```
 
 ## Runtime Quick Start
+
+This quick start follows the repository's primary Python-first path. JavaScript support remains
+experimental and is documented separately in [`docs/runtime.md`](docs/runtime.md).
 
 Typical Spring Boot happy path:
 

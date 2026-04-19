@@ -29,7 +29,8 @@ verification lines:
 - Java 21 as the repository minimum compile baseline
 - Java 25 / GraalVM 25.x as the currently exercised runtime and maintained-sample verification line
 
-It does not currently verify a Spring Boot 3.x line.
+It now verifies the current Spring Boot 4.0.4 line through the starter tests and the maintained
+Spring sample.
 
 The repository root pins the expected local Java runtime in [`.sdkmanrc`](../.sdkmanrc). For
 runtime work, maintained samples, and full test execution, contributors are expected to run
@@ -43,30 +44,23 @@ runtime work, maintained samples, and full test execution, contributors are expe
 | Java minimum for repository modules  | 21                    | root `pom.xml`, module POMs, Java 21 CI build                       | The repository contract now uses Java 21 as the minimum baseline            |
 | Java runtime verification line       | 25                    | `.sdkmanrc`, GraalVM 25 CI runtime job, sample verification on 25   | GraalVM 25.x remains the current verified runtime lane                      |
 | GraalVM runtime deps                 | 25.0.2                | root dependency management, sample POMs, sample workflows           | Current maintained runtime line                                             |
-| Spring Boot starter line             | 4.0.4                 | root dependency management, starter build, maintained Spring sample | Verified in the current repository line, not a broad historical range claim |
+| Spring Boot starter line             | 4.0.4                 | root dependency management, starter tests, maintained Spring sample | Verified in the current repository line, not a broad historical range claim |
 | Maintained sample smoke verification | Java 25 / GraalVM 25  | `samples.yml`, sample POMs                                          | Samples are verification inputs, not independent support guarantees         |
 
 ## Target Support, Not Yet Verified
 
 The stabilization path toward `1.0.0` may still aim for:
 
-- Spring Boot 3.x support
+- broader Spring Boot compatibility claims beyond the currently verified `4.0.4` line
 
 This remains a target only. It should not be described as supported until the repository actually
 verifies it.
-
-Required work before claiming Spring Boot 3.x support:
-
-1. move the starter and maintained Spring sample onto a verified Boot 3.x line
-2. run starter tests on that line
-3. run the maintained Spring sample on that line
-4. add CI coverage that exercises that support line
-5. update docs to name the exact verified range
 
 ## What Should Not Yet Be Claimed
 
 Do not currently claim:
 
+- a broad Spring Boot 4.x compatibility range beyond the currently verified `4.0.4` line
 - Spring Boot 3.x support
 - support for GraalVM lines other than the currently exercised 25.x line
 - broad runtime verification on Java lines other than the currently exercised 25 line
