@@ -11,7 +11,8 @@ The current `0.3.1-SNAPSHOT` repository line verifies the following:
 - Maven wrapper and CI workflows on Maven 3.9+
 - pinned local SDKMAN runtime: Java `25-graalce`
 - repository minimum Java version: 21
-- root CI workflows on Java 25
+- root CI baseline workflow on Java 21
+- root CI runtime workflow on GraalVM JDK 25
 - all modules compiled with `maven.compiler.release=21`
 - root enforcer minimum Java version: 21
 - GraalVM dependency line: `25.0.2`
@@ -39,8 +40,8 @@ runtime work, maintained samples, and full test execution, contributors are expe
 | Area                                 | Current verified line | Evidence in repository                                              | Notes                                                                       |
 |--------------------------------------|-----------------------|---------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | Maven                                | 3.9+                  | root enforcer and wrapper usage                                     | Release and CI assume the wrapper                                           |
-| Java minimum for repository modules  | 21                    | root `pom.xml`, module POMs, module builds on 21                    | The repository contract now uses Java 21 as the minimum baseline            |
-| Java runtime verification line       | 25                    | `.sdkmanrc`, CI on 25, runtime and sample verification on 25        | GraalVM 25.x remains the current verified runtime lane                      |
+| Java minimum for repository modules  | 21                    | root `pom.xml`, module POMs, Java 21 CI build                       | The repository contract now uses Java 21 as the minimum baseline            |
+| Java runtime verification line       | 25                    | `.sdkmanrc`, GraalVM 25 CI runtime job, sample verification on 25   | GraalVM 25.x remains the current verified runtime lane                      |
 | GraalVM runtime deps                 | 25.0.2                | root dependency management, sample POMs, sample workflows           | Current maintained runtime line                                             |
 | Spring Boot starter line             | 4.0.4                 | root dependency management, starter build, maintained Spring sample | Verified in the current repository line, not a broad historical range claim |
 | Maintained sample smoke verification | Java 25 / GraalVM 25  | `samples.yml`, sample POMs                                          | Samples are verification inputs, not independent support guarantees         |
