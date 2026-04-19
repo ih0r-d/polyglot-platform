@@ -43,7 +43,7 @@ public class PolyglotAutoConfiguration {
    */
   @Bean
   @ConditionalOnMissingBean
-  public PolyglotRuntimeState polyglotRuntimeState() {
+  PolyglotRuntimeState polyglotRuntimeState() {
     return new PolyglotRuntimeState();
   }
 

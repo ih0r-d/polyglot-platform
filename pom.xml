@@ -51,6 +51,7 @@
     <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
     <maven-plugin-api.version>3.9.14</maven-plugin-api.version>
     <google-java-format.version>1.28.0</google-java-format.version>
+    <archunit.version>1.4.1</archunit.version>
     <jacoco.coverage.instruction.minimum>0.70</jacoco.coverage.instruction.minimum>
     <minimum-maven.version>3.9.0</minimum-maven.version>
     <minimum-java.version>21</minimum-java.version>

@@ -14,7 +14,6 @@ import org.springframework.beans.factory.SmartInitializingSingleton;
 import io.github.ih0rd.adapter.context.JsExecutor;
 import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.polyglot.SupportedLanguage;
-import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotRuntimeState;
 import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -43,20 +42,22 @@ public class PolyglotMetricsBinder implements SmartInitializingSingleton {
    * @param jsExecutor provider for the optional JavaScript executor
    * @param meterRegistry Micrometer registry used for registration
    * @param properties starter properties
-   * @param runtimeState runtime state holder
+   * @param availableExecutors supplier for the number of currently available executors
+   * @param startupDurationMs supplier for startup duration in milliseconds
    */
   public PolyglotMetricsBinder(
       ObjectProvider<PyExecutor> pyExecutor,
       ObjectProvider<JsExecutor> jsExecutor,
       ObjectProvider<MeterRegistry> meterRegistry,
       PolyglotProperties properties,
-      PolyglotRuntimeState runtimeState) {
+      IntSupplier availableExecutors,
+      LongSupplier startupDurationMs) {
     this.pyExecutor = pyExecutor;
     this.jsExecutor = jsExecutor;
     this.meterRegistry = meterRegistry;
     this.properties = properties;
-    this.availableExecutors = runtimeState::availableExecutors;
-    this.startupDurationMs = runtimeState::startupDurationMs;
+    this.availableExecutors = availableExecutors;
+    this.startupDurationMs = startupDurationMs;
   }
 
   @Override

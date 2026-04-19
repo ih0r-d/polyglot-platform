@@ -37,12 +37,18 @@ public class PolyglotMetricsAutoConfiguration {
    */
   @Bean
   @ConditionalOnMissingBean
-  public PolyglotMetricsBinder polyglotMetricsBinder(
+  PolyglotMetricsBinder polyglotMetricsBinder(
       ObjectProvider<PyExecutor> py,
       ObjectProvider<JsExecutor> js,
       ObjectProvider<MeterRegistry> meterRegistry,
       PolyglotProperties properties,
       PolyglotRuntimeState runtimeState) {
-    return new PolyglotMetricsBinder(py, js, meterRegistry, properties, runtimeState);
+    return new PolyglotMetricsBinder(
+        py,
+        js,
+        meterRegistry,
+        properties,
+        runtimeState::availableExecutors,
+        runtimeState::startupDurationMs);
   }
 }

@@ -51,13 +51,15 @@ class PolyglotMetricsBinderTest {
     when(jsExecutor.metadata())
         .thenReturn(Map.of("sourceCacheSize", 4, "loadedInterfaces", List.of("Api")));
 
+    PolyglotRuntimeState runtimeState = runtimeState(42, 2);
     PolyglotMetricsBinder binder =
         new PolyglotMetricsBinder(
             provider(pyExecutor),
             provider(jsExecutor),
             provider(registry()),
             enabledProperties(true),
-            runtimeState(42, 2));
+            runtimeState::availableExecutors,
+            runtimeState::startupDurationMs);
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
     binder.bindTo(registry);
@@ -114,13 +116,15 @@ class PolyglotMetricsBinderTest {
   void bindToTreatsMissingMetadataAsZero() {
     when(pyExecutor.metadata()).thenReturn(Map.of("cachedInterfaces", "not-a-collection"));
 
+    PolyglotRuntimeState runtimeState = runtimeState(-1, 1);
     PolyglotMetricsBinder binder =
         new PolyglotMetricsBinder(
             provider(pyExecutor),
             provider(null),
             provider(registry()),
             enabledProperties(false),
-            runtimeState(-1, 1));
+            runtimeState::availableExecutors,
+            runtimeState::startupDurationMs);
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
     binder.bindTo(registry);
@@ -148,13 +152,15 @@ class PolyglotMetricsBinderTest {
     AtomicBoolean accessed = new AtomicBoolean(false);
     ObjectProvider<PyExecutor> pyProvider = trackingProvider(pyExecutor, accessed);
 
+    PolyglotRuntimeState runtimeState = runtimeState(-1, 1);
     PolyglotMetricsBinder binder =
         new PolyglotMetricsBinder(
             pyProvider,
             provider(null),
             provider(registry()),
             enabledProperties(false),
-            runtimeState(-1, 1));
+            runtimeState::availableExecutors,
+            runtimeState::startupDurationMs);
 
     binder.bindTo(new SimpleMeterRegistry());
 
