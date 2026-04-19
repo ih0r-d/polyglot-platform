@@ -2,10 +2,10 @@ package io.github.ih0rd.polyglot.model;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
+import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
-import com.tngtech.archunit.core.importer.ImportOption;
 
 @AnalyzeClasses(
     packages = "io.github.ih0rd.polyglot",

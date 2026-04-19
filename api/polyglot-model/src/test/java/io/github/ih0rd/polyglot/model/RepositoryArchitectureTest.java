@@ -23,13 +23,17 @@ import org.junit.jupiter.api.Test;
 class RepositoryArchitectureTest {
 
   private static final Pattern DEPENDENCY_ARTIFACT_PATTERN =
-      Pattern.compile("<dependency>.*?<artifactId>([^<]+)</artifactId>.*?</dependency>", Pattern.DOTALL);
+      Pattern.compile(
+          "<dependency>.*?<artifactId>([^<]+)</artifactId>.*?</dependency>", Pattern.DOTALL);
+
   @Test
   void api_modules_do_not_depend_on_runtime_spring_or_build_tools() throws IOException {
     Path root = repositoryRoot();
 
     List<Path> apiPoms =
-        List.of(root.resolve("api/polyglot-annotations/pom.xml"), root.resolve("api/polyglot-model/pom.xml"));
+        List.of(
+            root.resolve("api/polyglot-annotations/pom.xml"),
+            root.resolve("api/polyglot-model/pom.xml"));
 
     for (Path pom : apiPoms) {
       Set<String> dependencies = pomDependencies(pom);
@@ -59,7 +63,8 @@ class RepositoryArchitectureTest {
 
     for (Path pom : buildPoms) {
       Set<String> dependencies = pomDependencies(pom);
-      assertForbiddenDependencies(pom, dependencies, Set.of("polyglot-adapter", "polyglot-spring-boot-starter"));
+      assertForbiddenDependencies(
+          pom, dependencies, Set.of("polyglot-adapter", "polyglot-spring-boot-starter"));
     }
   }
 
@@ -97,10 +102,12 @@ class RepositoryArchitectureTest {
     Path root = repositoryRoot();
 
     assertContains(
-        root.resolve("api/polyglot-annotations/src/main/java/io/github/ih0rd/polyglot/SupportedLanguage.java"),
+        root.resolve(
+            "api/polyglot-annotations/src/main/java/io/github/ih0rd/polyglot/SupportedLanguage.java"),
         "@ExperimentalApi");
     assertContains(
-        root.resolve("runtime/polyglot-adapter/src/main/java/io/github/ih0rd/adapter/context/JsExecutor.java"),
+        root.resolve(
+            "runtime/polyglot-adapter/src/main/java/io/github/ih0rd/adapter/context/JsExecutor.java"),
         "@ExperimentalApi");
     assertContains(
         root.resolve(
@@ -126,7 +133,8 @@ class RepositoryArchitectureTest {
     if (visiting.contains(module)) {
       List<String> cycle = new ArrayList<>(stack);
       cycle.add(module);
-      throw new AssertionError("Detected internal module dependency cycle: " + String.join(" -> ", cycle));
+      throw new AssertionError(
+          "Detected internal module dependency cycle: " + String.join(" -> ", cycle));
     }
 
     visiting.add(module);
@@ -139,15 +147,18 @@ class RepositoryArchitectureTest {
     visited.add(module);
   }
 
-  private static Map<String, Set<String>> internalModuleDependencyGraph(Path root) throws IOException {
+  private static Map<String, Set<String>> internalModuleDependencyGraph(Path root)
+      throws IOException {
     Map<String, Path> modulePoms =
         Map.of(
             "polyglot-annotations", root.resolve("api/polyglot-annotations/pom.xml"),
             "polyglot-model", root.resolve("api/polyglot-model/pom.xml"),
             "polyglot-adapter", root.resolve("runtime/polyglot-adapter/pom.xml"),
-            "polyglot-spring-boot-starter", root.resolve("runtime/polyglot-spring-boot-starter/pom.xml"),
+            "polyglot-spring-boot-starter",
+                root.resolve("runtime/polyglot-spring-boot-starter/pom.xml"),
             "polyglot-codegen", root.resolve("build-tools/polyglot-codegen/pom.xml"),
-            "polyglot-codegen-maven-plugin", root.resolve("build-tools/polyglot-codegen-maven-plugin/pom.xml"));
+            "polyglot-codegen-maven-plugin",
+                root.resolve("build-tools/polyglot-codegen-maven-plugin/pom.xml"));
 
     Map<String, Set<String>> graph = new LinkedHashMap<>();
     Set<String> moduleIds = modulePoms.keySet();
@@ -164,7 +175,8 @@ class RepositoryArchitectureTest {
     return graph;
   }
 
-  private static void assertForbiddenDependencies(Path pom, Set<String> dependencies, Set<String> forbidden) {
+  private static void assertForbiddenDependencies(
+      Path pom, Set<String> dependencies, Set<String> forbidden) {
     Set<String> violating =
         dependencies.stream()
             .filter(forbidden::contains)
@@ -198,7 +210,8 @@ class RepositoryArchitectureTest {
       }
       current = current.getParent();
     }
-    throw new IllegalStateException("Could not locate repository root from " + Path.of("").toAbsolutePath());
+    throw new IllegalStateException(
+        "Could not locate repository root from " + Path.of("").toAbsolutePath());
   }
 
   private static boolean looksLikeRepositoryRoot(Path candidate) {

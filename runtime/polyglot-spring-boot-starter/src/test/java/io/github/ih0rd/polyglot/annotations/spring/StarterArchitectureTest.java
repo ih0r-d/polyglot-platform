@@ -22,16 +22,18 @@ import com.tngtech.archunit.lang.SimpleConditionEvent;
     importOptions = ImportOption.DoNotIncludeTests.class)
 class StarterArchitectureTest {
 
-  private static final String INTERNAL_PACKAGE = "io.github.ih0rd.polyglot.annotations.spring.internal";
+  private static final String INTERNAL_PACKAGE =
+      "io.github.ih0rd.polyglot.annotations.spring.internal";
 
   @ArchTest
-  static final ArchRule non_internal_starter_classes_should_not_expose_internal_types_in_public_or_protected_signatures =
-      classes()
-          .that()
-          .resideInAnyPackage("io.github.ih0rd.polyglot.annotations.spring..")
-          .and()
-          .resideOutsideOfPackage("..internal..")
-          .should(notExposeInternalStarterTypes());
+  static final ArchRule
+      non_internal_starter_classes_should_not_expose_internal_types_in_public_or_protected_signatures =
+          classes()
+              .that()
+              .resideInAnyPackage("io.github.ih0rd.polyglot.annotations.spring..")
+              .and()
+              .resideOutsideOfPackage("..internal..")
+              .should(notExposeInternalStarterTypes());
 
   private static ArchCondition<JavaClass> notExposeInternalStarterTypes() {
     return new ArchCondition<>("not expose internal starter types in public/protected signatures") {
@@ -46,10 +48,7 @@ class StarterArchitectureTest {
                 events);
             for (JavaClass parameter : method.getRawParameterTypes()) {
               checkInternalType(
-                  item,
-                  "method parameter in " + method.getFullName(),
-                  parameter,
-                  events);
+                  item, "method parameter in " + method.getFullName(), parameter, events);
             }
           }
         }
@@ -58,10 +57,7 @@ class StarterArchitectureTest {
           if (isPublicOrProtected(constructor.getModifiers())) {
             for (JavaClass parameter : constructor.getRawParameterTypes()) {
               checkInternalType(
-                  item,
-                  "constructor parameter in " + constructor.getFullName(),
-                  parameter,
-                  events);
+                  item, "constructor parameter in " + constructor.getFullName(), parameter, events);
             }
           }
         }
@@ -84,7 +80,12 @@ class StarterArchitectureTest {
     if (type.getPackageName().startsWith(INTERNAL_PACKAGE)) {
       events.add(
           SimpleConditionEvent.violated(
-              owner, owner.getName() + " exposes internal starter type " + type.getName() + " via " + location));
+              owner,
+              owner.getName()
+                  + " exposes internal starter type "
+                  + type.getName()
+                  + " via "
+                  + location));
     }
   }
 }

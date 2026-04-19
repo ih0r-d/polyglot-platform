@@ -20,6 +20,5 @@ class BuildToolsArchitectureTest {
           .should()
           .dependOnClassesThat()
           .resideInAnyPackage(
-              "io.github.ih0rd.adapter..",
-              "io.github.ih0rd.polyglot.annotations.spring..");
+              "io.github.ih0rd.adapter..", "io.github.ih0rd.polyglot.annotations.spring..");
 }

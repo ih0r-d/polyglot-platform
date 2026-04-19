@@ -20,6 +20,5 @@ class RuntimeArchitectureTest {
           .should()
           .dependOnClassesThat()
           .resideInAnyPackage(
-              "io.github.ih0rd.polyglot.annotations.spring..",
-              "org.springframework..");
+              "io.github.ih0rd.polyglot.annotations.spring..", "org.springframework..");
 }
