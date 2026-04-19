@@ -48,7 +48,7 @@ class PolyglotCodegenMojoTest {
     assertTrue(Files.exists(generatedSource));
     assertTrue(Files.readString(generatedSource).contains("public interface MyApi"));
     assertEquals(
-        outputDirectory.toAbsolutePath().toString(), project.getCompileSourceRoots().getFirst());
+        outputDirectory.toAbsolutePath().toString(), project.getCompileSourceRoots().get(0));
   }
 
   @Test

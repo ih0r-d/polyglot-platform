@@ -35,14 +35,14 @@ public final class JavaTypeRenderer {
       };
     }
 
-    if (type instanceof PolyList(PolyType elementType)) {
+    if (type instanceof PolyList list) {
       imports.add("java.util.List");
-      return "List<" + render(elementType) + ">";
+      return "List<" + render(list.elementType()) + ">";
     }
 
-    if (type instanceof PolyMap(PolyType keyType, PolyType valueType)) {
+    if (type instanceof PolyMap map) {
       imports.add("java.util.Map");
-      return "Map<" + render(keyType) + ", " + render(valueType) + ">";
+      return "Map<" + render(map.keyType()) + ", " + render(map.valueType()) + ">";
     }
 
     return "Object";

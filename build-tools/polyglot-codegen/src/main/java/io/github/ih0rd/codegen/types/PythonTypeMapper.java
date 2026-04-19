@@ -133,7 +133,7 @@ public final class PythonTypeMapper implements LanguageTypeMapper {
     if (args.isEmpty()) {
       return new PolyUnknown();
     }
-    return parseType(args.getFirst());
+    return parseType(args.get(0));
   }
 
   private List<String> splitGenericArgs(String inner) {
@@ -181,8 +181,8 @@ public final class PythonTypeMapper implements LanguageTypeMapper {
       return new PolyUnknown();
     }
     // If both are lists, unify elements
-    if (a instanceof PolyList(PolyType elementType) && b instanceof PolyList(PolyType type)) {
-      return new PolyList(unify(elementType, type));
+    if (a instanceof PolyList left && b instanceof PolyList right) {
+      return new PolyList(unify(left.elementType(), right.elementType()));
     }
     // Fallback to Unknown for mixed types
     return new PolyUnknown();

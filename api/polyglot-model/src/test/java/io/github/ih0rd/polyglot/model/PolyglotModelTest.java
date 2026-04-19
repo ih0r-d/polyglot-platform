@@ -88,7 +88,7 @@ class PolyglotModelTest {
     assertEquals("sum", method.name());
     assertEquals(PolyPrimitive.INT, method.returnType());
     assertEquals("Calculator", contractClass.name());
-    assertEquals(contractClass, model.classes().getFirst());
+    assertEquals(contractClass, model.classes().get(0));
     assertEquals(SupportedLanguage.PYTHON, descriptor.language());
     assertEquals("print('x')", descriptor.source());
     assertEquals("demo.py", descriptor.fileName());

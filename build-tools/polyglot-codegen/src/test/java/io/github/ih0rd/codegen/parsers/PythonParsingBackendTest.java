@@ -282,7 +282,7 @@ class C:
         %s
 """
             .formatted(returnStmt);
-    return parse(source).classes().getFirst().methods().getFirst().returnType();
+    return parse(source).classes().get(0).methods().get(0).returnType();
   }
 
   private void assertReturnType(String stmt, PolyType expected) {

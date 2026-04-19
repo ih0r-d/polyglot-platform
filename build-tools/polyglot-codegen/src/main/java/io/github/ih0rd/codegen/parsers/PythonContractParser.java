@@ -546,12 +546,12 @@ public final class PythonContractParser implements LanguageParser {
     if (a instanceof PolyPrimitive pa && b instanceof PolyPrimitive pb && pa == pb) {
       return pa;
     }
-    if (a instanceof PolyList(PolyType elementType) && b instanceof PolyList(PolyType type)) {
-      return new PolyList(unify(elementType, type));
+    if (a instanceof PolyList left && b instanceof PolyList right) {
+      return new PolyList(unify(left.elementType(), right.elementType()));
     }
-    if (a instanceof PolyMap(PolyType type, PolyType aValueType)
-        && b instanceof PolyMap(PolyType keyType, PolyType bValueType)) {
-      return new PolyMap(unify(type, keyType), unify(aValueType, bValueType));
+    if (a instanceof PolyMap left && b instanceof PolyMap right) {
+      return new PolyMap(
+          unify(left.keyType(), right.keyType()), unify(left.valueType(), right.valueType()));
     }
     return new PolyUnknown();
   }
