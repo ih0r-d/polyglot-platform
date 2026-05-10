@@ -42,7 +42,7 @@ public final class PythonContractParser implements LanguageParser {
       Pattern.compile("polyglot\\.export_value" + S + "\\(" + S + Q + "(" + W + ")" + Q + S + ",");
 
   private static final Pattern CLASS_DEF =
-      Pattern.compile("^" + S + "class" + S + "(" + W + ")" + S + ":");
+      Pattern.compile("^" + S + "class" + S + "(" + W + ")" + S + "(?:\\([^)]*\\))?" + S + ":");
 
   private static final Pattern DEF_START = Pattern.compile("^" + S + "def" + S + "(" + W + ")");
 

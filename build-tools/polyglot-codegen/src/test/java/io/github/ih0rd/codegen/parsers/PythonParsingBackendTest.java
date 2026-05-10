@@ -258,6 +258,77 @@ class C:
   }
 
   @Test
+  void parse_ClassWithoutBaseClass_ShouldMatchAndExtractMethods() {
+    String source =
+"""
+polyglot.export_value("Api", Service)
+
+class Service:
+    def compute(self) -> int:
+        return 1
+""";
+
+    ContractModel model = parse(source);
+    assertEquals(1, model.classes().size());
+    assertEquals("Api", model.classes().get(0).name());
+    assertEquals("compute", model.classes().get(0).methods().get(0).name());
+  }
+
+  @Test
+  void parse_ClassWithSingleBaseClass_ShouldMatchAndExtractMethods() {
+    String source =
+"""
+polyglot.export_value("Api", Service)
+
+class Service(Protocol):
+    def compute(self) -> int:
+        return 1
+""";
+
+    ContractModel model = parse(source);
+    assertEquals(1, model.classes().size());
+    assertEquals("Api", model.classes().get(0).name());
+    assertEquals("compute", model.classes().get(0).methods().get(0).name());
+    assertEquals(PolyPrimitive.INT, model.classes().get(0).methods().get(0).returnType());
+  }
+
+  @Test
+  void parse_ClassWithMultipleBaseClasses_ShouldMatchAndExtractMethods() {
+    String source =
+"""
+polyglot.export_value("Api", Service)
+
+class Service(BaseA, BaseB):
+    def hello(self) -> str:
+        return "hi"
+""";
+
+    ContractModel model = parse(source);
+    assertEquals(1, model.classes().size());
+    assertEquals("Api", model.classes().get(0).name());
+    assertEquals("hello", model.classes().get(0).methods().get(0).name());
+    assertEquals(PolyPrimitive.STRING, model.classes().get(0).methods().get(0).returnType());
+  }
+
+  @Test
+  void parse_ClassWithSpaceBeforeParentheses_ShouldMatchAndExtractMethods() {
+    String source =
+"""
+polyglot.export_value("Api", Service)
+
+class Service (BaseService):
+    def ping(self) -> bool:
+        return True
+""";
+
+    ContractModel model = parse(source);
+    assertEquals(1, model.classes().size());
+    assertEquals("Api", model.classes().get(0).name());
+    assertEquals("ping", model.classes().get(0).methods().get(0).name());
+    assertEquals(PolyPrimitive.BOOLEAN, model.classes().get(0).methods().get(0).returnType());
+  }
+
+  @Test
   void parseParam_ShouldRejectBlankAndInvalidIdentifiers() throws Exception {
     PythonContractParser pythonContractParser = new PythonContractParser();
     var parseParam = PythonContractParser.class.getDeclaredMethod("parseParam", String.class);
