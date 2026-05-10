@@ -164,14 +164,6 @@ public class PolyglotMetricsBinder implements SmartInitializingSingleton {
         .description("Number of Java interfaces loaded in JS")
         .tags(tags)
         .register(registry);
-
-    Gauge.builder(
-            "polyglot.executor.contract.cache.size",
-            jsExecutor,
-            provider -> size(metadata(provider.getIfAvailable()), "loadedInterfaces"))
-        .description("Number of cached polyglot contract bindings")
-        .tags(tags)
-        .register(registry);
   }
 
   private Tags baseTags(SupportedLanguage language) {

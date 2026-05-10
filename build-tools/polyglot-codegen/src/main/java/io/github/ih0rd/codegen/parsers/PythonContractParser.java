@@ -75,7 +75,9 @@ public final class PythonContractParser implements LanguageParser {
     for (ExportInfo export : exports) {
       if (!seen.add(export.apiName)) {
         throw new IllegalStateException(
-            "Duplicate contract name '" + export.apiName + "' in polyglot.export_value declarations");
+            "Duplicate contract name '"
+                + export.apiName
+                + "' in polyglot.export_value declarations");
       }
       List<ContractMethod> methods =
           export.isClass

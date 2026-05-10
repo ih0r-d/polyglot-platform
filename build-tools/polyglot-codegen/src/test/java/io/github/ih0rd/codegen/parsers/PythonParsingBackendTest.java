@@ -273,8 +273,7 @@ class ClassB:
         return 2
 """;
 
-    IllegalStateException ex =
-        assertThrows(IllegalStateException.class, () -> parse(source));
+    IllegalStateException ex = assertThrows(IllegalStateException.class, () -> parse(source));
     assertTrue(ex.getMessage().contains("Api"), "Error message must include the duplicate name");
   }
 
@@ -292,8 +291,7 @@ polyglot.export_value("Api", {"m1": f1})
 polyglot.export_value("Api", {"m2": f2})
 """;
 
-    IllegalStateException ex =
-        assertThrows(IllegalStateException.class, () -> parse(source));
+    IllegalStateException ex = assertThrows(IllegalStateException.class, () -> parse(source));
     assertTrue(ex.getMessage().contains("Api"), "Error message must include the duplicate name");
   }
 
@@ -414,8 +412,8 @@ class C:
 
     ContractModel model = parse(source);
     assertEquals(3, model.classes().size());
-    assertEquals(List.of("First", "Second", "Third"),
-        model.classes().stream().map(c -> c.name()).toList());
+    assertEquals(
+        List.of("First", "Second", "Third"), model.classes().stream().map(c -> c.name()).toList());
   }
 
   @Test

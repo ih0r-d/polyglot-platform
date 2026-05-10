@@ -90,14 +90,10 @@ class PolyglotMetricsBinderTest {
         Objects.requireNonNull(
                 registry.find("polyglot.js.loaded.interfaces.count").tag("language", "js").gauge())
             .value());
-    assertEquals(
-        1.0,
-        Objects.requireNonNull(
-                registry
-                    .find("polyglot.executor.contract.cache.size")
-                    .tag("language", "js")
-                    .gauge())
-            .value());
+    // polyglot.executor.contract.cache.size must NOT be registered for JS:
+    // it was a duplicate of polyglot.js.loaded.interfaces.count (both read loadedInterfaces).
+    assertNull(
+        registry.find("polyglot.executor.contract.cache.size").tag("language", "js").gauge());
     assertEquals(
         2.0,
         Objects.requireNonNull(registry.find("polyglot.executor.available.count").gauge()).value());
