@@ -57,11 +57,13 @@ jobs:
             exit 1
           fi
 
-      - name: Deploy to Maven Central
+      # Tests, JaCoCo (70 % instruction coverage), Spotless, and SpotBugs must all
+      # pass before the release profile signs and deploys artifacts to Maven Central.
+      - name: Verify and deploy to Maven Central
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          ./mvnw -B -ntp -Prelease -DskipTests deploy \
+          ./mvnw -B -ntp -Prelease,quality deploy \
             -Dgpg.passphrase="${GPG_PASSPHRASE}"
