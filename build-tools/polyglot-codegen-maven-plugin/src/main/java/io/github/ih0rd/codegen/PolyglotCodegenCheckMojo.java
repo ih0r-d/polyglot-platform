@@ -5,4 +5,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 
 /** Maven goal that checks generated contracts for drift without writing files. */
 @Mojo(name = "check", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true)
-public final class PolyglotCodegenCheckMojo extends AbstractPolyglotCodegenCheckLikeMojo {}
+public final class PolyglotCodegenCheckMojo extends AbstractPolyglotCodegenCheckLikeMojo {
+  /** Creates a new instance. */
+  public PolyglotCodegenCheckMojo() {}
+}

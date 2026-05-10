@@ -13,6 +13,9 @@ import org.apache.maven.project.MavenProject;
 @Mojo(name = "generate", defaultPhase = LifecyclePhase.GENERATE_SOURCES, threadSafe = true)
 public final class PolyglotCodegenMojo extends AbstractMojo {
 
+  /** Creates a new instance. */
+  public PolyglotCodegenMojo() {}
+
   @Parameter(defaultValue = "${project.basedir}/src/main/resources")
   private File inputDirectory;
 

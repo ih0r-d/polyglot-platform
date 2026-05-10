@@ -5,4 +5,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 
 /** Maven goal alias for check with more DX-friendly naming. */
 @Mojo(name = "doctor", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true)
-public final class PolyglotCodegenDoctorMojo extends AbstractPolyglotCodegenCheckLikeMojo {}
+public final class PolyglotCodegenDoctorMojo extends AbstractPolyglotCodegenCheckLikeMojo {
+  /** Creates a new instance. */
+  public PolyglotCodegenDoctorMojo() {}
+}
