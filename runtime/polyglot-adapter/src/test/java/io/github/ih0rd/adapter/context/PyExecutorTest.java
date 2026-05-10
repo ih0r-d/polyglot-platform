@@ -3,6 +3,7 @@ package io.github.ih0rd.adapter.context;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.io.StringReader;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -20,6 +21,7 @@ import java.util.function.Consumer;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Context.Builder;
+import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.Test;
@@ -798,6 +800,41 @@ class PyExecutorTest {
     }
 
     assertEquals(1, maxActive.get());
+  }
+
+  @Test
+  void preloadScriptWrapsPolyglotExceptionAsInvocationException() throws Exception {
+    Context ctx = mock(Context.class);
+    ScriptSource ss = mock(ScriptSource.class);
+    when(ss.exists(eq(SupportedLanguage.PYTHON), eq("failing"))).thenReturn(true);
+    when(ss.open(eq(SupportedLanguage.PYTHON), eq("failing")))
+        .thenReturn(new StringReader("x = 1"));
+    PyExecutor exec = new PyExecutor(ctx, ss);
+
+    PolyglotException polyglotEx = mock(PolyglotException.class);
+    when(polyglotEx.isInterrupted()).thenReturn(false);
+    when(ctx.eval(any(Source.class))).thenThrow(polyglotEx);
+
+    InvocationException thrown =
+        assertThrows(InvocationException.class, () -> exec.preloadScript("failing"));
+    assertSame(polyglotEx, thrown.getCause());
+  }
+
+  @Test
+  void preloadScriptRestoresInterruptFlagWhenPolyglotExceptionIsInterrupted() throws Exception {
+    Context ctx = mock(Context.class);
+    ScriptSource ss = mock(ScriptSource.class);
+    when(ss.exists(eq(SupportedLanguage.PYTHON), eq("failing"))).thenReturn(true);
+    when(ss.open(eq(SupportedLanguage.PYTHON), eq("failing")))
+        .thenReturn(new StringReader("x = 1"));
+    PyExecutor exec = new PyExecutor(ctx, ss);
+
+    PolyglotException polyglotEx = mock(PolyglotException.class);
+    when(polyglotEx.isInterrupted()).thenReturn(true);
+    when(ctx.eval(any(Source.class))).thenThrow(polyglotEx);
+
+    assertThrows(InvocationException.class, () -> exec.preloadScript("failing"));
+    assertTrue(Thread.interrupted()); // clears the flag after asserting
   }
 
   @Test

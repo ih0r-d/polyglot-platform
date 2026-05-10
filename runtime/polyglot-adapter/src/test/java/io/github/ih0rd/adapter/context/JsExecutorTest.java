@@ -3,6 +3,7 @@ package io.github.ih0rd.adapter.context;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -12,9 +13,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.StringReader;
 import java.util.function.Consumer;
 
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.AfterEach;
@@ -27,6 +30,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
 import io.github.ih0rd.adapter.exceptions.BindingException;
+import io.github.ih0rd.adapter.exceptions.InvocationException;
 import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
@@ -176,5 +180,40 @@ class JsExecutorTest {
 
     assertEquals(0, executor.sourceCache.size());
     verify(context).eval(source);
+  }
+
+  @Test
+  void preloadScriptWrapsPolyglotExceptionAsInvocationException() throws Exception {
+    Context ctx = mock(Context.class);
+    ScriptSource ss = mock(ScriptSource.class);
+    when(ss.exists(eq(SupportedLanguage.JS), eq("failing"))).thenReturn(true);
+    when(ss.open(eq(SupportedLanguage.JS), eq("failing")))
+        .thenReturn(new StringReader("var x = 1;"));
+    JsExecutor exec = new JsExecutor(ctx, ss);
+
+    PolyglotException polyglotEx = mock(PolyglotException.class);
+    when(polyglotEx.isInterrupted()).thenReturn(false);
+    when(ctx.eval(any(Source.class))).thenThrow(polyglotEx);
+
+    InvocationException thrown =
+        assertThrows(InvocationException.class, () -> exec.preloadScript("failing"));
+    assertSame(polyglotEx, thrown.getCause());
+  }
+
+  @Test
+  void preloadScriptRestoresInterruptFlagWhenPolyglotExceptionIsInterrupted() throws Exception {
+    Context ctx = mock(Context.class);
+    ScriptSource ss = mock(ScriptSource.class);
+    when(ss.exists(eq(SupportedLanguage.JS), eq("failing"))).thenReturn(true);
+    when(ss.open(eq(SupportedLanguage.JS), eq("failing")))
+        .thenReturn(new StringReader("var x = 1;"));
+    JsExecutor exec = new JsExecutor(ctx, ss);
+
+    PolyglotException polyglotEx = mock(PolyglotException.class);
+    when(polyglotEx.isInterrupted()).thenReturn(true);
+    when(ctx.eval(any(Source.class))).thenThrow(polyglotEx);
+
+    assertThrows(InvocationException.class, () -> exec.preloadScript("failing"));
+    assertTrue(Thread.interrupted()); // clears the flag after asserting
   }
 }

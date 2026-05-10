@@ -124,15 +124,16 @@ The adapter defines its own exception hierarchy for structured error reporting:
 - `BindingException`: the guest function or export could not be resolved or is not executable
 - `InvocationException`: a runtime failure occurred during guest code execution or inline evaluation
 
-`PolyglotException` thrown during guest code execution inside a proxy method call is always wrapped
-as `InvocationException`. The original `PolyglotException` is preserved as the cause.
+`PolyglotException` thrown during guest code execution is always wrapped as `InvocationException`.
+This covers both proxy method calls (via `bind(...)`) and direct `preloadScript(...)` calls.
+The original `PolyglotException` is preserved as the cause.
 
 If the `PolyglotException` signals a thread interrupt (`isInterrupted() == true`), the adapter
 re-sets the thread interrupt flag before throwing `InvocationException`, so callers that check
 `Thread.interrupted()` will observe the interrupt.
 
-Callers should expect adapter exceptions from proxy method calls. Neither is checked, so explicit
-handling is optional but recommended for resilience.
+Callers should expect adapter exceptions from all guest execution paths. Neither is checked, so
+explicit handling is optional but recommended for resilience.
 
 Proxy methods with `void` return type execute the guest function normally and return without
 attempting result conversion. Any guest exception still propagates to the caller.

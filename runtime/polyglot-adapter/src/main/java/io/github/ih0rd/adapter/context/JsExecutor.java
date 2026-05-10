@@ -8,10 +8,12 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
 import io.github.ih0rd.adapter.exceptions.BindingException;
+import io.github.ih0rd.adapter.exceptions.InvocationException;
 import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.annotations.ExperimentalApi;
@@ -142,7 +144,14 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
    */
   public void preloadScript(String scriptName) {
     Source source = loadScript(SupportedLanguage.JS, scriptName);
-    withContextLock(() -> context.eval(source));
+    try {
+      withContextLock(() -> context.eval(source));
+    } catch (PolyglotException e) {
+      if (e.isInterrupted()) {
+        Thread.currentThread().interrupt();
+      }
+      throw new InvocationException("Failed to preload script: " + scriptName, e);
+    }
   }
 
   /** Loads and evaluates the JavaScript script associated with the given contract if needed. */

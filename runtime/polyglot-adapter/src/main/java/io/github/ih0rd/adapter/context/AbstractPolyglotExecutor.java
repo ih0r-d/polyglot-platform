@@ -174,8 +174,7 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
                 if (e.isInterrupted()) {
                   Thread.currentThread().interrupt();
                 }
-                throw new InvocationException(
-                    "Failed to invoke polyglot method: " + methodName, e);
+                throw new InvocationException("Failed to invoke polyglot method: " + methodName, e);
               }
             });
   }

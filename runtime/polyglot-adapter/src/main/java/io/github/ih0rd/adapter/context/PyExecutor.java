@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
@@ -131,7 +132,14 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
    */
   public void preloadScript(String scriptName) {
     Source source = loadScript(SupportedLanguage.PYTHON, scriptName);
-    withContextLock(() -> context.eval(source));
+    try {
+      withContextLock(() -> context.eval(source));
+    } catch (PolyglotException e) {
+      if (e.isInterrupted()) {
+        Thread.currentThread().interrupt();
+      }
+      throw new InvocationException("Failed to preload script: " + scriptName, e);
+    }
   }
 
   /**
