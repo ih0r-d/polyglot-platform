@@ -124,12 +124,15 @@ The adapter defines its own exception hierarchy for structured error reporting:
 - `BindingException`: the guest function or export could not be resolved or is not executable
 - `InvocationException`: a runtime failure occurred during guest code execution or inline evaluation
 
-Underlying GraalVM errors surface as `org.graalvm.polyglot.PolyglotException` when they occur
-inside guest code invoked through the proxy. `PolyglotException` is a `RuntimeException`.
-Depending on the failure point it may be wrapped in an adapter exception or propagate directly.
+`PolyglotException` thrown during guest code execution inside a proxy method call is always wrapped
+as `InvocationException`. The original `PolyglotException` is preserved as the cause.
 
-Callers should expect both adapter exceptions and `PolyglotException` from proxy method calls.
-Neither is checked, so explicit handling is optional but recommended for resilience.
+If the `PolyglotException` signals a thread interrupt (`isInterrupted() == true`), the adapter
+re-sets the thread interrupt flag before throwing `InvocationException`, so callers that check
+`Thread.interrupted()` will observe the interrupt.
+
+Callers should expect adapter exceptions from proxy method calls. Neither is checked, so explicit
+handling is optional but recommended for resilience.
 
 Proxy methods with `void` return type execute the guest function normally and return without
 attempting result conversion. Any guest exception still propagates to the caller.

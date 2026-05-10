@@ -72,9 +72,10 @@ If the guest result is `null`, the proxy returns `null`.
 If the Java method has a `void` return type, the guest function is called normally and the result
 is discarded without any type conversion.
 
-Failures during guest execution may surface as `PolyglotException` (from GraalVM) or as adapter
-exceptions (`InvocationException`, `BindingException`, `ScriptNotFoundException`,
-`EvaluationException`). Both are unchecked. See
+Failures during guest execution surface as adapter exceptions (`InvocationException`,
+`BindingException`, `ScriptNotFoundException`, `EvaluationException`). `PolyglotException` thrown
+by guest code during proxy method invocation is wrapped as `InvocationException` with the original
+`PolyglotException` as the cause. All are unchecked. See
 [`runtime-semantics.md`](runtime-semantics.md#exception-contract) for the full exception contract.
 
 ## Python Runtime Details

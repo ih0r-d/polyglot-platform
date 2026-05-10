@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
@@ -160,14 +161,22 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
               }
               String methodName = method.getName();
               Object[] safeArgs = (args != null ? args : new Object[0]);
-              Value result = evaluate(effectiveConvention, methodName, iface, safeArgs);
-              if (method.getReturnType() == void.class) {
-                return null;
+              try {
+                Value result = evaluate(effectiveConvention, methodName, iface, safeArgs);
+                if (method.getReturnType() == void.class) {
+                  return null;
+                }
+                if (result == null || result.isNull()) {
+                  return null;
+                }
+                return result.as(method.getReturnType());
+              } catch (PolyglotException e) {
+                if (e.isInterrupted()) {
+                  Thread.currentThread().interrupt();
+                }
+                throw new InvocationException(
+                    "Failed to invoke polyglot method: " + methodName, e);
               }
-              if (result == null || result.isNull()) {
-                return null;
-              }
-              return result.as(method.getReturnType());
             });
   }
 

@@ -8,6 +8,7 @@ import java.io.StringReader;
 import java.util.Map;
 
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.Test;
@@ -256,6 +257,67 @@ class AbstractExecutorTest {
                 return mock(Value.class);
               }
             });
+  }
+
+  @Test
+  void bindWrapsPolyglotExceptionInInvocationException() {
+    Context ctx = mock(Context.class);
+    TestExecutor exec = spy(new TestExecutor(ctx));
+
+    PolyglotException polyglotEx = mock(PolyglotException.class);
+    when(polyglotEx.isInterrupted()).thenReturn(false);
+
+    interface Api {
+      String hello();
+    }
+
+    doThrow(polyglotEx)
+        .when(exec)
+        .evaluate(eq(Convention.DEFAULT), eq("hello"), eq(Api.class), any(Object[].class));
+
+    Api api = exec.bind(Api.class);
+    InvocationException thrown = assertThrows(InvocationException.class, api::hello);
+    assertSame(polyglotEx, thrown.getCause());
+  }
+
+  @Test
+  void bindPreservesBindingException() {
+    Context ctx = mock(Context.class);
+    TestExecutor exec = spy(new TestExecutor(ctx));
+
+    BindingException bindingEx = new BindingException("no such member");
+
+    interface Api {
+      String hello();
+    }
+
+    doThrow(bindingEx)
+        .when(exec)
+        .evaluate(eq(Convention.DEFAULT), eq("hello"), eq(Api.class), any(Object[].class));
+
+    Api api = exec.bind(Api.class);
+    BindingException thrown = assertThrows(BindingException.class, api::hello);
+    assertSame(bindingEx, thrown);
+  }
+
+  @Test
+  void bindPreservesScriptNotFoundException() {
+    Context ctx = mock(Context.class);
+    TestExecutor exec = spy(new TestExecutor(ctx));
+
+    ScriptNotFoundException notFoundEx = new ScriptNotFoundException("missing.py");
+
+    interface Api {
+      String hello();
+    }
+
+    doThrow(notFoundEx)
+        .when(exec)
+        .evaluate(eq(Convention.DEFAULT), eq("hello"), eq(Api.class), any(Object[].class));
+
+    Api api = exec.bind(Api.class);
+    ScriptNotFoundException thrown = assertThrows(ScriptNotFoundException.class, api::hello);
+    assertSame(notFoundEx, thrown);
   }
 
   @Test
