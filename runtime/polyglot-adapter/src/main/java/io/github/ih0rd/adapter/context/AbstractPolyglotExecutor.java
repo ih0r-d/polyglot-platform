@@ -161,6 +161,9 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
               String methodName = method.getName();
               Object[] safeArgs = (args != null ? args : new Object[0]);
               Value result = evaluate(effectiveConvention, methodName, iface, safeArgs);
+              if (method.getReturnType() == void.class) {
+                return null;
+              }
               if (result == null || result.isNull()) {
                 return null;
               }

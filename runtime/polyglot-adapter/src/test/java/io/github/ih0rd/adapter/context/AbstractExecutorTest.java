@@ -66,6 +66,39 @@ class AbstractExecutorTest {
   }
 
   @Test
+  void bindVoidMethodExecutesGuestAndReturnsNull() {
+    Context ctx = mock(Context.class);
+    TestExecutor exec = spy(new TestExecutor(ctx));
+
+    interface VoidApi {
+      void doSomething(String arg);
+    }
+
+    VoidApi api = exec.bind(VoidApi.class);
+
+    assertDoesNotThrow(() -> api.doSomething("x"));
+    verify(exec)
+        .evaluate(
+            eq(Convention.DEFAULT), eq("doSomething"), eq(VoidApi.class), any(Object[].class));
+  }
+
+  @Test
+  void bindNonVoidMethodConvertsGuestResult() {
+    Context ctx = mock(Context.class);
+    TestExecutor exec = spy(new TestExecutor(ctx));
+
+    interface StringApi {
+      String compute();
+    }
+
+    StringApi api = exec.bind(StringApi.class);
+
+    assertEquals("ok", api.compute());
+    verify(exec)
+        .evaluate(eq(Convention.DEFAULT), eq("compute"), eq(StringApi.class), any(Object[].class));
+  }
+
+  @Test
   void bindReturnsNullWhenValueIsNull() {
     Context ctx = mock(Context.class);
     TestExecutor exec = spy(new TestExecutor(ctx));
