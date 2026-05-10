@@ -1,3 +1,46 @@
+## [0.3.1] - 2026-05-10
+
+
+### ⚙️ Changed
+- avoid newer collection and pattern shortcuts (28ef958)
+- reduce mojo support helper complexity (af850c3)
+- extract shared check-style mojo base class (812b905)
+
+
+### ✅ Fixed
+- close polyglot executors on context shutdown (b9f1f28)
+- support void return types in proxies (dec87e9)
+- support Python classes with base classes (154c3ed)
+- parse multiple Python exports (c60169d)
+- reject duplicate Python contract names (49a341c)
+- include public API artifacts (19e5f4f)
+- remove duplicate Python cache metric (b895a99)
+- remove duplicate JS cache metric (d24f62d)
+- wrap polyglot exceptions in invocation errors (752f568)
+- wrap preload script polyglot errors (6630e86)
+
+
+### 🧪 Internal
+- bump 0.3.0 to 0.3.1-SNAPSHOT (d395441)
+- adopt ArchUnit for boundary enforcement (8e2b8e7)
+- define verified support and target baselines (f7b2bc9)
+- apply spotless to enforcement tests (1f8e512)
+- unify repository baseline on Java 21 (dbb0fae)
+- exercise Java 21 baseline and GraalVM 25 runtime lanes (ab83361)
+- harden Python runtime semantic coverage (67502d7)
+- align public API and support story (d48f7e1)
+- ignore local planning artifacts (318b768)
+- bump vulnerable dependency version (7baa508)
+- trigger smoke workflow only for sample changes (338edf5)
+- make cycle check assertion explicit (3fa120d)
+- scope write permissions to release job (0c71cab)
+- fix immutable summary counter accumulation (83dd824)
+- verify quality gates before Maven Central publish (a16d26c)
+- document codegen and runtime contracts (242b78f)
+- deprecate unused CommonUtils (02bf112)
+- fix release warnings (4b7f4af)
+
+
 ## [0.3.0] - 2026-04-12
 
 
