@@ -63,43 +63,42 @@ public final class PythonContractParser implements LanguageParser {
     String source = script.source().stripIndent();
     String[] lines = source.split("\\R");
 
-    ExportInfo export = findExport(source);
-    if (export == null) {
+    List<ExportInfo> exports = findAllExports(source);
+    if (exports.isEmpty()) {
       throw new IllegalStateException("No polyglot.export_value found");
     }
 
-    List<ContractMethod> methods;
-    if (export.isClass) {
-      methods = parseClassMethods(lines, export.targetName, config);
-    } else {
-      methods = parseDictMethods(lines, export.dictMapping, config);
+    List<ContractClass> classes = new ArrayList<>();
+    for (ExportInfo export : exports) {
+      List<ContractMethod> methods =
+          export.isClass
+              ? parseClassMethods(lines, export.targetName, config)
+              : parseDictMethods(lines, export.dictMapping, config);
+      classes.add(new ContractClass(export.apiName, methods));
     }
 
-    return new ContractModel(List.of(new ContractClass(export.apiName, methods)));
+    return new ContractModel(classes);
   }
 
   private record ExportInfo(
       String apiName, String targetName, Map<String, String> dictMapping, boolean isClass) {}
 
-  private ExportInfo findExport(String source) {
+  private List<ExportInfo> findAllExports(String source) {
+    List<ExportInfo> exports = new ArrayList<>();
     Matcher m = EXPORT_START.matcher(source);
-    if (!m.find()) {
-      return null;
+    while (m.find()) {
+      String apiName = m.group(1);
+      String remainder = source.substring(m.end()).trim();
+      String arg2 = extractExpression(remainder);
+      if (arg2.startsWith("{")) {
+        Map<String, String> mapping = parseExportDict(arg2);
+        exports.add(new ExportInfo(apiName, null, mapping, false));
+      } else {
+        String className = arg2.split("\\W")[0];
+        exports.add(new ExportInfo(apiName, className, null, true));
+      }
     }
-
-    String apiName = m.group(1);
-    int startIdx = m.end();
-
-    String remainder = source.substring(startIdx).trim();
-    String arg2 = extractExpression(remainder);
-
-    if (arg2.startsWith("{")) {
-      Map<String, String> mapping = parseExportDict(arg2);
-      return new ExportInfo(apiName, null, mapping, false);
-    } else {
-      String className = arg2.split("\\W")[0];
-      return new ExportInfo(apiName, className, null, true);
-    }
+    return exports;
   }
 
   private String extractExpression(String s) {

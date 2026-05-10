@@ -258,6 +258,105 @@ class C:
   }
 
   @Test
+  void parse_TwoClassExports_ReturnsTwoContracts() {
+    String source =
+"""
+polyglot.export_value("ServiceA", ClassA)
+polyglot.export_value("ServiceB", ClassB)
+
+class ClassA:
+    def method_a(self) -> int:
+        return 1
+
+class ClassB:
+    def method_b(self) -> str:
+        return "b"
+""";
+
+    ContractModel model = parse(source);
+    assertEquals(2, model.classes().size());
+    assertEquals("ServiceA", model.classes().get(0).name());
+    assertEquals("method_a", model.classes().get(0).methods().get(0).name());
+    assertEquals(PolyPrimitive.INT, model.classes().get(0).methods().get(0).returnType());
+    assertEquals("ServiceB", model.classes().get(1).name());
+    assertEquals("method_b", model.classes().get(1).methods().get(0).name());
+    assertEquals(PolyPrimitive.STRING, model.classes().get(1).methods().get(0).returnType());
+  }
+
+  @Test
+  void parse_TwoDictExports_ReturnsTwoContracts() {
+    String source =
+"""
+def greet():
+    return "hello"
+
+def count():
+    return 1
+
+polyglot.export_value("GreetApi", {"sayHello": greet})
+polyglot.export_value("CountApi", {"getCount": count})
+""";
+
+    ContractModel model = parse(source);
+    assertEquals(2, model.classes().size());
+    assertEquals("GreetApi", model.classes().get(0).name());
+    assertEquals("sayHello", model.classes().get(0).methods().get(0).name());
+    assertEquals(PolyPrimitive.STRING, model.classes().get(0).methods().get(0).returnType());
+    assertEquals("CountApi", model.classes().get(1).name());
+    assertEquals("getCount", model.classes().get(1).methods().get(0).name());
+    assertEquals(PolyPrimitive.INT, model.classes().get(1).methods().get(0).returnType());
+  }
+
+  @Test
+  void parse_ClassAndDictExports_ReturnsBothContracts() {
+    String source =
+"""
+polyglot.export_value("ClassApi", MyClass)
+polyglot.export_value("FuncApi", {"ping": do_ping})
+
+class MyClass:
+    def compute(self) -> bool:
+        return True
+
+def do_ping():
+    return "pong"
+""";
+
+    ContractModel model = parse(source);
+    assertEquals(2, model.classes().size());
+    assertEquals("ClassApi", model.classes().get(0).name());
+    assertEquals("compute", model.classes().get(0).methods().get(0).name());
+    assertEquals(PolyPrimitive.BOOLEAN, model.classes().get(0).methods().get(0).returnType());
+    assertEquals("FuncApi", model.classes().get(1).name());
+    assertEquals("ping", model.classes().get(1).methods().get(0).name());
+    assertEquals(PolyPrimitive.STRING, model.classes().get(1).methods().get(0).returnType());
+  }
+
+  @Test
+  void parse_MultipleExports_PreservesSourceOrder() {
+    String source =
+"""
+polyglot.export_value("First", A)
+polyglot.export_value("Second", B)
+polyglot.export_value("Third", C)
+
+class A:
+    def a(self) -> int: return 1
+
+class B:
+    def b(self) -> int: return 2
+
+class C:
+    def c(self) -> int: return 3
+""";
+
+    ContractModel model = parse(source);
+    assertEquals(3, model.classes().size());
+    assertEquals(List.of("First", "Second", "Third"),
+        model.classes().stream().map(c -> c.name()).toList());
+  }
+
+  @Test
   void parse_ClassWithoutBaseClass_ShouldMatchAndExtractMethods() {
     String source =
 """
