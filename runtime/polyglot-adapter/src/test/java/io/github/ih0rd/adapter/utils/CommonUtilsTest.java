@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import io.github.ih0rd.adapter.DummyApi;
 import io.github.ih0rd.adapter.exceptions.EvaluationException;
 
+@SuppressWarnings("deprecation")
 class CommonUtilsTest {
 
   static class DummyImpl implements DummyApi {

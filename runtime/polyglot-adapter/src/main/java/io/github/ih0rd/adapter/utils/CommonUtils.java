@@ -31,7 +31,11 @@ import io.github.ih0rd.adapter.exceptions.EvaluationException;
  * var result = CommonUtils.invokeMethod(MyApi.class, instance, "ping");
  * System.out.println(result.asString());
  * }</pre>
+ *
+ * @deprecated This class is not used by the adapter runtime and will be removed in a future
+ *     release. It is not part of the supported public API.
  */
+@Deprecated(forRemoval = true, since = "0.3.1")
 public final class CommonUtils {
 
   private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
