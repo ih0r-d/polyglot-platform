@@ -57,7 +57,7 @@ public class PolyglotJsAutoConfiguration {
    * @param jsScriptSource resolved JavaScript script source
    * @return JavaScript executor
    */
-  @Bean
+  @Bean(destroyMethod = "close")
   @ConditionalOnMissingBean
   public JsExecutor jsExecutor(
       SpringPolyglotContextFactory contextFactory, ScriptSource jsScriptSource) {

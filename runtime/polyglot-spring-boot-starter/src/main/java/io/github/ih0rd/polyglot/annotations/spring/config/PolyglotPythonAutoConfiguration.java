@@ -53,7 +53,7 @@ public class PolyglotPythonAutoConfiguration {
    * @param pyScriptSource resolved Python script source
    * @return Python executor
    */
-  @Bean
+  @Bean(destroyMethod = "close")
   @ConditionalOnMissingBean
   public PyExecutor pyExecutor(
       SpringPolyglotContextFactory contextFactory, ScriptSource pyScriptSource) {
