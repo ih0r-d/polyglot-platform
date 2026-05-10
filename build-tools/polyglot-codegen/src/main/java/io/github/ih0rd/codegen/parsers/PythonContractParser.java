@@ -2,8 +2,10 @@ package io.github.ih0rd.codegen.parsers;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -69,7 +71,12 @@ public final class PythonContractParser implements LanguageParser {
     }
 
     List<ContractClass> classes = new ArrayList<>();
+    Set<String> seen = new HashSet<>();
     for (ExportInfo export : exports) {
+      if (!seen.add(export.apiName)) {
+        throw new IllegalStateException(
+            "Duplicate contract name '" + export.apiName + "' in polyglot.export_value declarations");
+      }
       List<ContractMethod> methods =
           export.isClass
               ? parseClassMethods(lines, export.targetName, config)

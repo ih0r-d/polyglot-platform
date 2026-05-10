@@ -258,6 +258,68 @@ class C:
   }
 
   @Test
+  void parse_DuplicateClassExportName_ThrowsWithDuplicateName() {
+    String source =
+"""
+polyglot.export_value("Api", ClassA)
+polyglot.export_value("Api", ClassB)
+
+class ClassA:
+    def a(self) -> int:
+        return 1
+
+class ClassB:
+    def b(self) -> int:
+        return 2
+""";
+
+    IllegalStateException ex =
+        assertThrows(IllegalStateException.class, () -> parse(source));
+    assertTrue(ex.getMessage().contains("Api"), "Error message must include the duplicate name");
+  }
+
+  @Test
+  void parse_DuplicateDictExportName_ThrowsWithDuplicateName() {
+    String source =
+"""
+def f1():
+    return 1
+
+def f2():
+    return 2
+
+polyglot.export_value("Api", {"m1": f1})
+polyglot.export_value("Api", {"m2": f2})
+""";
+
+    IllegalStateException ex =
+        assertThrows(IllegalStateException.class, () -> parse(source));
+    assertTrue(ex.getMessage().contains("Api"), "Error message must include the duplicate name");
+  }
+
+  @Test
+  void parse_UniqueMultiExport_StillWorks() {
+    String source =
+"""
+polyglot.export_value("ServiceA", ClassA)
+polyglot.export_value("ServiceB", ClassB)
+
+class ClassA:
+    def a(self) -> int:
+        return 1
+
+class ClassB:
+    def b(self) -> str:
+        return "b"
+""";
+
+    ContractModel model = parse(source);
+    assertEquals(2, model.classes().size());
+    assertEquals("ServiceA", model.classes().get(0).name());
+    assertEquals("ServiceB", model.classes().get(1).name());
+  }
+
+  @Test
   void parse_TwoClassExports_ReturnsTwoContracts() {
     String source =
 """
