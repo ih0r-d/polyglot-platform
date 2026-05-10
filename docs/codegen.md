@@ -70,9 +70,50 @@ Language parsers convert source syntax into the adapter’s language-neutral con
 
 The Python parser is intentionally lightweight and convention-oriented. It is designed for adapter contracts, not for full Python semantic analysis.
 
+#### Class-Style Exports
+
+The parser matches `class` definitions with or without base classes:
+
+```python
+class ForecastService:          # no base class
+class ForecastService(Protocol): # single base class
+class ForecastService(BaseA, BaseB): # multiple base classes
+class ForecastService (Base):   # space before parentheses
+```
+
+Only the class name is captured; base class names are ignored by the parser.
+
+#### Multiple Exports Per File
+
+A single Python file may contain multiple `polyglot.export_value(...)` declarations. Each
+declaration produces one `ContractClass` in the resulting `ContractModel`, and the Maven plugin
+generates one Java interface file per class:
+
+```python
+polyglot.export_value("OrderService", OrderService)
+polyglot.export_value("InventoryService", InventoryService)
+```
+
+Contracts are returned in source order (the order `polyglot.export_value(...)` lines appear in
+the file).
+
+#### Duplicate Export Names
+
+If two or more `polyglot.export_value(...)` declarations in the same file use the same API name,
+`parse(...)` fails immediately with an `IllegalStateException` that includes the duplicate name.
+This check runs in all modes, not only in `strictMode`.
+
+```python
+# This will fail at parse time:
+polyglot.export_value("Api", ClassA)
+polyglot.export_value("Api", ClassB)  # duplicate name → IllegalStateException
+```
+
 Supported subset today:
 
 - `polyglot.export_value(...)` with a class export or dictionary-style export
+- multiple `polyglot.export_value(...)` declarations per file
+- class definitions with optional base classes
 - top-level Python functions used in exported dictionaries
 - class methods and basic type hints aligned with the repository type model
 
@@ -161,5 +202,28 @@ Generated interfaces can be bound at runtime through:
 - the Spring Boot starter
 
 That is why the build tools follow the same naming conventions and contract model expected by the runtime adapter.
+
+### Generated Interfaces and Spring Binding
+
+Generated Java interfaces are plain interfaces with no framework annotations. To use a generated
+interface with the Spring Boot starter, you must annotate it with `@PolyglotClient` and enable
+client scanning:
+
+```java
+@PolyglotClient(languages = {SupportedLanguage.PYTHON})
+public interface ForecastService {
+    // generated methods
+}
+```
+
+```java
+@EnablePolyglotClients
+@SpringBootApplication
+public class MyApplication { ... }
+```
+
+The code generator does not add `@PolyglotClient` automatically. That annotation must be present
+on the interface (either hand-written or added after generation) before the Spring starter can
+register the corresponding bean.
 
 ![Code generation diagram](assets/codegen-diagram.svg)

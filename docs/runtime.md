@@ -39,7 +39,11 @@ Current defaults:
 
 For Python, context creation uses `GraalPyResources.contextBuilder(...)` with a virtual file system. For JavaScript, it uses the regular `Context.newBuilder(...)`.
 
-These defaults are designed for application embedding through the adapter, not for hostile multi-tenant sandboxing.
+> **Security warning:** `allowAllAccess(true)` grants guest code unrestricted access to host Java
+> types, I/O, and environment variables. These defaults are intended solely for **trusted scripts**
+> that are part of the application. Do not use the adapter to execute untrusted or
+> user-supplied scripts. See
+> [`runtime-semantics.md`](runtime-semantics.md#security-contract) for the full security contract.
 
 ### Script Resolution
 
@@ -64,6 +68,14 @@ At invocation time:
 - the result is converted back through `Value.as(returnType)`
 
 If the guest result is `null`, the proxy returns `null`.
+
+If the Java method has a `void` return type, the guest function is called normally and the result
+is discarded without any type conversion.
+
+Failures during guest execution may surface as `PolyglotException` (from GraalVM) or as adapter
+exceptions (`InvocationException`, `BindingException`, `ScriptNotFoundException`,
+`EvaluationException`). Both are unchecked. See
+[`runtime-semantics.md`](runtime-semantics.md#exception-contract) for the full exception contract.
 
 ## Python Runtime Details
 

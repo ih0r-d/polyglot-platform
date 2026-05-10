@@ -90,11 +90,55 @@ Implication:
   `@PolyglotClient` beans during startup.
 - Startup failure is expected behavior when documented binding requirements are not met.
 
+## Security Contract
+
+GraalVM contexts created by `PolyglotHelper` use `allowAllAccess(true)`. This grants the
+guest-language environment unrestricted access to host Java types, host I/O, and host environment
+variables.
+
+**This is only safe when the scripts being executed are trusted application code under the
+operator's control.** Running untrusted or user-supplied scripts with `allowAllAccess(true)` is
+not safe and is not a supported use case for this project.
+
+Implications:
+
+- Do not embed guest code from untrusted sources without separate sandboxing outside the adapter.
+- The adapter is designed for application-owned scripts deployed alongside the service, not for
+  general-purpose script execution from external input.
+- Python contexts additionally use a GraalPy virtual file system; this constrains physical
+  filesystem access but does not restrict host API access.
+
+Setting `polyglot.python.safe-defaults=false` results in a more minimal context and allows
+providing a custom `PolyglotContextCustomizer`, but it does not change the `allowAllAccess(true)`
+contract established by the default helper. Callers taking full control of context creation are
+responsible for their own access policy.
+
+## Exception Contract
+
+Exceptions from guest-language execution propagate through the proxy method call to the caller.
+
+The adapter defines its own exception hierarchy for structured error reporting:
+
+- `ScriptNotFoundException`: the requested script could not be found through `ScriptSource`
+- `EvaluationException`: the script could not be loaded (I/O failure)
+- `BindingException`: the guest function or export could not be resolved or is not executable
+- `InvocationException`: a runtime failure occurred during guest code execution or inline evaluation
+
+Underlying GraalVM errors surface as `org.graalvm.polyglot.PolyglotException` when they occur
+inside guest code invoked through the proxy. `PolyglotException` is a `RuntimeException`.
+Depending on the failure point it may be wrapped in an adapter exception or propagate directly.
+
+Callers should expect both adapter exceptions and `PolyglotException` from proxy method calls.
+Neither is checked, so explicit handling is optional but recommended for resilience.
+
+Proxy methods with `void` return type execute the guest function normally and return without
+attempting result conversion. Any guest exception still propagates to the caller.
+
 ## Explicit Non-Goals
 
 The current runtime contract does not guarantee:
 
-- hostile sandboxing
+- hostile sandboxing or restriction of guest access to host APIs
 - hot reload
 - source version tracking
 - automatic pickup of changed guest-language code
