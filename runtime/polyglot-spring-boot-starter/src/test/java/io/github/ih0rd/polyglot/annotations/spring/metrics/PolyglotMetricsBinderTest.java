@@ -2,6 +2,7 @@ package io.github.ih0rd.polyglot.annotations.spring.metrics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -80,14 +81,10 @@ class PolyglotMetricsBinderTest {
                     .tag("language", "python")
                     .gauge())
             .value());
-    assertEquals(
-        3.0,
-        Objects.requireNonNull(
-                registry
-                    .find("polyglot.executor.contract.cache.size")
-                    .tag("language", "python")
-                    .gauge())
-            .value());
+    // polyglot.executor.contract.cache.size must NOT be registered for Python:
+    // it was a duplicate of polyglot.python.instance.cache.size (both read instanceCacheSize).
+    assertNull(
+        registry.find("polyglot.executor.contract.cache.size").tag("language", "python").gauge());
     assertEquals(
         1.0,
         Objects.requireNonNull(

@@ -138,14 +138,6 @@ public class PolyglotMetricsBinder implements SmartInitializingSingleton {
         .description("Number of Java interfaces bound to Python")
         .tags(tags)
         .register(registry);
-
-    Gauge.builder(
-            "polyglot.executor.contract.cache.size",
-            pyExecutor,
-            provider -> number(metadata(provider.getIfAvailable()), "instanceCacheSize"))
-        .description("Number of cached polyglot contract bindings")
-        .tags(tags)
-        .register(registry);
   }
 
   private void bindJs(MeterRegistry registry) {
