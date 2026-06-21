@@ -210,6 +210,9 @@ Common contributor commands:
 task verify
 task quality
 task format
+task docs:serve
+task docs:build
+task docs:clean
 ```
 
 For contribution workflow details, see [CONTRIBUTING.md](CONTRIBUTING.md).

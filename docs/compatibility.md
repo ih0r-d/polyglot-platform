@@ -32,7 +32,7 @@ verification lines:
 It now verifies the current Spring Boot 4.0.4 line through the starter tests and the maintained
 Spring sample.
 
-The repository root pins the expected local Java runtime in [`.sdkmanrc`](../.sdkmanrc). For
+The repository root pins the expected local Java runtime in `.sdkmanrc`. For
 runtime work, maintained samples, and full test execution, contributors are expected to run
 `sdk env` before using the Maven wrapper.
 

@@ -41,6 +41,21 @@ tasks:
     cmds:
       - ./.dev/bin/format.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
+  docs:build:
+    desc: Build the documentation site with strict checks
+    cmds:
+      - ./.dev/bin/docs-build.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  docs:serve:
+    desc: Start the local documentation server
+    cmds:
+      - ./.dev/bin/docs-serve.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  docs:clean:
+    desc: Remove local documentation build output
+    cmds:
+      - rm -rf ./site
+
   version:
     desc: Show current project version
     cmds:

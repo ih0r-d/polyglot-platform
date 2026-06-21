@@ -18,6 +18,8 @@
    ```bash
    task verify
    task quality
+   task docs:build
+   task docs:clean
    ```
 
 `task dev:setup` enables repository-local Git hooks for the current clone, runs a lightweight
@@ -63,6 +65,8 @@ task dev:setup
 task verify
 task quality
 task format
+task docs:serve
+task docs:clean
 ```
 
 The root `Taskfile.yaml` is the canonical contributor interface. `.dev/bin/*` and `.dev/lib/*`
