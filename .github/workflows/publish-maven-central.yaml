@@ -57,6 +57,9 @@ jobs:
             exit 1
           fi
 
+      - name: Run release profile dry run
+        run: ./mvnw -B -ntp -Prelease -Dgpg.skip=true -DskipTests clean verify
+
       # Tests, JaCoCo (70 % instruction coverage), Spotless, and SpotBugs must all
       # pass before the release profile signs and deploys artifacts to Maven Central.
       - name: Verify and deploy to Maven Central

@@ -43,6 +43,9 @@ jobs:
       - name: Run release quality verification
         run: ./mvnw -B -ntp -Pquality verify
 
+      - name: Run release profile dry run
+        run: ./mvnw -B -ntp -Prelease -Dgpg.skip=true -DskipTests clean verify
+
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
