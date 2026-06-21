@@ -9,16 +9,20 @@
    git clone https://github.com/ih0r-d/polyglot-platform.git
    cd polyglot-platform
    ```
-2. Build the repository with the Maven wrapper:
+2. Activate the pinned toolchain and run the canonical contributor setup:
    ```bash
    sdk env
-   ./mvnw clean verify
+   task dev:setup
    ```
-3. Install local pre-commit checks if you use them:
+3. Run the standard verification commands before opening a pull request:
    ```bash
-   pip install pre-commit
-   pre-commit install
+   task verify
+   task quality
    ```
+
+`task dev:setup` enables repository-local Git hooks for the current clone, runs a lightweight
+local validation step, does not publish artifacts, and does not require Maven Central or GPG
+secrets. Hooks are not enabled automatically after clone.
 
 ## Toolchain Baseline
 
@@ -26,6 +30,7 @@
 - Build tooling modules: JDK 21+
 - Runtime modules: JDK 25+
 - GraalVM runtime integrations: GraalVM 25.x
+- Developer automation scripts: `bash`
 
 The repository root includes [`.sdkmanrc`](.sdkmanrc). For full test execution and any runtime or
 sample work, use:
@@ -47,16 +52,25 @@ If you change the supported matrix, update [`README.md`](README.md), [`docs/comp
 
 ## Development Workflow
 
-Prefer the Maven wrapper for all contributor-facing commands:
+Prefer the root Taskfile for contributor-facing commands:
 
 ```bash
 sdk env
-./mvnw clean verify
-./mvnw -B -ntp -Pquality verify
-./mvnw spotless:apply
+task dev:setup
+task verify
+task quality
+task format
 ```
 
-Optional maintainer conveniences live in `.dev/`, including release and pre-commit helper scripts.
+The root `Taskfile.yaml` is the canonical contributor interface. `.dev/bin/*` and `.dev/lib/*`
+remain the implementation detail and maintainer automation layer.
+
+Maintainer-oriented release commands are still available through the root Taskfile, including:
+
+```bash
+task release:preflight
+task release -- <version>
+```
 
 ## Change Expectations
 
@@ -70,8 +84,8 @@ Optional maintainer conveniences live in `.dev/`, including release and pre-comm
 
 Before opening a pull request:
 
-1. Run `./mvnw clean verify`.
-2. Run `./mvnw -B -ntp -Pquality verify` for changes that affect runtime, build tooling, or release logic.
+1. Run `task verify`.
+2. Run `task quality` for changes that affect runtime, build tooling, or release logic.
 3. Run the relevant sample smoke build when changing public runtime, starter, or codegen behavior.
 4. Update docs, samples, or changelog entries when the change affects users.
 5. Describe the motivation, scope, and compatibility impact in the PR.
@@ -89,6 +103,9 @@ docs(readme): clarify JDK and GraalVM requirements
 ```
 
 Keep commits logically grouped and reviewable.
+
+If you ran `task dev:setup`, the local `commit-msg` hook will validate Conventional Commit headers
+for this clone.
 
 ## Reporting Bugs and Security Issues
 

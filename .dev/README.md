@@ -2,59 +2,39 @@
 
 ## Layout
 
-- `bin/`: local developer entrypoints
-- `lib/`: shared shell helpers
-- `Taskfile.yaml`: thin wrapper around `bin/*`
+- `bin/`: implementation scripts for local automation
+- `lib/`: shared shell helpers for the scripts
+
+The public Task interface lives in the repository root [Taskfile.yaml](../Taskfile.yaml).
+`.dev/` is the implementation toolkit behind those commands.
 
 ## Usage
 
-Use the scripts directly for local automation:
+Use root-level Task commands as the canonical interface:
 
-- `./.dev/bin/build.sh`
-- `./.dev/bin/build.sh --module <module> --skip-tests`
-- `./.dev/bin/clean.sh`
-- `./.dev/bin/test.sh`
-- `./.dev/bin/verify.sh`
-- `./.dev/bin/format.sh`
-- `./.dev/bin/version.sh`
-- `./.dev/bin/bump.sh patch|minor|major`
-- `./.dev/bin/release-preflight.sh`
-- `./.dev/bin/release.sh <version>`
-- `./.dev/dry-run-release.sh`
-- `./.dev/dry-run-release.sh --log /tmp/polyglot-dry-run.log`
-- `./.dev/bin/clean-remote-tags.sh`
-- `./.dev/bin/pre-commit-maven.sh`
-- `./.dev/bin/setup-hooks.sh`
+```bash
+task dev:setup
+```
 
-Use Task only as a convenience alias layer:
+Contributor commands:
 
 - `task dev:setup`
 - `task dev:hooks`
-- `task -t .dev/Taskfile.yaml build`
-- `task -t .dev/Taskfile.yaml bump -- minor`
-- `task -t .dev/Taskfile.yaml dry-run-release`
-- `task -t .dev/Taskfile.yaml dry-run-release -- --log /tmp/polyglot-dry-run.log`
-- `task -t .dev/Taskfile.yaml release-preflight`
-- `task -t .dev/Taskfile.yaml release-preflight-clean`
-- `task -t .dev/Taskfile.yaml release -- 1.2.3`
-- `task -t .dev/Taskfile.yaml bump -- patch`
-- `task -t .dev/Taskfile.yaml setup-hooks`
-- `task -t .dev/Taskfile.yaml dev-setup`
+- `task build`
+- `task test`
+- `task verify`
+- `task quality`
+- `task format`
 
-## Rules
+Maintainer and release commands:
 
-- Put real automation logic in `bin/*` scripts.
-- Keep shared shell helpers in `lib/*`.
-- Keep `Taskfile.yaml` minimal and readable.
-- Run Maven through `./mvnw`.
-
-## Requirements
-
-- `java`
-- `git`
-- `./mvnw`
-- `git cliff` for releases
-- `python3` for docs preflight automation
+- `task release:preflight`
+- `task release:preflight:clean`
+- `task release:dry-run`
+- `task release -- 1.2.3`
+- `task version`
+- `task version:bump -- patch`
+- `task git:clean-remote-tags`
 
 For repository work, prefer the pinned SDKMAN environment first:
 
@@ -68,21 +48,63 @@ First-time contributor setup:
 task dev:setup
 ```
 
+`task dev:setup` enables repository-local Git hooks for the current clone, runs a lightweight
+local validation, does not publish artifacts, and does not require Maven Central or GPG secrets.
+Hooks are not enabled automatically after clone.
+
+Hook-only setup:
+
+```bash
+task dev:hooks
+```
+
+Common contributor commands:
+
+```bash
+task verify
+task quality
+task format
+```
+
+Advanced/internal usage:
+
+Use scripts in `.dev/bin/` directly only when working on the toolkit itself or when you need to
+debug the implementation behind a Task command.
+
+## Rules
+
+- Put real automation logic in `bin/*` scripts.
+- Keep shared shell helpers in `lib/*`.
+- Keep the root `Taskfile.yaml` as the only public Task interface.
+- Run Maven through `./mvnw`.
+- Developer automation scripts require `bash`.
+
+## Requirements
+
+- `java`
+- `git`
+- `bash`
+- `./mvnw`
+- `git cliff` for releases
+- `python3` for docs preflight automation
+
 ## Safety
 
-- `release-preflight.sh` is the required local gate before `release.sh`.
-- `dev-setup.sh` enables repository-local Git hooks for the current clone, checks the local Maven/Java environment, and runs a lightweight validation step.
-- `setup-hooks.sh` enables repository-local Git hooks for the current clone; it is not automatic after clone.
-- `release-preflight.sh` runs quality verification, strict docs build, local artifact install, and
+- `task dev:setup` enables repository-local Git hooks for the current clone, checks the local Maven/Java environment, and runs a lightweight validation step.
+- `task dev:hooks` enables repository-local Git hooks for the current clone; it is not automatic after clone.
+- `task verify` runs the standard repository verification path.
+- `task quality` runs the stricter local quality gate.
+- `task release:preflight`, `task release`, and `task release:dry-run` are maintainer-oriented release commands.
+- `task release:preflight` runs quality verification, strict docs build, local artifact install, and
   maintained sample verification.
-- `release-preflight.sh` creates `.venv-docs/` automatically when `mkdocs` is not available and
+- `task release:preflight` creates `.venv-docs/` automatically when `mkdocs` is not available and
   reuses it on later runs.
-- `release-preflight-clean` removes `.venv-docs/` after the run; the default preflight keeps it for
+- `task release:preflight:clean` removes `.venv-docs/` after the run; the default preflight keeps it for
   faster reruns.
-- `release.sh` expects a clean working tree.
-- `release.sh` runs `release-preflight.sh` first, then updates project versions, regenerates
+- `task release` expects a clean working tree.
+- `task release` runs the release preflight first, then updates project versions, regenerates
   `CHANGELOG.md`, commits, creates `v<version>`, and pushes `main` plus the tag.
-- `release.sh` does not publish to Maven Central. Maven Central publishing is manual-only through `.github/workflows/publish-maven-central.yaml`.
-- `dry-run-release.sh` verifies flattened POM generation and local deploy output for publishable modules only.
-- `dry-run-release.sh --log <path>` keeps terminal output and writes the full run log to the given file.
-- `clean-remote-tags.sh` deletes remote tags that do not exist locally.
+- `task release` does not publish to Maven Central. Maven Central publishing is manual-only through `.github/workflows/publish-maven-central.yaml`.
+- `task release:dry-run` verifies flattened POM generation and local deploy output for publishable modules only.
+- `./.dev/dry-run-release.sh --log <path>` keeps terminal output and writes the full run log to the given file.
+- `task git:clean-remote-tags` deletes remote tags that do not exist locally.

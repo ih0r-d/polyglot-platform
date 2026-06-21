@@ -1,0 +1,90 @@
+version: "3"
+
+tasks:
+  clean:
+    desc: Remove Maven build output and generated files
+    cmds:
+      - ./.dev/bin/clean.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  dev:setup:
+    desc: Prepare local contributor tooling for this clone
+    cmds:
+      - ./.dev/bin/dev-setup.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  dev:hooks:
+    desc: Enable repository-local Git hooks for this clone
+    cmds:
+      - ./.dev/bin/setup-hooks.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  build:
+    desc: Build project
+    cmds:
+      - ./.dev/bin/build.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  test:
+    desc: Run tests
+    cmds:
+      - ./.dev/bin/test.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  verify:
+    desc: Run repository verification
+    cmds:
+      - ./.dev/bin/verify.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  quality:
+    desc: Run the stricter local quality gate
+    cmds:
+      - ./.dev/bin/quality.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  format:
+    desc: Format code with Spotless
+    cmds:
+      - ./.dev/bin/format.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  version:
+    desc: Show current project version
+    cmds:
+      - ./.dev/bin/version.sh
+
+  version:bump:
+    desc: Bump project version (patch|minor|major)
+    cmds:
+      - ./.dev/bin/bump.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{else}} patch{{end}}
+
+  dev:pre-commit:
+    desc: Run the local Maven pre-commit checks
+    cmds:
+      - ./.dev/bin/pre-commit-maven.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  release:preflight:
+    desc: Run the required verification checks before preparing a release
+    cmds:
+      - ./.dev/bin/release-preflight.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  release:preflight:clean:
+    desc: Run release preflight and remove the temporary docs virtualenv afterwards
+    env:
+      RELEASE_PREFLIGHT_CLEAN_DOCS_VENV: "1"
+    cmds:
+      - ./.dev/bin/release-preflight.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  release:dry-run:
+    desc: Verify release publication locally without publishing to Maven Central
+    cmds:
+      - ./.dev/dry-run-release.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  release:
+    desc: Prepare, tag, and push a release without Maven Central publishing
+    cmds:
+      - ./.dev/bin/release.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  git:clean-remote-tags:
+    desc: Delete remote tags that do not exist locally
+    cmds:
+      - ./.dev/bin/clean-remote-tags.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  default:
+    desc: Default task (clean + build)
+    cmds:
+      - task: clean
+      - task: build

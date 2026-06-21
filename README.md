@@ -197,23 +197,34 @@ Local developer tooling and helper scripts are available in [`.dev/`](.dev/).
 
 If present, start with [`.dev/README.md`](.dev/README.md) for local workflows, helper commands, and repository-specific development utilities.
 
-Main project commands use the Maven wrapper:
+Canonical contributor setup from the repository root:
 
 ```bash
 sdk env
 task dev:setup
-./mvnw clean verify
-./mvnw -B -ntp -Pquality verify
 ```
 
-Release preparation flow:
+`task dev:setup` enables repository-local Git hooks for this clone, runs a lightweight local
+validation step, does not publish artifacts, and does not require Maven Central or GPG secrets.
+Hooks are not enabled automatically after clone.
+
+Common contributor commands:
 
 ```bash
-task -t .dev/Taskfile.yaml release-preflight
-task -t .dev/Taskfile.yaml release -- <version>
+task verify
+task quality
+task format
+./mvnw clean verify
 ```
 
-`release-preflight` is the required local gate before `release`. It verifies the quality profile,
+Maintainer-only release preparation flow:
+
+```bash
+task release:preflight
+task release -- <version>
+```
+
+`task release:preflight` is the required local gate before `task release`. It verifies the quality profile,
 strict docs build, local artifact installation, and maintained samples.
 
 ## Documentation

@@ -18,6 +18,7 @@ print_step "Running lightweight local validation"
 run_mvn -DskipTests validate
 
 print_section "Next Steps"
-print_info "Use 'task -t .dev/Taskfile.yaml build' or './mvnw clean verify' for a full local build."
-print_info "Use 'task -t .dev/Taskfile.yaml verify' before opening a pull request."
+print_info "Use 'task build' or './mvnw clean verify' for a full local build."
+print_info "Use 'task verify' before opening a pull request."
+print_info "Use 'task quality' for the stricter local quality gate."
 print_info "Git hooks are enabled only for this clone."

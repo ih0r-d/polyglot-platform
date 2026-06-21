@@ -12,12 +12,12 @@ Use this page together with:
 ## Release Checklist
 
 1. Ensure `main` is green in CI.
-2. Run `task -t .dev/Taskfile.yaml release-preflight`.
+2. Run `task release:preflight`.
 3. Review dependency, security, and CodeQL workflow results.
 4. Update `CHANGELOG.md` and any release notes if the preflight surfaced missing scope notes.
 5. Confirm documentation and samples match the released API.
-6. Run `task -t .dev/Taskfile.yaml release -- <version>` to set the release version, update `CHANGELOG.md`, commit, tag, and push.
-7. Run `task -t .dev/Taskfile.yaml bump -- patch` after the release if you want to move `main` to the next patch snapshot.
+6. Run `task release -- <version>` to set the release version, update `CHANGELOG.md`, commit, tag, and push.
+7. Run `task version:bump -- patch` after the release if you want to move `main` to the next patch snapshot.
 8. Push the snapshot bump commit if you created one locally.
 9. Run the `Publish Maven Central` workflow manually with the exact release tag after the tag is in GitHub.
 
@@ -37,8 +37,8 @@ It runs, in order:
 
 Use:
 
-- `task -t .dev/Taskfile.yaml release-preflight`
-- `task -t .dev/Taskfile.yaml release-preflight-clean`
+- `task release:preflight`
+- `task release:preflight:clean`
 
 `release-preflight-clean` removes the local docs virtual environment after the run. The default
 preflight keeps `.venv-docs/` to make repeated runs faster.
