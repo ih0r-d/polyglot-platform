@@ -28,7 +28,7 @@ It is expected to:
 
 Use `release-preflight-clean` only when you explicitly want `.venv-docs/` removed after the run.
 
-## `0.3.0` Checklist
+## `0.4.0` Checklist
 
 1. Python runtime semantics remain explicit in docs, tests, and code comments.
 2. Spring fail-fast, preload, and warmup behavior remain aligned with those semantics.

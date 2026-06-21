@@ -29,14 +29,14 @@ The immediate documentation goals are:
 
 The next release line is focused on credibility and release quality, not platform expansion.
 
-Current `0.3.0` direction:
+Current `0.4.0` direction:
 
 - make Python runtime semantics explicit enough to be trusted
 - keep Spring startup/fail-fast/preload behavior aligned with those semantics
 - improve code generation reliability with stricter type handling and drift checks
 - keep JavaScript claims bounded to the experimental runtime surface that actually exists
 
-Not the focus of `0.3.0`:
+Not the focus of `0.4.0`:
 
 - JavaScript code generation
 - JavaScript parity work

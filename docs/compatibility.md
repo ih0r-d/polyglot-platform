@@ -6,7 +6,7 @@ change before stronger support claims are made.
 
 ## Current Verified Support
 
-The current `0.3.1-SNAPSHOT` repository line verifies the following:
+The current `0.4.x` release-preparation line verifies the following:
 
 - Maven wrapper and CI workflows on Maven 3.9+
 - pinned local SDKMAN runtime: Java `25-graalce`

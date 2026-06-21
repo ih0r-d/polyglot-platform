@@ -5,7 +5,7 @@ This page defines the repository's intended public surface for the path to `1.0.
 It is not a promise that every item below is already fully stabilized. It is the list of surfaces
 that should be treated as user-facing and reviewed with compatibility discipline.
 
-For the current `0.3.1-SNAPSHOT` line:
+For the current `0.4.x` release-preparation line:
 
 - Java 21 is the minimum repository baseline
 - Java 21 and Java 25 are the exercised verification lanes

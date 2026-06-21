@@ -104,8 +104,8 @@ Import the runtime BOM:
 </dependencyManagement>
 ```
 
-Use the latest published version for `${polyglot.version}`. The current development line on
-`main` is `0.3.1-SNAPSHOT`.
+Use the latest released version for `${polyglot.version}` in Maven Central. When building against
+the current unreleased branch from source, the development line is `0.4.0-SNAPSHOT`.
 
 Add the core adapter:
 
@@ -242,8 +242,8 @@ Project documentation is maintained in [`docs/`](docs/). Start with [`docs/index
 ## Samples
 
 The `samples/` directory contains maintained example applications aligned with the current
-development line on `main`. On this branch they target `0.3.1-SNAPSHOT`, so run a local
-`./mvnw -DskipTests install` first when building them from source.
+`0.4.0-SNAPSHOT` development line on `main`. Run a local `./mvnw -DskipTests install` first when
+building them from this repository checkout.
 
 - `samples/java-maven-example`: framework-neutral runtime API with `FileSystemScriptSource`
 - `samples/java-maven-codegen-example`: code generation plus runtime binding

@@ -25,9 +25,9 @@ conditions that should be true before a release is considered credible.
 - runtime behavior changes are documented
 - build-time workflow changes are documented
 
-## `0.3.0` Gates
+## `0.4.0` Gates
 
-`0.3.0` should not ship unless all of the following are true:
+`0.4.0` should not ship unless all of the following are true:
 
 1. Python runtime semantics are explicit enough to be trusted.
 2. Cache, reload, preload, and fail-fast behavior are documented honestly.

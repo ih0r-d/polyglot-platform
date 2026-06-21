@@ -8,7 +8,7 @@ It exists to separate:
 - bounded support that exists but is not on the path to parity before `1.0.0`
 - explicitly unsupported areas
 
-For the current `0.3.x` line, stability work is anchored to the verified Java 21 baseline, the
+For the current `0.4.x` line, stability work is anchored to the verified Java 21 baseline, the
 verified GraalVM 25.x runtime lane, and the currently verified Spring Boot 4.0.4 starter/sample
 line.
 
@@ -16,7 +16,7 @@ line.
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Python runtime binding via `PyExecutor` | target for stabilization | Primary path for the `0.3.x` to `1.0.0` journey |
+| Python runtime binding via `PyExecutor` | target for stabilization | Primary path for the `0.4.x` to `1.0.0` journey |
 | Spring Boot starter on the Python-first path | target for stabilization | Verified on the current Boot 4.0.4 line; includes fail-fast, preload, warmup, actuator, and metrics behavior |
 | Python-oriented code generation | target for stabilization | Limited to the documented supported parser subset |
 | JavaScript runtime binding via `JsExecutor` | experimental | Supported as a bounded runtime path, not a parity target before `1.0.0` |

@@ -8,7 +8,7 @@ Instead of interacting directly with the low-level [GraalVM Polyglot API](https:
 The runtime adapter handles script loading and typed method binding so Java code can call dynamic-language logic through normal Java interfaces.
 
 This guide follows the repository's primary Python-first path. JavaScript support exists, but it
-remains experimental and is not the recommended starting point for the `0.3.x` stabilization line.
+remains experimental and is not the recommended starting point for the `0.4.x` stabilization line.
 
 > Note
 > The adapter API builds on the GraalVM Polyglot API. You still use GraalVM runtimes and language dependencies directly.
@@ -109,8 +109,8 @@ Add the runtime BOM:
 </dependencyManagement>
 ```
 
-Use the latest published release for `${polyglot.version}`. The `main` branch currently carries
-the open `0.3.1-SNAPSHOT` development line.
+Use the latest released version for `${polyglot.version}` when consuming the library from Maven
+Central. If you are building against this unreleased repository checkout, use `0.4.0-SNAPSHOT`.
 
 Add the adapter and the language runtime:
 
