@@ -24,6 +24,9 @@
 local validation step, does not publish artifacts, and does not require Maven Central or GPG
 secrets. Hooks are not enabled automatically after clone.
 
+For the full developer command reference, see
+[`docs/developer-tooling.md`](docs/developer-tooling.md).
+
 ## Toolchain Baseline
 
 - Maven: 3.9+
@@ -71,6 +74,9 @@ Maintainer-oriented release commands are still available through the root Taskfi
 task release:preflight
 task release -- <version>
 ```
+
+See [`docs/developer-tooling.md`](docs/developer-tooling.md) for the complete command map and
+tooling lifecycle notes.
 
 ## Change Expectations
 

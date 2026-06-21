@@ -94,3 +94,6 @@ docs/.venv/
 .dev/sonar.sh
 .dev/sonar.yml
 site/
+
+./.dev/sonar.yml
+./.dev/sonar.sh

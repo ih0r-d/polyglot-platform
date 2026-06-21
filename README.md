@@ -193,10 +193,6 @@ Run the stricter local quality gate:
 
 ## Development
 
-Local developer tooling and helper scripts are available in [`.dev/`](.dev/).
-
-If present, start with [`.dev/README.md`](.dev/README.md) for local workflows, helper commands, and repository-specific development utilities.
-
 Canonical contributor setup from the repository root:
 
 ```bash
@@ -214,18 +210,11 @@ Common contributor commands:
 task verify
 task quality
 task format
-./mvnw clean verify
 ```
 
-Maintainer-only release preparation flow:
-
-```bash
-task release:preflight
-task release -- <version>
-```
-
-`task release:preflight` is the required local gate before `task release`. It verifies the quality profile,
-strict docs build, local artifact installation, and maintained samples.
+For contribution workflow details, see [CONTRIBUTING.md](CONTRIBUTING.md).
+For the full command reference and developer tooling model, see
+[`docs/developer-tooling.md`](docs/developer-tooling.md).
 
 ## Documentation
 
@@ -240,6 +229,7 @@ Project documentation is maintained in [`docs/`](docs/). Start with [`docs/index
 - [`docs/runtime.md`](docs/runtime.md)
 - [`docs/runtime-semantics.md`](docs/runtime-semantics.md)
 - [`docs/codegen.md`](docs/codegen.md)
+- [`docs/developer-tooling.md`](docs/developer-tooling.md)
 - [`docs/concepts.md`](docs/concepts.md)
 - [`docs/release-checklist.md`](docs/release-checklist.md)
 - [`docs/release-gates.md`](docs/release-gates.md)
