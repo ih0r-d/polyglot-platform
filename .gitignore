@@ -69,7 +69,7 @@ jacoco.exec
 # ===============================
 .env
 .env.*
-local/
+./local/
 *.asc
 settings-local.xml
 .venv/
@@ -93,6 +93,4 @@ docs/.venv/
 .planning/
 .dev/sonar.sh
 .dev/sonar.yml
-AUDIT.md
-HANDOFF-SESSION-STATE.md
-PLAN.md
+site/

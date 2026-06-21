@@ -201,6 +201,7 @@ Main project commands use the Maven wrapper:
 
 ```bash
 sdk env
+task dev:setup
 ./mvnw clean verify
 ./mvnw -B -ntp -Pquality verify
 ```

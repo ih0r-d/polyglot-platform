@@ -1,0 +1,62 @@
+#!/bin/sh
+
+set -eu
+
+msg_file=${1:-}
+
+if [ -z "$msg_file" ] || [ ! -f "$msg_file" ]; then
+  echo "commit-msg hook error: missing commit message file" >&2
+  exit 1
+fi
+
+subject=$(
+  sed -n '
+    /^[[:space:]]*#/d
+    /^[[:space:]]*$/d
+    1p
+    q
+  ' "$msg_file"
+)
+
+if [ -z "$subject" ]; then
+  echo "Commit message must not be empty." >&2
+  exit 1
+fi
+
+case "$subject" in
+  Merge\ *)
+    exit 0
+    ;;
+  Revert\ *)
+    exit 0
+    ;;
+  fixup!\ *)
+    exit 0
+    ;;
+  squash!\ *)
+    exit 0
+    ;;
+  Release\ *|release\ *)
+    exit 0
+    ;;
+esac
+
+conventional_pattern='^(feat|fix|refactor|perf|build|ci|docs|test|chore|style)(\([[:alnum:]._/-]+\))?: .+$'
+
+if printf '%s\n' "$subject" | grep -Eq "$conventional_pattern"; then
+  exit 0
+fi
+
+cat >&2 <<'EOF'
+Invalid commit message.
+
+Use Conventional Commits, for example:
+  feat: add Python warmup support
+  fix(runtime): handle null guest values
+  chore(release): 0.4.0
+
+Allowed types:
+  feat, fix, refactor, perf, build, ci, docs, test, chore, style
+EOF
+
+exit 1

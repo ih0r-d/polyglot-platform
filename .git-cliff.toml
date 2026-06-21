@@ -1,6 +1,6 @@
 [git]
 # Tags like v0.0.19, v0.0.20, v0.0.21, ...
-tag_pattern = "v[0-9]*.[0-9]*.[0-9]*"
+tag_pattern = "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
 
 [cli]
 tag_format = "v{{version}}"
@@ -53,30 +53,30 @@ footer = """
 Generated for **polyglot-adapter** from git history.
 """
 
-# feat: ... -> Added
+# Release commits (both "Release X" and "chore(release): X") -> skip
 [[git.commit_parsers]]
-message = "^feat"
+message = "^(Release|release)\\s+.+$|^chore\\(release\\):\\s+.+$"
+skip = true
+
+# feat: ... / feat(scope): ... -> Added
+[[git.commit_parsers]]
+message = "^feat(?:\\([^)]+\\))?:\\s+.+$"
 group = "Added"
 
-# fix: ... -> Fixed
+# fix: ... / fix(scope): ... -> Fixed
 [[git.commit_parsers]]
-message = "^fix"
+message = "^fix(?:\\([^)]+\\))?:\\s+.+$"
 group = "Fixed"
 
-# refactor / perf -> Changed
+# refactor: ... / refactor(scope): ... / perf: ... / perf(scope): ... -> Changed
 [[git.commit_parsers]]
-message = "^(refactor|perf)"
+message = "^(refactor|perf)(?:\\([^)]+\\))?:\\s+.+$"
 group = "Changed"
 
 # build / ci / docs / test / chore -> Internal
 [[git.commit_parsers]]
-message = "^(build|ci|docs|test|chore)"
+message = "^(build|ci|docs|test|chore)(?:\\([^)]+\\))?:\\s+.+$"
 group = "Internal"
-
-# Release commits (both "Release X" and "chore(release): X") -> skip
-[[git.commit_parsers]]
-message = "^(Release|release|chore\\(release\\))"
-skip = true
 
 # Fallback: anything else -> Internal
 [[git.commit_parsers]]

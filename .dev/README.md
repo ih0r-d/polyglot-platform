@@ -24,9 +24,12 @@ Use the scripts directly for local automation:
 - `./.dev/dry-run-release.sh --log /tmp/polyglot-dry-run.log`
 - `./.dev/bin/clean-remote-tags.sh`
 - `./.dev/bin/pre-commit-maven.sh`
+- `./.dev/bin/setup-hooks.sh`
 
 Use Task only as a convenience alias layer:
 
+- `task dev:setup`
+- `task dev:hooks`
 - `task -t .dev/Taskfile.yaml build`
 - `task -t .dev/Taskfile.yaml bump -- minor`
 - `task -t .dev/Taskfile.yaml dry-run-release`
@@ -35,6 +38,8 @@ Use Task only as a convenience alias layer:
 - `task -t .dev/Taskfile.yaml release-preflight-clean`
 - `task -t .dev/Taskfile.yaml release -- 1.2.3`
 - `task -t .dev/Taskfile.yaml bump -- patch`
+- `task -t .dev/Taskfile.yaml setup-hooks`
+- `task -t .dev/Taskfile.yaml dev-setup`
 
 ## Rules
 
@@ -57,9 +62,17 @@ For repository work, prefer the pinned SDKMAN environment first:
 sdk env
 ```
 
+First-time contributor setup:
+
+```bash
+task dev:setup
+```
+
 ## Safety
 
 - `release-preflight.sh` is the required local gate before `release.sh`.
+- `dev-setup.sh` enables repository-local Git hooks for the current clone, checks the local Maven/Java environment, and runs a lightweight validation step.
+- `setup-hooks.sh` enables repository-local Git hooks for the current clone; it is not automatic after clone.
 - `release-preflight.sh` runs quality verification, strict docs build, local artifact install, and
   maintained sample verification.
 - `release-preflight.sh` creates `.venv-docs/` automatically when `mkdocs` is not available and

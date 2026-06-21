@@ -68,6 +68,16 @@ tasks:
     cmds:
       - ./bin/pre-commit-maven.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
+  setup-hooks:
+    desc: Enable repository-local Git hooks for this clone
+    cmds:
+      - ./bin/setup-hooks.sh
+
+  dev-setup:
+    desc: Prepare local contributor tooling for this clone
+    cmds:
+      - ./bin/dev-setup.sh
+
   default:
     desc: Default task (clean + build)
     cmds:
