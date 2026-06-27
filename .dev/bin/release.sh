@@ -56,10 +56,8 @@ if [ "$already_prepared" = false ]; then
     -DgenerateBackupPoms=false
 
   git cliff --config .git-cliff.toml \
-    --unreleased \
     --tag "$VERSION" \
-    --strip header \
-    --prepend CHANGELOG.md
+    --output CHANGELOG.md
 fi
 
 git add CHANGELOG.md "${pom_files[@]}"

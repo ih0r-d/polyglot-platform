@@ -1,3 +1,27 @@
+# Polyglot-adapter changelog
+
+All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be documented in this file.
+
+## [0.4.0] - 2026-06-27
+
+
+### ✅ Fixed
+- resolve snyk vulnerabilities (49d7ff2)
+
+
+### 🧪 Internal
+- bump 0.3.1 to 0.4.0-SNAPSHOT (2a70ee0)
+- integrate semantic commit setup into dev tooling (ab99a54)
+- use Central Portal publishing only (b6ba54e)
+- verify release profile before publishing (59cf938)
+- centralize task commands (e37100e)
+- centralize developer tooling guide (480e2b7)
+- add local docs workflow (f4389a2)
+- remove stale 0.3 version references (b218942)
+- improve release workflow diagnostics (bf85640)
+- pin GitHub actions to full shas (1f1704e)
+
+
 ## [0.3.1] - 2026-05-10
 
 
@@ -74,57 +98,29 @@
 - document preflight-first release flow (2a4a04c)
 
 
-# Polyglot-adapter changelog
-
-All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be documented in this file.
-
-## [Unreleased]
-
-## [0.3.0] - 2026-04-12
-
-### ➕ Added
-- add strict generation and incremental write controls (9277a32)
-- extend CodegenConfig with strict mode and enforce unknown-type checks (d366ee6)
-- add check goal and contract drift enforcement (fbc4bea)
-- add doctor goal and harden strict type resolution (1dd69df)
-
-### ✅ Fixed
-- harden lifecycle, cache reload semantics, and nullability checks (a016064)
-- clear 0.3.0 release blockers (906afda)
-
-### 🧪 Internal
-- bump 0.2.1 to 0.3.0-SNAPSHOT (a144056)
-- clarify python-first scope and lifecycle/cache/preload semantics (77a87b8)
-- add real-context python preload and cache lifecycle coverage (400fd9c)
-- align toolchain guidance and runtime semantics (6f814a7)
-- align 0.3.0 positioning with current scope (8ccc35f)
-- align examples with 0.3.0-SNAPSHOT (0e91e20)
-- fix existing spotless import order (e4893ea)
-- mark JavaScript support as experimental (c176bcc)
-- mark JavaScript path experimental in JavaDoc (786a442)
-- add experimental API marker and release gates (e543c92)
-- enforce quality gate before github release (f8646d0)
-
 ## [0.2.1] - 2026-03-31
+
 
 ### ➕ Added
 - improve startup visibility and demo runtime flags (6883f28)
+
 
 ### ⚙️ Changed
 - deduplicate object provider adapters (9ea9ef0)
 - fix sonar issues and raise new code coverage (a883d66)
 
+
 ### ✅ Fixed
 - align examples with 0.2.0 usage (88974a8)
 - defer metrics executor resolution (c99038f)
+
 
 ### 🧪 Internal
 - avoid direct use of workflow input in shell (12d6ef8)
 - prevent duplicate changelog header on release (33c90fa)
 - use conventional commit messages for release scripts (ed29f60)
 - normalize published API documentation (3ab0836)
-- prepare metadata and skip parent pom publication (6c5cba4)
-- verify dry-run publishing flow (f032722)
+
 
 ## [0.2.0] - 2026-03-29
 
@@ -157,6 +153,7 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 
 
 ### ✅ Fixed
+- update maven dependencies (c56f809)
 - replace field injection with constructor injection in PolyglotClientFactoryBean (7fd6e27)
 - add codegen example, small updates on other examples (b477299)
 - update maven dependencies (149f6f1)
@@ -172,6 +169,7 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 
 
 ### 🧪 Internal
+- synchronize version bump across all Maven modules (93cab37)
 - align build script with Maven skipTests semantics (f34e13b)
 - rename java-example to java-maven-example (db37a64)
 - fix AbstractPolyglotExecutor tests after ScriptSource SPI (3b9fa7d)
@@ -253,7 +251,7 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - update release script (c85857c)
 
 
-## [v0.0.20] - 2025-11-22
+## [0.0.20] - 2025-11-22
 
 
 ### ➕ Added
@@ -270,7 +268,7 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - update java example with new adapter implementation (97cb292)
 
 
-## [v0.0.19] - 2025-11-09
+## [0.0.19] - 2025-11-09
 
 
 ### ✅ Fixed
@@ -281,7 +279,7 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - code formatting (24bd507)
 
 
-## [v0.0.18] - 2025-11-09
+## [0.0.18] - 2025-11-09
 
 
 ### ✅ Fixed
@@ -297,21 +295,21 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - fix mvn deploy step (e4a9d18)
 
 
-## [v0.0.17] - 2025-11-08
+## [0.0.17] - 2025-11-08
 
 
 ### ✅ Fixed
 - update pom.xml and project example (7a1217b)
 
 
-## [v0.0.16] - 2025-11-07
+## [0.0.16] - 2025-11-07
 
 
 ### 🧪 Internal
 - simplify executors and optimize context configuration (32cac09)
 
 
-## [v0.0.15] - 2025-11-02
+## [0.0.15] - 2025-11-02
 
 
 ### ⚙️ Changed
@@ -322,28 +320,28 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - improve test coverage to 64%, code reformat (0c67589)
 
 
-## [v0.0.14] - 2025-11-02
+## [0.0.14] - 2025-11-02
 
 
 ### 🧪 Internal
 - prepare to mvn central release (444f1b7)
 
 
-## [v0.0.13] - 2025-11-01
+## [0.0.13] - 2025-11-01
 
 
 ### ✅ Fixed
 - update maven dependencies (f27d9ec)
 
 
-## [v0.0.12] - 2025-11-01
+## [0.0.12] - 2025-11-01
 
 
 ### ⚙️ Changed
 - remove PolyglotAdapter and migrate to unified binding-based executor API (f729b1a)
 
 
-## [v0.0.11] - 2025-10-18
+## [0.0.11] - 2025-10-18
 
 
 ### ➕ Added
@@ -363,7 +361,7 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - update github actions to v5 (d336a11)
 
 
-## [v0.0.10] - 2025-10-12
+## [0.0.10] - 2025-10-12
 
 
 ### 🧪 Internal
@@ -371,7 +369,7 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - remove warnigns from bump script (0371769)
 
 
-## [v0.0.7] - 2025-10-12
+## [0.0.7] - 2025-10-12
 
 
 ### ⚙️ Changed
@@ -382,7 +380,7 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - add github action and update release script (f28f0e2)
 
 
-## [v0.0.5] - 2025-10-10
+## [0.0.5] - 2025-10-10
 
 
 ### ➕ Added
@@ -394,7 +392,7 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - refactor tests and update Taskfile configuration (031271b)
 
 
-## [v0.0.4] - 2025-10-09
+## [0.0.4] - 2025-10-09
 
 
 ### ➕ Added
@@ -410,7 +408,7 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - update Readme.md (37a7a85)
 
 
-## [v0.0.2] - 2025-10-01
+## [0.0.2] - 2025-10-01
 
 
 ### ➕ Added
