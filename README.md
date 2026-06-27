@@ -232,6 +232,7 @@ Project documentation is maintained in [`docs/`](docs/). Start with [`docs/index
 - [`docs/runtime.md`](docs/runtime.md)
 - [`docs/runtime-semantics.md`](docs/runtime-semantics.md)
 - [`docs/codegen.md`](docs/codegen.md)
+- [`docs/troubleshooting.md`](docs/troubleshooting.md)
 - [`docs/developer-tooling.md`](docs/developer-tooling.md)
 - [`docs/concepts.md`](docs/concepts.md)
 - [`docs/release-checklist.md`](docs/release-checklist.md)

@@ -91,6 +91,10 @@ sdk env
 
 If you want aligned runtime dependency versions, import `polyglot-bom` first.
 
+If the first binding attempt fails, use the troubleshooting guide for the common script lookup,
+export, convention, language dependency, and Spring Boot startup checks:
+[`troubleshooting.md`](troubleshooting.md).
+
 ## Package and Run on a JVM
 
 Add the runtime BOM:

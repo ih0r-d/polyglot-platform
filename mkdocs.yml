@@ -36,6 +36,7 @@ nav:
   - Runtime: runtime.md
   - Runtime Semantics: runtime-semantics.md
   - Code Generation: codegen.md
+  - Troubleshooting: troubleshooting.md
   - Developer Tooling: developer-tooling.md
   - Examples: examples.md
   - Release Checklist: release-checklist.md

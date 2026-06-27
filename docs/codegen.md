@@ -191,6 +191,9 @@ Recommended policy:
 - use `polyglot:check` in CI to detect drift without rewriting files
 - treat `polyglot:doctor` as a local diagnostic convenience, not as a separate behavior contract
 
+For parser limitations, drift failures, and common check/doctor symptoms, see
+[`troubleshooting.md`](troubleshooting.md).
+
 ## Relationship to Runtime Execution
 
 The code generation layer and the runtime adapter are separate by design, but they are intended to be used together.

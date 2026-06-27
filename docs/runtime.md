@@ -77,6 +77,7 @@ Failures during guest execution surface as adapter exceptions (`InvocationExcept
 by guest code during proxy method invocation is wrapped as `InvocationException` with the original
 `PolyglotException` as the cause. All are unchecked. See
 [`runtime-semantics.md`](runtime-semantics.md#exception-contract) for the full exception contract.
+For symptom-oriented fixes, see [`troubleshooting.md`](troubleshooting.md).
 
 ## Python Runtime Details
 
