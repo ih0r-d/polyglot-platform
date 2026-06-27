@@ -9,7 +9,15 @@ import org.springframework.context.annotation.Import;
  * io.github.ih0rd.polyglot.annotations.PolyglotClient}.
  *
  * <p>The Spring starter uses this annotation to discover Java contracts that should be bound to
- * guest-language implementations through the runtime adapter.
+ * guest-language implementations through the runtime adapter. Python-backed clients are the primary
+ * supported path; JavaScript-backed clients remain experimental.
+ *
+ * <pre>{@code
+ * @Configuration
+ * @EnablePolyglotClients(basePackages = "com.example.clients")
+ * class PolyglotClientConfig {
+ * }
+ * }</pre>
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

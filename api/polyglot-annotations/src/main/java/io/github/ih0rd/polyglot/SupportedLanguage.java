@@ -22,9 +22,9 @@ import io.github.ih0rd.polyglot.annotations.ExperimentalApi;
  * </ul>
  */
 public enum SupportedLanguage {
-  /** Python guest-language support. */
+  /** Python guest-language support and primary stabilization target. */
   PYTHON("python", ".py"),
-  /** JavaScript guest-language support. Currently treated as experimental. */
+  /** Experimental JavaScript guest-language support. */
   @ExperimentalApi
   JS("js", ".js");
 

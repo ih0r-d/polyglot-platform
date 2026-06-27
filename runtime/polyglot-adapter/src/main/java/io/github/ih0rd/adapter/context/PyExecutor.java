@@ -26,7 +26,11 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
 /**
  * Python-specific executor backed by GraalPy.
  *
- * <p>The executor follows the repository's default convention:
+ * <p>This is the primary runtime entry point for direct, non-Spring usage. Spring Boot users will
+ * normally receive this executor through the starter auto-configuration or inject Java interfaces
+ * annotated with {@code @PolyglotClient}.
+ *
+ * <p>The executor follows the repository's default Python convention:
  *
  * <ul>
  *   <li>script name derived from the Java interface simple name in snake case
@@ -35,6 +39,14 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  *
  * <p>Sources are cached per Java interface. Resolved Python targets are cached per interface using
  * weak references, so a reclaimed target may be recreated on a later invocation.
+ *
+ * <p>Minimal direct setup:
+ *
+ * <pre>{@code
+ * ScriptSource scripts = new ClasspathScriptSource();
+ * PyExecutor executor = PyExecutor.create(scripts, builder -> builder.allowAllAccess(false));
+ * executor.validateBinding(RecommendationService.class, Convention.DEFAULT);
+ * }</pre>
  */
 public final class PyExecutor extends AbstractPolyglotExecutor {
 
@@ -42,7 +54,10 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   private final Map<Class<?>, WeakReference<Value>> instanceCache = new ConcurrentHashMap<>();
 
   /**
-   * Creates a Python executor.
+   * Creates a Python executor from an existing GraalPy context.
+   *
+   * <p>Use this constructor when the application needs to configure the GraalPy context directly.
+   * The executor uses the supplied context and closes it when the executor is closed.
    *
    * @param context GraalPy context
    * @param scriptSource script source abstraction
@@ -96,7 +111,10 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   }
 
   /**
-   * Creates a Python executor with a new internally managed context.
+   * Creates a Python executor with a new context used by the executor.
+   *
+   * <p>The optional customizer is the place to configure GraalVM access permissions, host access,
+   * and other context options needed by trusted scripts.
    *
    * @param scriptSource script source implementation
    * @param customizer optional context-builder customizer
@@ -111,9 +129,10 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   /**
    * Creates a Python executor with a caller-provided context.
    *
-   * <p>The caller remains responsible for the context lifecycle.
+   * <p>Use this factory when the application needs to configure the GraalPy context directly. The
+   * executor uses the supplied context and closes it when the executor is closed.
    *
-   * @param context externally managed GraalPy context
+   * @param context GraalPy context supplied by the caller
    * @param scriptSource script source implementation
    * @return configured executor bound to the provided context
    */

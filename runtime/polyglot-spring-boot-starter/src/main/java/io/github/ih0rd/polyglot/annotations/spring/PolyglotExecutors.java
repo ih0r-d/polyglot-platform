@@ -14,7 +14,9 @@ import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotObjectProvid
 /**
  * Spring-facing facade exposing the executors created by the starter.
  *
- * <p>This avoids leaking optional bean lookups throughout the rest of the Spring integration.
+ * <p>Application code can use this facade when it needs direct executor access instead of an
+ * interface proxy created from {@code @PolyglotClient}. Python is the primary supported executor;
+ * JavaScript access is exposed for experimental integrations.
  */
 public final class PolyglotExecutors {
 
@@ -58,7 +60,8 @@ public final class PolyglotExecutors {
   }
 
   /**
-   * Returns the JavaScript executor when the JavaScript runtime integration is enabled.
+   * Returns the JavaScript executor when the experimental JavaScript runtime integration is
+   * enabled.
    *
    * @return optional JavaScript executor
    */
@@ -79,7 +82,8 @@ public final class PolyglotExecutors {
   }
 
   /**
-   * Returns the JavaScript executor or throws when JavaScript support is not available.
+   * Returns the experimental JavaScript executor or throws when JavaScript support is not
+   * available.
    *
    * @return configured JavaScript executor
    * @throws IllegalStateException if JavaScript support is disabled

@@ -20,7 +20,7 @@ import io.github.ih0rd.polyglot.annotations.ExperimentalApi;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
 /**
- * JavaScript-specific executor backed by GraalJS.
+ * Experimental JavaScript-specific executor backed by GraalJS.
  *
  * <p>The executor loads one script per Java contract and resolves interface methods from JavaScript
  * language bindings.
@@ -30,14 +30,18 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  *
  * <p>This executor is part of the repository's experimental JavaScript support surface. It is a
  * bounded runtime path and is not a parity target with the Python executor before {@code 1.0.0}.
+ * Prefer {@link PyExecutor} for release-grade integrations unless the application is explicitly
+ * validating the JavaScript path.
  */
 @ExperimentalApi
 public final class JsExecutor extends AbstractPolyglotExecutor {
 
   /**
-   * Creates a JavaScript executor.
+   * Creates a JavaScript executor from an existing GraalJS context.
    *
-   * <p>JavaScript support is currently experimental.
+   * <p>Use this constructor when the application needs to configure the GraalJS context directly.
+   * The executor uses the supplied context and closes it when the executor is closed. JavaScript
+   * support is currently experimental.
    *
    * @param context GraalJS context
    * @param scriptSource script source abstraction
@@ -103,7 +107,7 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
   }
 
   /**
-   * Creates a JavaScript executor with a new internally managed context.
+   * Creates a JavaScript executor with a new context used by the executor.
    *
    * <p>JavaScript support is currently experimental.
    *
@@ -120,9 +124,11 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
   /**
    * Creates a JavaScript executor using a caller-provided context.
    *
-   * <p>JavaScript support is currently experimental.
+   * <p>Use this factory when the application needs to configure the GraalJS context directly. The
+   * executor uses the supplied context and closes it when the executor is closed. JavaScript
+   * support is currently experimental.
    *
-   * @param context externally managed GraalJS context
+   * @param context GraalJS context supplied by the caller
    * @param scriptSource script source implementation
    * @return configured executor bound to the provided context
    */

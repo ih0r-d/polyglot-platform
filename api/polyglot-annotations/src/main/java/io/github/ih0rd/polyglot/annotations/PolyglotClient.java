@@ -21,6 +21,13 @@ import io.github.ih0rd.polyglot.SupportedLanguage;
  *
  * <p>Binding currently follows {@link Convention#DEFAULT}.
  *
+ * <pre>{@code
+ * @PolyglotClient(languages = SupportedLanguage.PYTHON)
+ * interface RecommendationService {
+ *   String recommend(String userId);
+ * }
+ * }</pre>
+ *
  * <p>Python is the primary stabilization target. JavaScript-backed clients are currently treated as
  * experimental and should be used with a narrower support expectation.
  */

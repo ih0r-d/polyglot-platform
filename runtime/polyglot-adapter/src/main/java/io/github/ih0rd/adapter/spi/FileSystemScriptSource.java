@@ -12,7 +12,8 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
 /**
  * {@link ScriptSource} implementation that loads scripts from the local filesystem.
  *
- * <p>The expected directory structure is {@code {baseDir}/{language}/{scriptName}{extension}}.
+ * <p>The expected directory structure is {@code {baseDir}/{language}/{scriptName}{extension}}, for
+ * example {@code scripts/python/forecast_service.py}.
  *
  * <p>This implementation is useful for local development, hot-reload scenarios, and external script
  * overrides. It is generally not suitable for packaged JAR-only deployments.

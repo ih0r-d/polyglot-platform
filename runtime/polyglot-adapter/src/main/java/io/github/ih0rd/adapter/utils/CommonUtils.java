@@ -10,30 +10,17 @@ import org.graalvm.polyglot.Value;
 import io.github.ih0rd.adapter.exceptions.EvaluationException;
 
 /**
- * Utility class providing reflection and polyglot adapter helpers.
+ * Legacy reflection helpers retained for source and binary compatibility.
  *
- * <p><strong>Responsibilities:</strong>
- *
- * <ul>
- *   <li>Fast method invocation using {@link java.lang.invoke.MethodHandle}
- *   <li>Primitive and wrapper argument coercion for GraalVM calls
- *   <li>Reflection helpers for method discovery and validation
- *   <li>Lightweight polyglot utilities such as {@code getFirstElement()}
- * </ul>
- *
- * <p><strong>Notes:</strong>
+ * <p>This class is not used by the current adapter runtime and is not recommended for new
+ * integrations. Prefer the supported executor APIs such as {@link
+ * io.github.ih0rd.adapter.context.PyExecutor} and {@link
+ * io.github.ih0rd.adapter.context.JsExecutor}.
  *
  * <p>All reflection or invocation errors are wrapped in {@link EvaluationException}.
  *
- * <p><strong>Example:</strong>
- *
- * <pre>{@code
- * var result = CommonUtils.invokeMethod(MyApi.class, instance, "ping");
- * System.out.println(result.asString());
- * }</pre>
- *
- * @deprecated This class is not used by the adapter runtime and will be removed in a future
- *     release. It is not part of the supported public API.
+ * @deprecated This legacy utility is not part of the supported public API and is scheduled for
+ *     removal in a future release.
  */
 @Deprecated(forRemoval = true, since = "0.3.1")
 public final class CommonUtils {

@@ -14,8 +14,8 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  * <p>This implementation is primarily intended for unit tests, runtime overrides, and dynamically
  * generated scripts.
  *
- * <p>Scripts are stored using the key format {@code {language}/{scriptName}}. No filesystem or
- * classpath access is performed.
+ * <p>Scripts are stored using the key format {@code {language}/{scriptName}}, for example {@code
+ * python/forecast_service}. No filesystem or classpath access is performed.
  */
 public final class InMemoryScriptSource implements ScriptSource {
 

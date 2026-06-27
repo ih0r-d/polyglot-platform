@@ -3,6 +3,9 @@ package io.github.ih0rd.adapter.exceptions;
 /**
  * Thrown when guest code execution fails after the adapter has already resolved the target script
  * and binding.
+ *
+ * <p>Use this exception to distinguish runtime failures raised by Python or the GraalVM execution
+ * layer from binding problems such as missing exports.
  */
 public class InvocationException extends EvaluationException {
 

@@ -12,7 +12,8 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  * {@link ScriptSource} implementation that loads scripts from the application classpath.
  *
  * <p>Scripts are resolved using the convention {@code {language}/{scriptName}{extension}}, for
- * example {@code python/forecast_service.py} or {@code js/forecast_service.js}.
+ * example {@code python/forecast_service.py}. JavaScript resources use the same layout with the
+ * {@code js} language directory, but JavaScript runtime support is experimental.
  *
  * <p>This implementation is suitable for packaged JARs, container deployments, and GraalVM native
  * images when the resources are included in the image configuration.
