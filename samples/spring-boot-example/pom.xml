@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.4</version>
+        <version>4.1.0</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>io.github.ih0rd.examples</groupId>
@@ -63,6 +63,16 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-jackson</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-gson</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
