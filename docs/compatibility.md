@@ -16,8 +16,8 @@ The current `0.4.x` release-preparation line verifies the following:
 - all modules compiled with `maven.compiler.release=21`
 - root enforcer minimum Java version: 21
 - GraalVM dependency line: `25.0.2`
-- Spring Boot repository dependency-management line: `4.0.4`
-- maintained Spring sample currently aligned to Spring Boot `4.0.4`
+- Spring Boot repository dependency-management line: `4.1.0`
+- maintained Spring sample currently aligned to Spring Boot `4.1.0`
 - maintained sample smoke verification on GraalVM JDK 25 for:
   - `samples/java-maven-example`
   - `samples/java-maven-codegen-example`
@@ -29,7 +29,7 @@ verification lines:
 - Java 21 as the repository minimum compile baseline
 - Java 25 / GraalVM 25.x as the currently exercised runtime and maintained-sample verification line
 
-It now verifies the current Spring Boot 4.0.4 line through the starter tests and the maintained
+It now verifies the current Spring Boot 4.1.0 line through the starter tests and the maintained
 Spring sample.
 
 The repository root pins the expected local Java runtime in `.sdkmanrc`. For
@@ -44,14 +44,14 @@ runtime work, maintained samples, and full test execution, contributors are expe
 | Java minimum for repository modules  | 21                    | root `pom.xml`, module POMs, Java 21 CI build                       | The repository contract now uses Java 21 as the minimum baseline            |
 | Java runtime verification line       | 25                    | `.sdkmanrc`, GraalVM 25 CI runtime job, sample verification on 25   | GraalVM 25.x remains the current verified runtime lane                      |
 | GraalVM runtime deps                 | 25.0.2                | root dependency management, sample POMs, sample workflows           | Current maintained runtime line                                             |
-| Spring Boot starter line             | 4.0.4                 | root dependency management, starter tests, maintained Spring sample | Verified in the current repository line, not a broad historical range claim |
+| Spring Boot starter line             | 4.1.0                 | root dependency management, starter tests, maintained Spring sample | Verified in the current repository line, not a broad historical range claim |
 | Maintained sample smoke verification | Java 25 / GraalVM 25  | `samples.yml`, sample POMs                                          | Samples are verification inputs, not independent support guarantees         |
 
 ## Target Support, Not Yet Verified
 
 The stabilization path toward `1.0.0` may still aim for:
 
-- broader Spring Boot compatibility claims beyond the currently verified `4.0.4` line
+- broader Spring Boot compatibility claims beyond the currently verified `4.1.0` line
 
 This remains a target only. It should not be described as supported until the repository actually
 verifies it.
@@ -60,7 +60,7 @@ verifies it.
 
 Do not currently claim:
 
-- a broad Spring Boot 4.x compatibility range beyond the currently verified `4.0.4` line
+- a broad Spring Boot 4.x compatibility range beyond the currently verified `4.1.0` line
 - Spring Boot 3.x support
 - support for GraalVM lines other than the currently exercised 25.x line
 - broad runtime verification on Java lines other than the currently exercised 25 line

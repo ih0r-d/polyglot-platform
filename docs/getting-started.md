@@ -81,7 +81,7 @@ Without the exported value and the naming convention, the runtime adapter would 
 - add only the GraalVM language runtimes you use
 
 If you are using the Spring Boot starter instead of the framework-neutral adapter shown here, stay
-on the repository's currently verified Spring Boot 4.0.4 line.
+on the repository's currently verified Spring Boot 4.1.0 line.
 
 When working from this repository checkout, activate the pinned SDKMAN environment first:
 

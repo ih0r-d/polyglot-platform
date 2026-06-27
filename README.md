@@ -47,7 +47,7 @@ Current verified repository line:
 - repository modules compile against Java 21
 - repository CI explicitly exercises Java 21 as the minimum baseline
 - runtime modules and maintained sample verification currently run on Java 25 / GraalVM 25.x
-- the repository currently verifies a Spring Boot 4.0.4 starter and maintained sample line
+- the repository currently verifies a Spring Boot 4.1.0 starter and maintained sample line
 
 Current contract boundaries:
 

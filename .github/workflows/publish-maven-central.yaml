@@ -39,6 +39,31 @@ jobs:
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           gpg-passphrase: GPG_PASSPHRASE
 
+      - name: Validate publish input
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if ! printf '%s\n' "${RELEASE_TAG}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "Publish tag must look like v0.4.0 or v0.4.0-rc.1. Got: ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+
+      - name: Verify publishing secrets are configured
+        env:
+          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          missing=0
+          for name in MAVEN_USERNAME MAVEN_PASSWORD GPG_PRIVATE_KEY GPG_PASSPHRASE; do
+            if [ -z "${!name}" ]; then
+              echo "Missing required publishing secret: ${name}" >&2
+              missing=1
+            fi
+          done
+          exit "$missing"
+
       - name: Verify tag exists locally
         env:
           RELEASE_TAG: ${{ inputs.tag }}
@@ -70,3 +95,22 @@ jobs:
         run: |
           ./mvnw -B -ntp -Prelease,quality deploy \
             -Dgpg.passphrase="${GPG_PASSPHRASE}"
+
+      - name: Summarize Maven Central publish
+        if: success()
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          {
+            echo "## Maven Central Publish"
+            echo
+            echo "Published tag: \`${RELEASE_TAG}\`"
+            echo
+            echo "Validated:"
+            echo "- publish tag format"
+            echo "- required publishing secrets are configured"
+            echo "- tag exists in the checked-out repository"
+            echo "- tag matches Maven project version"
+            echo "- release profile dry run"
+            echo "- release and quality profiles during deploy"
+          } >> "$GITHUB_STEP_SUMMARY"

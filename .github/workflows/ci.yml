@@ -218,18 +218,25 @@ jobs:
 
       - name: Run Snyk Maven scan
         if: env.SNYK_TOKEN != ''
+        shell: bash
         run: |
           set +e
-          snyk test --maven-aggregate-project --severity-threshold=high --sarif-file-output=snyk.sarif -- -Dmaven.plugin.skipErrorNoDescriptorsFound=true
-          exit_code=$?
-          printf '%s\n' "$exit_code" > .snyk-exit-code
+          snyk test \
+            --maven-aggregate-project \
+            --severity-threshold=high \
+            --json-file-output=snyk-report.json \
+            --sarif-file-output=snyk-report.sarif \
+            -- -Dmaven.plugin.skipErrorNoDescriptorsFound=true 2>&1 | tee snyk-report.txt
+          exit_code=${PIPESTATUS[0]}
+          printf '%s\n' "$exit_code" > snyk-exit-code.txt
           exit 0
 
       - name: Detect Snyk SARIF output
         id: snyk-sarif
         if: always()
+        shell: bash
         run: |
-          if [ -f snyk.sarif ]; then
+          if [ -f snyk-report.sarif ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -239,29 +246,105 @@ jobs:
         if: always() && steps.snyk-sarif.outputs.exists == 'true'
         uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: snyk.sarif
+          sarif_file: snyk-report.sarif
+
+      - name: Upload Snyk reports
+        if: always() && env.SNYK_TOKEN != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-reports
+          path: |
+            snyk-report.txt
+            snyk-report.json
+            snyk-report.sarif
+            snyk-exit-code.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Summarize Snyk result
+        if: always() && env.SNYK_TOKEN != ''
+        shell: bash
+        run: |
+          {
+            echo "## Snyk Maven Scan"
+            echo
+
+            if [ ! -f snyk-exit-code.txt ]; then
+              echo "Snyk did not produce an exit code marker. Treat this as a scan/setup failure."
+              exit 0
+            fi
+
+            exit_code="$(cat snyk-exit-code.txt)"
+            case "$exit_code" in
+              0)
+                echo "Result: passed. No high or critical vulnerable paths were reported."
+                ;;
+              1)
+                echo "Result: failed. Snyk reported high or critical vulnerabilities."
+                echo
+                echo "Open the \`snyk-reports\` artifact for:"
+                echo "- human-readable output: \`snyk-report.txt\`"
+                echo "- machine-readable output: \`snyk-report.json\`"
+                echo "- code scanning output when available: \`snyk-report.sarif\`"
+                ;;
+              2)
+                echo "Result: failed. Snyk reported a scan/setup error, not a vulnerability finding."
+                echo
+                echo "Check \`snyk-report.txt\` in the \`snyk-reports\` artifact for CLI diagnostics."
+                ;;
+              3)
+                echo "Result: failed. Snyk did not detect supported projects."
+                echo
+                echo "Check Maven project detection and the Snyk CLI output in \`snyk-report.txt\`."
+                ;;
+              *)
+                echo "Result: failed. Snyk returned unexpected exit code \`${exit_code}\`."
+                echo
+                echo "Check \`snyk-report.txt\` in the \`snyk-reports\` artifact."
+                ;;
+            esac
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Update Snyk project snapshot
         if: env.SNYK_TOKEN != ''
+        shell: bash
         run: |
-          if [ -f .snyk-exit-code ] && [ "$(cat .snyk-exit-code)" = "0" ]; then
+          if [ -f snyk-exit-code.txt ] && [ "$(cat snyk-exit-code.txt)" = "0" ]; then
             snyk monitor --maven-aggregate-project --target-reference="${{ github.ref_name }}" -- -Dmaven.plugin.skipErrorNoDescriptorsFound=true
           else
             echo "Skipping snyk monitor because the scan did not succeed."
           fi
 
-      - name: Fail when Snyk finds high severity issues
+      - name: Fail on Snyk vulnerabilities or scan errors
         if: always() && env.SNYK_TOKEN != ''
+        shell: bash
         run: |
-          if [ ! -f .snyk-exit-code ]; then
+          if [ ! -f snyk-exit-code.txt ]; then
             echo "Snyk scan did not produce an exit code marker."
             exit 1
           fi
-          exit_code="$(cat .snyk-exit-code)"
-          if [ "$exit_code" != "0" ]; then
-            echo "Snyk reported vulnerabilities or scan errors. Exit code: $exit_code"
-            exit 1
-          fi
+          exit_code="$(cat snyk-exit-code.txt)"
+          case "$exit_code" in
+            0)
+              echo "Snyk scan passed."
+              ;;
+            1)
+              echo "Snyk reported high or critical vulnerabilities. See snyk-report.txt/json and the job summary."
+              exit 1
+              ;;
+            2)
+              echo "Snyk scan/setup failed. See snyk-report.txt and the job summary."
+              exit 1
+              ;;
+            3)
+              echo "Snyk did not detect supported projects. See snyk-report.txt and the job summary."
+              exit 1
+              ;;
+            *)
+              echo "Snyk returned unexpected exit code: $exit_code. See snyk-report.txt and the job summary."
+              exit 1
+              ;;
+          esac
 
       - name: Skip Snyk scan when token is unavailable
         if: env.SNYK_TOKEN == ''

@@ -30,6 +30,13 @@ jobs:
           java-version: 25
           cache: maven
 
+      - name: Validate release tag format
+        run: |
+          if ! printf '%s\n' "${GITHUB_REF_NAME}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "Release tag must look like v0.4.0 or v0.4.0-rc.1. Got: ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+
       - name: Verify tag matches project version
         run: |
           project_version="$(./mvnw -q -DforceStdout org.apache.maven.plugins:maven-help-plugin:3.5.1:evaluate -Dexpression=project.version)"
@@ -45,6 +52,21 @@ jobs:
 
       - name: Run release profile dry run
         run: ./mvnw -B -ntp -Prelease -Dgpg.skip=true -DskipTests clean verify
+
+      - name: Summarize release verification
+        if: success()
+        run: |
+          {
+            echo "## Release Verification"
+            echo
+            echo "Release tag: \`${GITHUB_REF_NAME}\`"
+            echo
+            echo "Validated:"
+            echo "- tag format"
+            echo "- tag matches Maven project version"
+            echo "- quality profile"
+            echo "- release profile dry run with signing skipped"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   release:
     name: Create GitHub Release

@@ -10,7 +10,7 @@ For the current `0.4.x` release-preparation line:
 - Java 21 is the minimum repository baseline
 - Java 21 and Java 25 are the exercised verification lanes
 - GraalVM 25.x is the verified runtime line
-- Spring Boot support is verified on the current Boot 4.0.4 line only
+- Spring Boot support is verified on the current Boot 4.1.0 line only
 - Python is the primary stabilization path
 - JavaScript remains experimental where marked with `@ExperimentalApi`
 

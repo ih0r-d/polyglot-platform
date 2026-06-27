@@ -9,7 +9,7 @@ It exists to separate:
 - explicitly unsupported areas
 
 For the current `0.4.x` line, stability work is anchored to the verified Java 21 baseline, the
-verified GraalVM 25.x runtime lane, and the currently verified Spring Boot 4.0.4 starter/sample
+verified GraalVM 25.x runtime lane, and the currently verified Spring Boot 4.1.0 starter/sample
 line.
 
 ## Stability Matrix
@@ -17,7 +17,7 @@ line.
 | Area | Status | Notes |
 | --- | --- | --- |
 | Python runtime binding via `PyExecutor` | target for stabilization | Primary path for the `0.4.x` to `1.0.0` journey |
-| Spring Boot starter on the Python-first path | target for stabilization | Verified on the current Boot 4.0.4 line; includes fail-fast, preload, warmup, actuator, and metrics behavior |
+| Spring Boot starter on the Python-first path | target for stabilization | Verified on the current Boot 4.1.0 line; includes fail-fast, preload, warmup, actuator, and metrics behavior |
 | Python-oriented code generation | target for stabilization | Limited to the documented supported parser subset |
 | JavaScript runtime binding via `JsExecutor` | experimental | Supported as a bounded runtime path, not a parity target before `1.0.0` |
 | Public API in non-experimental documented Python-first paths | stability-disciplined | Changes should be narrow, reviewed, and reflected in docs and tests |
