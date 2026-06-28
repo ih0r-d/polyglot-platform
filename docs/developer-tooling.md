@@ -61,14 +61,18 @@ and manual `workflow_dispatch` runs. CI is intentionally separate from release a
 release verification and GitHub Release creation stay in `.github/workflows/release.yaml`, while
 Maven Central publishing stays manual in `.github/workflows/publish.yaml`.
 
-Dependency Review runs only for pull requests. Snyk Open Source Scan runs for pull requests, pushes
-to `main`, and manual CI runs. Regular samples run on normal pull request and `main` push CI. AOT
-sample validation is manual-only through `workflow_dispatch`, and the CI matrix excludes those AOT
-entries on normal pull request and push runs so they do not appear as skipped jobs.
+Dependency Review runs only for pull requests. OSV Scanner runs for pull requests, pushes to
+`main`, and manual CI runs. CI first generates a Maven CycloneDX aggregate SBOM with
+`./mvnw -B -ntp -Psbom -DskipTests verify`, then OSV scans only that SBOM; it does not recursively
+scan the whole repository in CI. CodeQL remains the code security analysis gate, and Renovate remains
+responsible for dependency and GitHub Actions updates. Snyk is no longer required for CI. Regular
+samples run on normal pull request and `main` push CI. AOT sample validation is manual-only through
+`workflow_dispatch`, and the CI matrix excludes those AOT entries on normal pull request and push
+runs so they do not appear as skipped jobs.
 
 ```mermaid
 flowchart TD
-    DG["Stage 0: Dependency & Vulnerability Gate<br/>Dependency Review: PR only<br/>Snyk Open Source Scan: PR / push / manual<br/>artifact: snyk-reports"]
+    DG["Stage 0: Dependency & Vulnerability Gate<br/>Dependency Review: PR only<br/>OSV Scanner: Maven CycloneDX SBOM<br/>artifact: osv-sbom-reports"]
 
     J21["Stage 1: Baseline / Java 21<br/>mvn clean test<br/>artifact: maven-test-reports-java21"]
     G25["Stage 1: Runtime / GraalVM 25<br/>mvn clean test<br/>artifact: maven-test-reports-graalvm25"]

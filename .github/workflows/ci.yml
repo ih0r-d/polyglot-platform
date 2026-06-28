@@ -20,11 +20,10 @@ jobs:
     name: Dependency & Vulnerability Gate
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       pull-requests: read
       security-events: write
-    env:
-      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -36,143 +35,131 @@ jobs:
         with:
           fail-on-severity: high
 
-      - name: Install Snyk CLI
-        if: env.SNYK_TOKEN != ''
-        uses: snyk/actions/setup@9adf32b1121593767fc3c057af55b55db032dc04 # v1.0.0
+      - name: Set up Java 21
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
 
-      - name: Snyk Open Source Scan
-        if: env.SNYK_TOKEN != ''
+      - name: Generate CycloneDX aggregate SBOM
+        run: ./mvnw -B -ntp -Psbom -DskipTests verify
+
+      - name: Verify SBOM output
         shell: bash
         run: |
-          set +e
-          snyk test \
-            --maven-aggregate-project \
-            --severity-threshold=high \
-            --json-file-output=snyk-report.json \
-            --sarif-file-output=snyk-report.sarif \
-            -- -Dmaven.plugin.skipErrorNoDescriptorsFound=true 2>&1 | tee snyk-report.txt
-          exit_code=${PIPESTATUS[0]}
-          printf '%s\n' "$exit_code" > snyk-exit-code.txt
-          exit 0
+          if [ ! -s target/cyclonedx-bom.json ]; then
+            echo "Expected CycloneDX SBOM was not generated: target/cyclonedx-bom.json"
+            exit 1
+          fi
 
-      - name: Detect Snyk SARIF output
-        id: snyk-sarif
+      - name: Normalize SBOM filename for OSV Scanner
+        run: cp target/cyclonedx-bom.json target/bom.json
+
+      - name: OSV Scanner SBOM scan
+        id: osv-json
+        continue-on-error: true
+        uses: google/osv-scanner-action/osv-scanner-action@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
+        with:
+          scan-args: |-
+            scan
+            -L
+            target/bom.json
+            --format=json
+            --output-file=osv-report.json
+
+      - name: Generate OSV SARIF report from SBOM
+        id: osv-sarif-report
+        if: always()
+        continue-on-error: true
+        uses: google/osv-scanner-action/osv-scanner-action@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
+        with:
+          scan-args: |-
+            scan
+            -L
+            target/bom.json
+            --format=sarif
+            --output-file=osv-report.sarif
+
+      - name: Detect OSV SARIF output
+        id: osv-sarif
         if: always()
         shell: bash
         run: |
-          if [ -f snyk-report.sarif ]; then
+          if [ -f osv-report.sarif ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Upload Snyk SARIF
-        if: always() && steps.snyk-sarif.outputs.exists == 'true'
+      - name: Upload OSV SARIF
+        if: always() && steps.osv-sarif.outputs.exists == 'true'
         uses: github/codeql-action/upload-sarif@411bbbe57033eedfc1a82d68c01345aa96c737d7 # v4
         with:
-          sarif_file: snyk-report.sarif
+          sarif_file: osv-report.sarif
 
-      - name: Upload Snyk reports
+      - name: Upload OSV reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: snyk-reports
+          name: osv-sbom-reports
           path: |
-            snyk-report.txt
-            snyk-report.json
-            snyk-report.sarif
-            snyk-exit-code.txt
+            target/cyclonedx-bom.json
+            osv-report.json
+            osv-report.sarif
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Summarize Snyk result
-        if: always() && env.SNYK_TOKEN != ''
+      - name: Summarize OSV result
+        if: always()
         shell: bash
         run: |
           {
-            echo "## Snyk Maven Scan"
+            echo "## OSV Scanner"
             echo
 
-            if [ ! -f snyk-exit-code.txt ]; then
-              echo "Snyk did not produce an exit code marker. Treat this as a scan/setup failure."
+            if [ "${{ steps.osv-json.outcome }}" = "success" ]; then
+              echo "Result: passed. OSV Scanner did not report known vulnerable dependencies in the Maven CycloneDX SBOM."
               exit 0
             fi
 
-            exit_code="$(cat snyk-exit-code.txt)"
-            case "$exit_code" in
-              0)
-                echo "Result: passed. No high or critical vulnerable paths were reported."
-                ;;
-              1)
-                echo "Result: failed. Snyk reported high or critical vulnerabilities."
-                echo
-                echo "Open the \`snyk-reports\` artifact for:"
-                echo "- human-readable output: \`snyk-report.txt\`"
-                echo "- machine-readable output: \`snyk-report.json\`"
-                echo "- code scanning output when available: \`snyk-report.sarif\`"
-                ;;
-              2)
-                echo "Result: failed. Snyk reported a scan/setup error, not a vulnerability finding."
-                echo
-                echo "Check \`snyk-report.txt\` in the \`snyk-reports\` artifact for CLI diagnostics."
-                ;;
-              3)
-                echo "Result: failed. Snyk did not detect supported projects."
-                echo
-                echo "Check Maven project detection and the Snyk CLI output in \`snyk-report.txt\`."
-                ;;
-              *)
-                echo "Result: failed. Snyk returned unexpected exit code \`${exit_code}\`."
-                echo
-                echo "Check \`snyk-report.txt\` in the \`snyk-reports\` artifact."
-                ;;
-            esac
+            if [ -s osv-report.json ]; then
+              vulnerability_count="$(jq '[.results[]? | .packages[]? | .vulnerabilities[]?] | length' osv-report.json)"
+              if [ "$vulnerability_count" -gt 0 ]; then
+                echo "Result: failed. OSV Scanner reported ${vulnerability_count} known vulnerable dependency finding(s)."
+              else
+                echo "Result: failed. OSV Scanner did not complete successfully."
+              fi
+            else
+              echo "Result: failed. OSV Scanner did not produce a JSON report."
+            fi
+
+            echo
+            echo "Open the \`osv-sbom-reports\` artifact for:"
+            echo "- Maven CycloneDX aggregate SBOM: \`target/cyclonedx-bom.json\`"
+            echo "- machine-readable output: \`osv-report.json\`"
+            echo "- code scanning output when available: \`osv-report.sarif\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Update Snyk project snapshot
-        if: env.SNYK_TOKEN != '' && github.event_name != 'pull_request'
+      - name: Fail on OSV vulnerabilities or scan errors
+        if: always()
         shell: bash
         run: |
-          if [ -f snyk-exit-code.txt ] && [ "$(cat snyk-exit-code.txt)" = "0" ]; then
-            snyk monitor --maven-aggregate-project --target-reference="${{ github.ref_name }}" -- -Dmaven.plugin.skipErrorNoDescriptorsFound=true
-          else
-            echo "Skipping snyk monitor because the scan did not succeed."
+          if [ "${{ steps.osv-json.outcome }}" = "success" ]; then
+            echo "OSV Scanner passed."
+            exit 0
           fi
 
-      - name: Fail on Snyk vulnerabilities or scan errors
-        if: always() && env.SNYK_TOKEN != ''
-        shell: bash
-        run: |
-          if [ ! -f snyk-exit-code.txt ]; then
-            echo "Snyk scan did not produce an exit code marker."
-            exit 1
+          if [ -s osv-report.json ]; then
+            vulnerability_count="$(jq '[.results[]? | .packages[]? | .vulnerabilities[]?] | length' osv-report.json)"
+            if [ "$vulnerability_count" -gt 0 ]; then
+              echo "OSV Scanner reported ${vulnerability_count} known vulnerable dependency finding(s). See osv-report.json and the job summary."
+              exit 1
+            fi
           fi
-          exit_code="$(cat snyk-exit-code.txt)"
-          case "$exit_code" in
-            0)
-              echo "Snyk scan passed."
-              ;;
-            1)
-              echo "Snyk reported high or critical vulnerabilities. See snyk-report.txt/json and the job summary."
-              exit 1
-              ;;
-            2)
-              echo "Snyk scan/setup failed. See snyk-report.txt and the job summary."
-              exit 1
-              ;;
-            3)
-              echo "Snyk did not detect supported projects. See snyk-report.txt and the job summary."
-              exit 1
-              ;;
-            *)
-              echo "Snyk returned unexpected exit code: $exit_code. See snyk-report.txt and the job summary."
-              exit 1
-              ;;
-          esac
 
-      - name: Skip Snyk scan when token is unavailable
-        if: env.SNYK_TOKEN == ''
-        run: echo "Skipping Snyk because SNYK_TOKEN is not configured."
+          echo "OSV Scanner failed or did not produce a usable report. See the scanner log and job summary."
+          exit 1
 
   baseline-java21:
     name: Baseline / Java 21

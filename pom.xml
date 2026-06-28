@@ -43,6 +43,7 @@
     <javadoc-plugin.version>3.12.0</javadoc-plugin.version>
     <source-plugin.version>3.4.0</source-plugin.version>
     <maven-plugin-plugin.version>3.15.2</maven-plugin-plugin.version>
+    <cyclonedx-plugin.version>2.9.2</cyclonedx-plugin.version>
     <maven-clean-plugin.version>3.2.0</maven-clean-plugin.version>
     <maven-install-plugin.version>3.1.2</maven-install-plugin.version>
     <maven-site-plugin.version>3.12.1</maven-site-plugin.version>
@@ -582,6 +583,35 @@
                 <phase>verify</phase>
                 <goals>
                   <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>sbom</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.cyclonedx</groupId>
+            <artifactId>cyclonedx-maven-plugin</artifactId>
+            <version>${cyclonedx-plugin.version}</version>
+            <configuration>
+              <outputFormat>json</outputFormat>
+              <outputName>cyclonedx-bom</outputName>
+              <outputReactorProjects>false</outputReactorProjects>
+              <skipAttach>true</skipAttach>
+              <skipNotDeployed>false</skipNotDeployed>
+            </configuration>
+            <executions>
+              <execution>
+                <id>make-aggregate-sbom</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>makeAggregateBom</goal>
                 </goals>
               </execution>
             </executions>
