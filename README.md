@@ -219,6 +219,24 @@ For contribution workflow details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 For the full command reference and developer tooling model, see
 [`docs/developer-tooling.md`](docs/developer-tooling.md).
 
+### CI Flow
+
+Repository CI runs from `.github/workflows/ci.yml` on pull requests, pushes to `main`, and manual
+dispatch. It is a staged validation pipeline: dependency and vulnerability checks run first, then
+Java 21 and GraalVM 25 builds, docs and sample validation, quality/security analysis, and finally
+coverage/SonarCloud reporting.
+
+- Dependency Review runs only for pull requests.
+- Snyk Open Source Scan runs for pull requests, pushes to `main`, and manual CI runs.
+- AOT sample validation is manual-only through `workflow_dispatch`; it does not appear as skipped
+  jobs on normal pull request or push runs.
+- Release is not performed by `ci.yml`; tag release verification stays in
+  `.github/workflows/release.yaml`.
+- Maven Central publishing is not performed by `ci.yml`; publishing stays manual in
+  `.github/workflows/publish.yaml`.
+
+The full CI diagram is documented in [`docs/developer-tooling.md`](docs/developer-tooling.md).
+
 ## Documentation
 
 Project documentation is maintained in [`docs/`](docs/). Start with [`docs/index.md`](docs/index.md).

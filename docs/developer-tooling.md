@@ -54,6 +54,51 @@ What they do:
 - `task docs:build`: run a strict local documentation build
 - `task docs:clean`: remove local MkDocs site output
 
+## Continuous Integration
+
+GitHub Actions CI lives in `.github/workflows/ci.yml`. It runs on pull requests, pushes to `main`,
+and manual `workflow_dispatch` runs. CI is intentionally separate from release and publishing:
+release verification and GitHub Release creation stay in `.github/workflows/release.yaml`, while
+Maven Central publishing stays manual in `.github/workflows/publish.yaml`.
+
+Dependency Review runs only for pull requests. Snyk Open Source Scan runs for pull requests, pushes
+to `main`, and manual CI runs. Regular samples run on normal pull request and `main` push CI. AOT
+sample validation is manual-only through `workflow_dispatch`, and the CI matrix excludes those AOT
+entries on normal pull request and push runs so they do not appear as skipped jobs.
+
+```mermaid
+flowchart TD
+    DG["Stage 0: Dependency & Vulnerability Gate<br/>Dependency Review: PR only<br/>Snyk Open Source Scan: PR / push / manual<br/>artifact: snyk-reports"]
+
+    J21["Stage 1: Baseline / Java 21<br/>mvn clean test<br/>artifact: maven-test-reports-java21"]
+    G25["Stage 1: Runtime / GraalVM 25<br/>mvn clean test<br/>artifact: maven-test-reports-graalvm25"]
+
+    DOCS["Stage 2: Docs Build<br/>artifact: docs-site"]
+    SAMPLES["Stage 2: Samples validation<br/>Java Maven Example<br/>Java Maven Codegen Example<br/>Spring Boot Example<br/>+ AOT only on manual"]
+
+    QP["Stage 3: Quality Profile<br/>artifact: quality-reports"]
+    CQL["Stage 3: CodeQL Security Analysis"]
+
+    SONAR["Stage 4: Coverage and SonarCloud<br/>artifact: coverage-reports"]
+
+    DG --> J21
+    DG --> G25
+
+    J21 --> DOCS
+    G25 --> DOCS
+
+    J21 --> SAMPLES
+    G25 --> SAMPLES
+
+    DOCS --> QP
+    SAMPLES --> QP
+
+    DOCS --> CQL
+    SAMPLES --> CQL
+
+    QP --> SONAR
+```
+
 ## Build And Inspection Commands
 
 Useful local commands outside the basic contributor flow:
