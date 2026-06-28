@@ -13,9 +13,12 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    name: Verify Release Candidate
+  validate-release-version:
+    name: Validate Release Version
     runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout repository
@@ -27,53 +30,204 @@ jobs:
         uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
         with:
           distribution: temurin
-          java-version: 25
+          java-version: "25"
           cache: maven
 
       - name: Validate release tag format
+        shell: bash
         run: |
+          set -euo pipefail
           if ! printf '%s\n' "${GITHUB_REF_NAME}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
             echo "Release tag must look like v0.4.0 or v0.4.0-rc.1. Got: ${GITHUB_REF_NAME}" >&2
             exit 1
           fi
 
       - name: Verify tag matches project version
+        id: version
+        shell: bash
         run: |
+          set -euo pipefail
           project_version="$(./mvnw -q -DforceStdout org.apache.maven.plugins:maven-help-plugin:3.5.1:evaluate -Dexpression=project.version)"
-          release_version="${project_version%-SNAPSHOT}"
           tag_version="${GITHUB_REF_NAME#v}"
-          if [ "$release_version" != "$tag_version" ]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match project version ${project_version}" >&2
+          if [ "$project_version" != "$tag_version" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match project.version ${project_version}" >&2
             exit 1
           fi
+          if [[ "$project_version" == *-SNAPSHOT ]]; then
+            echo "Release tags must point to a non-SNAPSHOT project.version. Got: ${project_version}" >&2
+            exit 1
+          fi
+          echo "version=$project_version" >> "$GITHUB_OUTPUT"
 
-      - name: Run release quality verification
-        run: ./mvnw -B -ntp -Pquality verify
+      - name: Validate sample release versions
+        run: bash ./.dev/bin/validate-sample-versions.sh "${{ steps.version.outputs.version }}"
 
-      - name: Run release profile dry run
-        run: ./mvnw -B -ntp -Prelease -Dgpg.skip=true -DskipTests clean verify
-
-      - name: Summarize release verification
+      - name: Summarize version validation
         if: success()
         run: |
           {
-            echo "## Release Verification"
+            echo "## Release Version"
             echo
-            echo "Release tag: \`${GITHUB_REF_NAME}\`"
+            echo "Tag: \`${GITHUB_REF_NAME}\`"
+            echo "Project version: \`${{ steps.version.outputs.version }}\`"
             echo
             echo "Validated:"
-            echo "- tag format"
-            echo "- tag matches Maven project version"
-            echo "- quality profile"
-            echo "- release profile dry run with signing skipped"
+            echo "- release tag format"
+            echo "- tag matches exact Maven project.version"
+            echo "- project.version is non-SNAPSHOT"
+            echo "- sample polyglot.version values match the release"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  release:
-    name: Create GitHub Release
+  verify-core:
+    name: Verify Core
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    needs: verify
+    needs: validate-release-version
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Set up Temurin JDK 25
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Run tests
+        run: ./mvnw -B -ntp clean test
+
+      - name: Run quality profile
+        run: ./mvnw -B -ntp -Pquality clean verify
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-core-test-reports
+          path: |
+            **/target/surefire-reports/*.xml
+            **/target/failsafe-reports/*.xml
+          if-no-files-found: ignore
+
+      - name: Upload quality reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-core-quality-reports
+          path: |
+            **/target/spotbugsXml.xml
+            **/target/site/spotbugs.html
+            **/target/site/jacoco/jacoco.xml
+            **/target/site/jacoco/index.html
+          if-no-files-found: ignore
+
+      - name: Summarize core verification
+        if: success()
+        run: |
+          {
+            echo "## Core Verification"
+            echo
+            echo "Completed:"
+            echo "- \`./mvnw -B -ntp clean test\`"
+            echo "- \`./mvnw -B -ntp -Pquality clean verify\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  verify-samples:
+    name: Verify Samples
+    runs-on: ubuntu-latest
+    needs: validate-release-version
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Set up GraalVM JDK 25
+        uses: graalvm/setup-graalvm@6f3fa030c4b8f77c1f554a860f593a654538fa38 # v1
+        with:
+          distribution: graalvm-community
+          java-version: "25"
+          cache: maven
+
+      - name: Validate sample release versions
+        run: bash ./.dev/bin/validate-sample-versions.sh "${{ needs.validate-release-version.outputs.version }}"
+
+      - name: Install current release artifacts locally
+        run: ./mvnw -B -ntp -DskipTests install
+
+      - name: Verify Java Maven sample
+        run: mvn -B -ntp -DskipTests verify
+        working-directory: samples/java-maven-example
+
+      - name: Verify Java Maven codegen sample
+        run: mvn -B -ntp -DskipTests verify
+        working-directory: samples/java-maven-codegen-example
+
+      - name: Verify Spring Boot sample
+        run: mvn -B -ntp -DskipTests verify
+        working-directory: samples/spring-boot-example
+
+      - name: Upload sample reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-sample-test-reports
+          path: samples/**/target/surefire-reports/*.xml
+          if-no-files-found: ignore
+
+      - name: Summarize sample verification
+        if: success()
+        run: |
+          {
+            echo "## Sample Verification"
+            echo
+            echo "Release version: \`${{ needs.validate-release-version.outputs.version }}\`"
+            echo
+            echo "Completed:"
+            echo "- installed current release artifacts locally"
+            echo "- verified Java Maven sample"
+            echo "- verified Java Maven codegen sample"
+            echo "- verified Spring Boot sample"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  verify-docs:
+    name: Verify Docs
+    runs-on: ubuntu-latest
+    needs: validate-release-version
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Build documentation
+        run: ./.dev/bin/docs-build.sh
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: site
+
+      - name: Summarize docs verification
+        if: success()
+        run: |
+          {
+            echo "## Documentation Verification"
+            echo
+            echo "Completed:"
+            echo "- strict MkDocs build"
+            echo "- GitHub Pages artifact upload"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  verify-release-candidate:
+    name: Verify Release Candidate
+    runs-on: ubuntu-latest
+    needs: validate-release-version
 
     steps:
       - name: Checkout repository
@@ -85,8 +239,94 @@ jobs:
         uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
         with:
           distribution: temurin
-          java-version: 25
+          java-version: "25"
           cache: maven
+
+      - name: Validate sample release versions
+        run: bash ./.dev/bin/validate-sample-versions.sh "${{ needs.validate-release-version.outputs.version }}"
+
+      - name: Run release profile dry run
+        run: ./mvnw -B -ntp -Prelease -DskipTests -Dgpg.skip=true -DskipPublishing=true clean verify
+
+      - name: Upload release artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-candidate-artifacts
+          path: |
+            **/target/*-sources.jar
+            **/target/*-javadoc.jar
+            **/target/*.jar
+            **/target/*.pom
+          if-no-files-found: ignore
+
+      - name: Summarize release candidate verification
+        if: success()
+        run: |
+          {
+            echo "## Release Candidate"
+            echo
+            echo "Release version: \`${{ needs.validate-release-version.outputs.version }}\`"
+            echo
+            echo "Completed:"
+            echo "- release profile dry run"
+            echo "- signing skipped"
+            echo "- Maven Central publishing skipped"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-docs:
+    name: Deploy Docs
+    runs-on: ubuntu-latest
+    needs:
+      - validate-release-version
+      - verify-core
+      - verify-samples
+      - verify-docs
+      - verify-release-candidate
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
+
+      - name: Summarize docs deployment
+        if: success()
+        run: |
+          {
+            echo "## Documentation Deployment"
+            echo
+            echo "GitHub Pages deployment completed after all release verification jobs passed."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  create-github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - validate-release-version
+      - verify-core
+      - verify-samples
+      - verify-docs
+      - verify-release-candidate
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          fetch-depth: 0
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1
@@ -95,3 +335,14 @@ jobs:
           name: Release ${{ github.ref_name }}
           generateReleaseNotes: true
           allowUpdates: true
+
+      - name: Summarize GitHub release
+        if: success()
+        run: |
+          {
+            echo "## GitHub Release"
+            echo
+            echo "Created or updated release \`${{ github.ref_name }}\` after all release verification jobs passed."
+            echo
+            echo "Maven Central publishing remains manual and separate."
+          } >> "$GITHUB_STEP_SUMMARY"

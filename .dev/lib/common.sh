@@ -93,3 +93,9 @@ project_pom_files() {
     fi
   done
 }
+
+sample_pom_files() {
+  if [ -d "$REPO_ROOT/samples" ]; then
+    find "$REPO_ROOT/samples" -type f -name pom.xml -print
+  fi
+}

@@ -56,6 +56,15 @@ tasks:
     cmds:
       - rm -rf ./site
 
+  samples:
+    desc: Install local artifacts and verify maintained samples
+    cmds:
+      - ./mvnw -B -ntp -DskipTests install
+      - ./.dev/bin/validate-sample-versions.sh
+      - mvn -B -ntp -DskipTests verify -f samples/java-maven-example/pom.xml
+      - mvn -B -ntp -DskipTests verify -f samples/java-maven-codegen-example/pom.xml
+      - mvn -B -ntp -DskipTests verify -f samples/spring-boot-example/pom.xml
+
   version:
     desc: Show current project version
     cmds:

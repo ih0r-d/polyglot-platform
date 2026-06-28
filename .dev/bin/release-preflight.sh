@@ -58,6 +58,7 @@ print_step "3/5 install local release artifacts"
 run_mvn -DskipTests install
 
 print_step "4/5 maintained sample verification"
+"$SCRIPT_DIR/validate-sample-versions.sh"
 run_sample_check "samples/java-maven-example"
 run_sample_check "samples/java-maven-codegen-example"
 run_sample_check "samples/spring-boot-example"

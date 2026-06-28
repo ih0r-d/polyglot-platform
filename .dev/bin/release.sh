@@ -16,10 +16,14 @@ pom_files=()
 while IFS= read -r pom_file; do
   pom_files+=("$pom_file")
 done < <(project_pom_files)
-managed_files=(CHANGELOG.md "${pom_files[@]}")
+sample_pom_files=()
+while IFS= read -r pom_file; do
+  sample_pom_files+=("$pom_file")
+done < <(sample_pom_files)
+managed_files=(CHANGELOG.md "${pom_files[@]}" "${sample_pom_files[@]}")
 
 current_version() {
-  sed -n '0,/<version>/s:.*<version>\(.*\)</version>.*:\1:p' pom.xml | head -n 1
+  sed -n 's:.*<version>\([^<]*\)</version>.*:\1:p' pom.xml | head -n 1
 }
 
 managed_release_changes_only() {
@@ -32,6 +36,17 @@ managed_release_changes_only() {
   for changed_file in "${changed_files[@]}"; do
     if [[ ! " ${managed_files[*]} " =~ " ${changed_file} " ]]; then
       return 1
+    fi
+  done
+}
+
+update_sample_polyglot_versions() {
+  local pom_file
+
+  for pom_file in "${sample_pom_files[@]}"; do
+    if grep -q "<polyglot.version>" "$pom_file"; then
+      sed -i.bak "s:<polyglot.version>[^<]*</polyglot.version>:<polyglot.version>$VERSION</polyglot.version>:g" "$pom_file"
+      rm -f "$pom_file.bak"
     fi
   done
 }
@@ -55,12 +70,15 @@ if [ "$already_prepared" = false ]; then
     -DprocessAllModules=true \
     -DgenerateBackupPoms=false
 
+  update_sample_polyglot_versions
+  "$SCRIPT_DIR/validate-sample-versions.sh" "$VERSION"
+
   git cliff --config .git-cliff.toml \
     --tag "$VERSION" \
     --output CHANGELOG.md
 fi
 
-git add CHANGELOG.md "${pom_files[@]}"
+git add CHANGELOG.md "${pom_files[@]}" "${sample_pom_files[@]}"
 git commit -m "chore(release): $VERSION" || true
 git tag -a "v$VERSION" -m "Release $VERSION"
 
