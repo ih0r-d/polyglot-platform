@@ -37,6 +37,7 @@ Common contributor commands:
 ```bash
 task verify
 task quality
+task samples
 task format
 task docs:serve
 task docs:build
@@ -49,6 +50,7 @@ What they do:
 - `task dev:hooks`: configure only the local Git hooks for this clone
 - `task verify`: run the standard repository verification path
 - `task quality`: run the stricter local quality gate
+- `task samples`: install local artifacts and verify maintained samples
 - `task format`: apply Spotless formatting
 - `task docs:serve`: start the local MkDocs development server
 - `task docs:build`: run a strict local documentation build
@@ -101,6 +103,7 @@ flowchart TD
     SAMPLES --> CQL
 
     QP --> SONAR
+    CQL --> SONAR
 ```
 
 ## Build And Inspection Commands

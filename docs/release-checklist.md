@@ -26,7 +26,7 @@ It is expected to:
 - build docs with a local `.venv-docs/` environment when `mkdocs` is not already installed
 - verify the maintained release-path samples after local artifact installation
 
-Use `release-preflight-clean` only when you explicitly want `.venv-docs/` removed after the run.
+Use `task release:preflight:clean` only when you explicitly want `.venv-docs/` removed after the run.
 
 ## `0.4.0` Checklist
 

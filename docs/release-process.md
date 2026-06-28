@@ -40,7 +40,7 @@ Use:
 - `task release:preflight`
 - `task release:preflight:clean`
 
-`release-preflight-clean` removes the local docs virtual environment after the run. The default
+`task release:preflight:clean` removes the local docs virtual environment after the run. The default
 preflight keeps `.venv-docs/` to make repeated runs faster.
 
 ## Release Automation

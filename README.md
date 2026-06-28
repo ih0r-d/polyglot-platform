@@ -209,6 +209,7 @@ Common contributor commands:
 ```bash
 task verify
 task quality
+task samples
 task format
 task docs:serve
 task docs:build
