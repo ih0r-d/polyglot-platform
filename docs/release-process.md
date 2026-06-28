@@ -50,7 +50,7 @@ preflight keeps `.venv-docs/` to make repeated runs faster.
   verification profile, runs a non-publishing Maven `release` profile dry run with
   `-Dgpg.skip=true -DskipTests`, and only then creates or updates the GitHub Release.
 - Maven Central publishing is intentionally not part of the tag-push workflow.
-- Publishing to Maven Central runs only from `.github/workflows/publish-maven-central.yaml`, triggered with `workflow_dispatch`.
+- Publishing to Maven Central runs only from `.github/workflows/publish.yaml`, triggered with `workflow_dispatch`.
 - The manual publish workflow checks out the requested tag, verifies it matches the Maven project version, runs the same non-publishing `release` profile dry run, and only then deploys with the existing Maven `release` profile and signing configuration.
 - Local `.dev/bin/release.sh` no longer runs Maven `deploy`; it first runs the release preflight and
   then prepares and pushes the Git commit and tag for the release.

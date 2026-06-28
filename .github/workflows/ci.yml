@@ -5,30 +5,10 @@ on:
     branches:
       - main
       - release/*
-    paths:
-      - ".github/workflows/ci.yml"
-      - ".github/workflows/release.yaml"
-      - ".mvn/**"
-      - "mvnw"
-      - "mvnw.cmd"
-      - "pom.xml"
-      - "api/**"
-      - "runtime/**"
-      - "build-tools/**"
   push:
     branches:
       - main
       - release/*
-    paths:
-      - ".github/workflows/ci.yml"
-      - ".github/workflows/release.yaml"
-      - ".mvn/**"
-      - "mvnw"
-      - "mvnw.cmd"
-      - "pom.xml"
-      - "api/**"
-      - "runtime/**"
-      - "build-tools/**"
   workflow_dispatch:
 
 concurrency:
@@ -450,3 +430,160 @@ jobs:
       - name: Skip SonarCloud analysis when token is unavailable
         if: env.SONAR_TOKEN == ''
         run: echo "Skipping SonarCloud analysis because SONAR_TOKEN is not configured."
+
+  docs:
+    name: Docs Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Build documentation
+        run: ./.dev/bin/docs-build.sh
+
+      - name: Upload documentation site
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: docs-site
+          path: site
+          if-no-files-found: ignore
+
+  samples:
+    name: Samples / ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Java Maven Example
+            path: samples/java-maven-example
+          - name: Java Maven Codegen Example
+            path: samples/java-maven-codegen-example
+          - name: Spring Boot Example
+            path: samples/spring-boot-example
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Set up GraalVM JDK 25
+        uses: graalvm/setup-graalvm@6f3fa030c4b8f77c1f554a860f593a654538fa38 # v1
+        with:
+          distribution: graalvm-community
+          java-version: "25"
+          cache: maven
+
+      - name: Install local platform artifacts
+        run: ./mvnw -B -ntp -DskipTests install
+
+      - name: Validate sample versions
+        run: ./.dev/bin/validate-sample-versions.sh
+
+      - name: Verify sample
+        run: mvn -B -ntp -DskipTests verify
+        working-directory: ${{ matrix.path }}
+
+      - name: Upload sample reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sample-reports-${{ matrix.name }}
+          path: ${{ matrix.path }}/target/surefire-reports/*.xml
+          if-no-files-found: ignore
+
+  java-python-aot-fat-jar:
+    name: Java+Python AOT / JVM Fat JAR
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Set up GraalVM JDK 25
+        uses: graalvm/setup-graalvm@6f3fa030c4b8f77c1f554a860f593a654538fa38 # v1
+        with:
+          distribution: graalvm-community
+          java-version: "25"
+          cache: maven
+
+      - name: Install local platform artifacts
+        run: ./mvnw -B -ntp -DskipTests install
+
+      - name: Build fat JAR
+        run: mvn -B -ntp clean package
+        working-directory: samples/java-python-aot-adapter
+
+      - name: Run fat JAR
+        run: java -jar target/java-python-aot-adapter-0.0.1-all.jar
+        working-directory: samples/java-python-aot-adapter
+
+      - name: Summarize JVM sample result
+        if: success()
+        run: |
+          {
+            echo "## Java+Python AOT Sample"
+            echo
+            echo "JVM fat JAR build and execution completed successfully."
+            echo
+            echo "Local reproduction:"
+            echo "\`\`\`bash"
+            echo "./mvnw -B -ntp -DskipTests install"
+            echo "mvn -B -ntp clean package -f samples/java-python-aot-adapter/pom.xml"
+            echo "java -jar samples/java-python-aot-adapter/target/java-python-aot-adapter-0.0.1-all.jar"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  java-python-aot-native-image:
+    name: Java+Python AOT / Native Image
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Set up GraalVM JDK 25
+        uses: graalvm/setup-graalvm@6f3fa030c4b8f77c1f554a860f593a654538fa38 # v1
+        with:
+          distribution: graalvm-community
+          java-version: "25"
+          native-image-job-reports: "true"
+          cache: maven
+
+      - name: Install local platform artifacts
+        run: ./mvnw -B -ntp -DskipTests install
+
+      - name: Build native image via script
+        run: |
+          chmod +x ./build-native.sh
+          ./build-native.sh
+        working-directory: samples/java-python-aot-adapter
+
+      - name: Run native image
+        run: ./target/java-python-aot-adapter
+        working-directory: samples/java-python-aot-adapter
+
+      - name: Summarize native-image sample result
+        if: success()
+        run: |
+          {
+            echo "## Java+Python AOT Sample"
+            echo
+            echo "Native image build and execution completed successfully."
+            echo
+            echo "Local reproduction:"
+            echo "\`\`\`bash"
+            echo "./mvnw -B -ntp -DskipTests install"
+            echo "cd samples/java-python-aot-adapter"
+            echo "./build-native.sh"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"

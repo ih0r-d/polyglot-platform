@@ -45,7 +45,7 @@ runtime work, maintained samples, and full test execution, contributors are expe
 | Java runtime verification line       | 25                    | `.sdkmanrc`, GraalVM 25 CI runtime job, sample verification on 25   | GraalVM 25.x remains the current verified runtime lane                      |
 | GraalVM runtime deps                 | 25.0.2                | root dependency management, sample POMs, sample workflows           | Current maintained runtime line                                             |
 | Spring Boot starter line             | 4.1.0                 | root dependency management, starter tests, maintained Spring sample | Verified in the current repository line, not a broad historical range claim |
-| Maintained sample smoke verification | Java 25 / GraalVM 25  | `samples.yml`, sample POMs                                          | Samples are verification inputs, not independent support guarantees         |
+| Maintained sample smoke verification | Java 25 / GraalVM 25  | `ci.yml`, sample POMs                                               | Samples are verification inputs, not independent support guarantees         |
 
 ## Target Support, Not Yet Verified
 
