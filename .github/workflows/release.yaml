@@ -1,33 +1,111 @@
 name: Release
 
 on:
-  workflow_run:
-    workflows:
-      - Checks / Main
-    types:
-      - completed
-    branches:
-      - main
+  push:
+    tags:
+      - "v*"
 
 concurrency:
-  group: release-${{ github.event.workflow_run.head_sha }}
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  detect-release:
-    name: Detect Release
+  wait-for-main-ci:
+    name: Wait for Main CI
     runs-on: ubuntu-latest
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main'
+
+    permissions:
+      actions: read
+      contents: read
+
+    steps:
+      - name: Wait for Checks / Main on release commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! printf '%s\n' "$RELEASE_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$'; then
+            echo "Release tag must look like v0.4.0 or v0.4.0-rc.1. Got: ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+
+          deadline=$((SECONDS + 1200))
+          run_id=""
+          run_url=""
+
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            runs_json="$(
+              gh run list \
+                --workflow ci.yml \
+                --commit "$RELEASE_SHA" \
+                --branch main \
+                --event push \
+                --json databaseId,status,conclusion,url \
+                --limit 20
+            )"
+
+            run_id="$(jq -r 'sort_by(.databaseId) | reverse | .[0].databaseId // empty' <<< "$runs_json")"
+            run_url="$(jq -r 'sort_by(.databaseId) | reverse | .[0].url // empty' <<< "$runs_json")"
+
+            if [ -n "$run_id" ]; then
+              break
+            fi
+
+            echo "Waiting for Checks / Main push run on main for ${RELEASE_SHA}..."
+            sleep 20
+          done
+
+          if [ -z "$run_id" ]; then
+            {
+              echo "## Main CI"
+              echo
+              echo "No matching \`Checks / Main\` push run on \`main\` was found for \`${RELEASE_SHA}\` before timeout."
+              echo
+              echo "Release tag: \`${RELEASE_TAG}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "Found Checks / Main run: ${run_url}"
+
+          set +e
+          gh run watch "$run_id" --exit-status
+          watch_exit=$?
+          set -e
+
+          run_json="$(gh run view "$run_id" --json databaseId,status,conclusion,url)"
+          conclusion="$(jq -r '.conclusion // empty' <<< "$run_json")"
+          status="$(jq -r '.status // empty' <<< "$run_json")"
+          run_url="$(jq -r '.url // empty' <<< "$run_json")"
+
+          {
+            echo "## Main CI"
+            echo
+            echo "Release tag: \`${RELEASE_TAG}\`"
+            echo "Release SHA: \`${RELEASE_SHA}\`"
+            echo "CI run: ${run_url}"
+            echo "CI status: \`${status}\`"
+            echo "CI conclusion: \`${conclusion:-none}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$watch_exit" -ne 0 ] || [ "$conclusion" != "success" ]; then
+            echo "Checks / Main did not complete successfully for ${RELEASE_SHA}." >&2
+            exit 1
+          fi
+
+  validate-release-version:
+    name: Validate Release Version
+    runs-on: ubuntu-latest
+    needs: wait-for-main-ci
 
     outputs:
-      release_found: ${{ steps.tag.outputs.release_found }}
-      tag: ${{ steps.version.outputs.tag }}
       version: ${{ steps.version.outputs.version }}
 
     steps:
@@ -35,7 +113,6 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set up Temurin JDK 25
         uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
@@ -44,86 +121,39 @@ jobs:
           java-version: "25"
           cache: maven
 
-      - name: Discover release tag for CI commit
-        id: tag
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          ci_sha="${{ github.event.workflow_run.head_sha }}"
-          git fetch --force --tags origin
-
-          mapfile -t release_tags < <(
-            git tag --points-at "$ci_sha" \
-              | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$' \
-              | sort
-          )
-
-          if [ "${#release_tags[@]}" -eq 0 ]; then
-            echo "release_found=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ "${#release_tags[@]}" -gt 1 ]; then
-            printf 'Multiple release tags point at CI SHA %s:\n' "$ci_sha" >&2
-            printf -- '- %s\n' "${release_tags[@]}" >&2
-            exit 1
-          fi
-
-          echo "release_found=true" >> "$GITHUB_OUTPUT"
-          echo "tag=${release_tags[0]}" >> "$GITHUB_OUTPUT"
-
       - name: Verify tag matches project version
         id: version
-        if: steps.tag.outputs.release_found == 'true'
         shell: bash
         run: |
           set -euo pipefail
           project_version="$(./mvnw -q -DforceStdout org.apache.maven.plugins:maven-help-plugin:3.5.1:evaluate -Dexpression=project.version)"
-          release_tag="${{ steps.tag.outputs.tag }}"
-          tag_version="${release_tag#v}"
+          tag_version="${GITHUB_REF_NAME#v}"
           if [ "$project_version" != "$tag_version" ]; then
-            echo "Tag ${release_tag} does not match project.version ${project_version}" >&2
+            echo "Tag ${GITHUB_REF_NAME} does not match project.version ${project_version}" >&2
             exit 1
           fi
           if [[ "$project_version" == *-SNAPSHOT ]]; then
             echo "Release tags must point to a non-SNAPSHOT project.version. Got: ${project_version}" >&2
             exit 1
           fi
-          echo "tag=$release_tag" >> "$GITHUB_OUTPUT"
           echo "version=$project_version" >> "$GITHUB_OUTPUT"
 
       - name: Validate sample release versions
-        if: steps.tag.outputs.release_found == 'true'
         run: bash ./.dev/bin/validate-sample-versions.sh "${{ steps.version.outputs.version }}"
 
-      - name: Summarize skipped release
-        if: steps.tag.outputs.release_found == 'false'
-        run: |
-          {
-            echo "## Release"
-            echo
-            echo "No release tag points at this CI SHA; skipping GitHub Release."
-            echo
-            echo "CI workflow: \`${{ github.event.workflow_run.name }} #${{ github.event.workflow_run.run_number }}\`"
-            echo "CI SHA: \`${{ github.event.workflow_run.head_sha }}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
-
       - name: Summarize version validation
-        if: steps.tag.outputs.release_found == 'true'
+        if: success()
         run: |
           {
             echo "## Release Version"
             echo
-            echo "CI workflow: \`${{ github.event.workflow_run.name }} #${{ github.event.workflow_run.run_number }}\`"
-            echo "CI SHA: \`${{ github.event.workflow_run.head_sha }}\`"
-            echo "Tag: \`${{ steps.version.outputs.tag }}\`"
+            echo "Tag: \`${GITHUB_REF_NAME}\`"
+            echo "Release SHA: \`${GITHUB_SHA}\`"
             echo "Project version: \`${{ steps.version.outputs.version }}\`"
             echo
             echo "Validated:"
-            echo "- CI completed successfully for a push to main"
-            echo "- exactly one release tag points at the CI SHA"
-            echo "- release tag format is vX.Y.Z or vX.Y.Z-rc.N"
+            echo "- tag format was checked before checkout"
+            echo "- Checks / Main succeeded for this release commit"
             echo "- tag matches exact Maven project.version"
             echo "- project.version is non-SNAPSHOT"
             echo "- sample polyglot.version values match the release"
@@ -132,14 +162,13 @@ jobs:
   verify-docs:
     name: Verify Docs
     runs-on: ubuntu-latest
-    needs: detect-release
-    if: needs.detect-release.outputs.release_found == 'true'
+    needs:
+      - wait-for-main-ci
+      - validate-release-version
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -169,15 +198,15 @@ jobs:
   verify-release-candidate:
     name: Verify Release Candidate
     runs-on: ubuntu-latest
-    needs: detect-release
-    if: needs.detect-release.outputs.release_found == 'true'
+    needs:
+      - wait-for-main-ci
+      - validate-release-version
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set up Temurin JDK 25
         uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
@@ -187,7 +216,7 @@ jobs:
           cache: maven
 
       - name: Validate sample release versions
-        run: bash ./.dev/bin/validate-sample-versions.sh "${{ needs.detect-release.outputs.version }}"
+        run: bash ./.dev/bin/validate-sample-versions.sh "${{ needs.validate-release-version.outputs.version }}"
 
       - name: Run release profile dry run
         run: ./mvnw -B -ntp -Prelease -DskipTests -Dgpg.skip=true -DskipPublishing=true clean verify
@@ -210,7 +239,7 @@ jobs:
           {
             echo "## Release Candidate"
             echo
-            echo "Release version: \`${{ needs.detect-release.outputs.version }}\`"
+            echo "Release version: \`${{ needs.validate-release-version.outputs.version }}\`"
             echo
             echo "Completed:"
             echo "- release profile dry run"
@@ -222,10 +251,10 @@ jobs:
     name: Deploy Docs
     runs-on: ubuntu-latest
     needs:
-      - detect-release
+      - wait-for-main-ci
+      - validate-release-version
       - verify-docs
       - verify-release-candidate
-    if: needs.detect-release.outputs.release_found == 'true'
 
     permissions:
       pages: write
@@ -249,16 +278,16 @@ jobs:
           {
             echo "## Documentation Deployment"
             echo
-            echo "GitHub Pages deployment completed after all release verification jobs passed."
+            echo "GitHub Pages deployment completed after release verification and matching main CI passed."
           } >> "$GITHUB_STEP_SUMMARY"
 
   create-github-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs:
-      - detect-release
+      - wait-for-main-ci
+      - validate-release-version
       - deploy-docs
-    if: needs.detect-release.outputs.release_found == 'true'
 
     permissions:
       contents: write
@@ -268,13 +297,12 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1
         with:
-          tag: ${{ needs.detect-release.outputs.tag }}
-          name: Release ${{ needs.detect-release.outputs.tag }}
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           generateReleaseNotes: true
           allowUpdates: true
 
@@ -284,7 +312,7 @@ jobs:
           {
             echo "## GitHub Release"
             echo
-            echo "Created or updated release \`${{ needs.detect-release.outputs.tag }}\` after docs deployment completed."
+            echo "Created or updated release \`${{ github.ref_name }}\` after docs deployment completed."
             echo
             echo "Maven Central publishing remains manual and separate."
           } >> "$GITHUB_STEP_SUMMARY"

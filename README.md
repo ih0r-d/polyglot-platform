@@ -235,8 +235,9 @@ coverage/SonarCloud reporting.
 - Renovate keeps dependency and GitHub Actions updates moving; Snyk is no longer required for CI.
 - AOT sample validation is manual-only through `workflow_dispatch`; it does not appear as skipped
   jobs on normal pull request or push runs.
-- Release is not performed by `ci.yml`; after successful `main` CI, `.github/workflows/release.yaml`
-  creates a GitHub Release only when a release tag points at the same commit.
+- Release is not performed by `ci.yml`; `.github/workflows/release.yaml` starts from a release tag
+  push, waits for `Checks / Main` to pass on the same commit, then deploys docs and creates the
+  GitHub Release.
 - Maven Central publishing is not performed by `ci.yml`; publishing stays manual in
   `.github/workflows/publish.yaml`.
 
