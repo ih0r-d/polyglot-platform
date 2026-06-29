@@ -43,6 +43,7 @@ jobs:
           while [ "$SECONDS" -lt "$deadline" ]; do
             runs_json="$(
               gh run list \
+                --repo "$GITHUB_REPOSITORY" \
                 --workflow ci.yml \
                 --commit "$RELEASE_SHA" \
                 --branch main \
@@ -76,11 +77,11 @@ jobs:
           echo "Found Checks / Main run: ${run_url}"
 
           set +e
-          gh run watch "$run_id" --exit-status
+          gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status
           watch_exit=$?
           set -e
 
-          run_json="$(gh run view "$run_id" --json databaseId,status,conclusion,url)"
+          run_json="$(gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --json databaseId,status,conclusion,url)"
           conclusion="$(jq -r '.conclusion // empty' <<< "$run_json")"
           status="$(jq -r '.status // empty' <<< "$run_json")"
           run_url="$(jq -r '.url // empty' <<< "$run_json")"
