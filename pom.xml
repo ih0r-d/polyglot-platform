@@ -11,6 +11,7 @@
   <packaging>pom</packaging>
 
   <name>polyglot-aggregator</name>
+  <description>GraalVM polyglot platform.</description>
   <url>https://github.com/ih0r-d/polyglot-platform</url>
 
   <modules>
