@@ -2,11 +2,13 @@
 
 All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be documented in this file.
 
-## [0.4.0] - 2026-06-27
+## [0.4.0] - 2026-06-29
 
 
 ### ✅ Fixed
 - resolve snyk vulnerabilities (49d7ff2)
+- configure maven central publishing (e0dd85c)
+- pass repository to gh cli (af0b6a8)
 
 
 ### 🧪 Internal
@@ -19,7 +21,14 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - add local docs workflow (f4389a2)
 - remove stale 0.3 version references (b218942)
 - improve release workflow diagnostics (bf85640)
-- pin GitHub actions to full shas (1f1704e)
+- pin github actions to full shas (1f1704e)
+- add troubleshooting guide for 0.4.0 (133aba6)
+- improve public API documentation for 0.4.0 (d74420b)
+- gate GitHub releases on full verification (2768343)
+- consolidate workflow structure (e49f4f8)
+- stage CI checks and document pipeline (2bb043a)
+- add maven sbom scan for osv (b23d17e)
+- align release and ci documentation for 0.4.0 (f76ff54)
 
 
 ## [0.3.1] - 2026-05-10
