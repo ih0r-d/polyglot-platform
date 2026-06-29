@@ -510,10 +510,12 @@
             <groupId>org.sonatype.central</groupId>
             <artifactId>central-publishing-maven-plugin</artifactId>
             <extensions>true</extensions>
+            <inherited>true</inherited>
             <configuration>
+              <skipPublishing>false</skipPublishing>
               <publishingServerId>central</publishingServerId>
-              <autoPublish>true</autoPublish>
-              <waitUntil>published</waitUntil>
+              <autoPublish>false</autoPublish>
+              <waitUntil>VALIDATED</waitUntil>
             </configuration>
           </plugin>
 

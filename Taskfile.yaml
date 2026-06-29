@@ -97,6 +97,16 @@ tasks:
     cmds:
       - ./.dev/dry-run-release.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
+  release:publish:validate-local:
+    desc: Validate Maven Central publish configuration locally without uploading
+    cmds:
+      - ./.dev/bin/validate-maven-central-publish-local.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  release:publish:validate-local-signed:
+    desc: Validate Maven Central publish configuration locally with signing but without uploading
+    cmds:
+      - ./.dev/bin/validate-maven-central-publish-local.sh --with-signing{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
   release:
     desc: Prepare, tag, and push a release without Maven Central publishing
     cmds:

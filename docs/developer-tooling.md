@@ -130,6 +130,7 @@ These commands are maintainer-oriented and are not part of the normal first-time
 task release:preflight
 task release:preflight:clean
 task release:dry-run
+task release:publish:validate-local
 task release -- 1.2.3
 task version:bump -- patch
 ```
@@ -137,6 +138,8 @@ task version:bump -- patch
 - `task release:preflight`: run the required local gate before preparing a release
 - `task release:preflight:clean`: run the same preflight and remove the temporary docs virtualenv afterwards
 - `task release:dry-run`: verify release publication locally without publishing to Maven Central
+- `task release:publish:validate-local`: verify the Maven Central publish configuration and deploy lifecycle locally with `-DskipPublishing=true`
+- `MAVEN_GPG_PASSPHRASE=... task release:publish:validate-local-signed`: run the same local publish validation with GPG signing enabled, still without uploading
 - `task release -- <version>`: prepare, tag, and push a release without publishing to Maven Central
 - `task version:bump -- patch`: move the project to the next snapshot line after a release
 
@@ -144,6 +147,7 @@ task version:bump -- patch
 
 - `task dev:setup` affects only the current clone when enabling hooks.
 - `task release` does not publish to Maven Central.
+- `task release:publish:validate-local` uses dummy local Maven Central credentials and must keep `-DskipPublishing=true`.
 - Maven Central publishing is manual-only through the GitHub Actions publish workflow.
 - The release preflight and release commands are intentionally separate from normal contributor commands.
 - `task docs:serve` cleans the temporary `site/` output on exit or interruption.

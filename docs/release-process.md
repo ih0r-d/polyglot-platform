@@ -16,10 +16,12 @@ Use this page together with:
 3. Review dependency, security, and CodeQL workflow results.
 4. Update `CHANGELOG.md` and any release notes if the preflight surfaced missing scope notes.
 5. Confirm documentation and samples match the released API.
-6. Run `task release -- <version>` to set the release version, update `CHANGELOG.md`, commit, tag, and push.
-7. Run `task version:bump -- patch` after the release if you want to move `main` to the next patch snapshot.
-8. Push the snapshot bump commit if you created one locally.
-9. Run the `Publish Maven Central` workflow manually with the exact release tag after the tag is in GitHub.
+6. Run `task release:publish:validate-local`.
+7. Run `task release -- <version>` to set the release version, update `CHANGELOG.md`, commit, tag, and push.
+8. Run `task version:bump -- patch` after the release if you want to move `main` to the next patch snapshot.
+9. Push the snapshot bump commit if you created one locally.
+10. Run the `Publish Maven Central` workflow manually with the exact release tag after the tag is in GitHub.
+11. Review and publish the validated deployment in Central Portal.
 
 ## Release Preflight
 
@@ -51,7 +53,10 @@ preflight keeps `.venv-docs/` to make repeated runs faster.
   `-Dgpg.skip=true -DskipTests`, and only then creates or updates the GitHub Release.
 - Maven Central publishing is intentionally not part of the tag-push workflow.
 - Publishing to Maven Central runs only from `.github/workflows/publish.yaml`, triggered with `workflow_dispatch`.
-- The manual publish workflow checks out the requested tag, verifies it matches the Maven project version, runs the same non-publishing `release` profile dry run, and only then deploys with the existing Maven `release` profile and signing configuration.
+- `task release:publish:validate-local` verifies the Central Publishing effective POMs and deploy
+  lifecycle locally with dummy `central` credentials and `-DskipPublishing=true`.
+- The manual publish workflow checks out the requested tag, verifies it matches the Maven project version, runs the same non-publishing `release` profile dry run, and only then uploads a signed deployment to Central Portal with the Maven `release` profile.
+- Central Portal final publish remains a manual maintainer action.
 - Local `.dev/bin/release.sh` no longer runs Maven `deploy`; it first runs the release preflight and
   then prepares and pushes the Git commit and tag for the release.
 
@@ -70,6 +75,7 @@ preflight keeps `.venv-docs/` to make repeated runs faster.
 ## After Release
 
 - Verify the GitHub Release was created or updated from the tag push workflow.
-- Verify published artifacts in Maven Central after the manual publish workflow completes.
+- Review and publish the Central Portal deployment after the manual publish workflow completes.
+- Verify published artifacts in Maven Central after Central Portal publishing completes.
 - Verify generated site and documentation references if they changed.
 - Announce breaking or compatibility-sensitive changes clearly in release notes.

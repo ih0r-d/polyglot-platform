@@ -19,6 +19,7 @@ jobs:
   publish:
     name: Publish Maven Central
     runs-on: ubuntu-latest
+    environment: maven-central
 
     steps:
       - name: Checkout tagged release
@@ -82,6 +83,56 @@ jobs:
             exit 1
           fi
 
+      - name: Show Central Publishing configuration
+        run: |
+          ./mvnw -B -ntp -Prelease -pl api/polyglot-annotations help:effective-pom \
+            -Doutput=target/effective-publish-config.xml
+
+          python3 <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          path = Path("api/polyglot-annotations/target/effective-publish-config.xml")
+          root = ET.parse(path).getroot()
+          ns = {"m": "http://maven.apache.org/POM/4.0.0"}
+
+          plugins = root.findall("./m:build/m:plugins/m:plugin", ns)
+          central = None
+          for plugin in plugins:
+            group_id = plugin.findtext("m:groupId", default="", namespaces=ns)
+            artifact_id = plugin.findtext("m:artifactId", default="", namespaces=ns)
+            if group_id == "org.sonatype.central" and artifact_id == "central-publishing-maven-plugin":
+              central = plugin
+              break
+
+          if central is None:
+            print("Central Publishing plugin is not active in the release effective POM.", file=sys.stderr)
+            sys.exit(1)
+
+          def text(path, default=""):
+            return central.findtext(path, default=default, namespaces=ns)
+
+          print("Central Publishing effective configuration:")
+          print(f"- artifactId: {text('m:artifactId')}")
+          print(f"- version: {text('m:version')}")
+          print(f"- extensions: {text('m:extensions')}")
+          print(f"- publishingServerId: {text('m:configuration/m:publishingServerId')}")
+          print(f"- skipPublishing: {text('m:configuration/m:skipPublishing')}")
+          print(f"- autoPublish: {text('m:configuration/m:autoPublish')}")
+          print(f"- waitUntil: {text('m:configuration/m:waitUntil')}")
+
+          if text("m:extensions") != "true":
+            print("Central Publishing plugin must run as a Maven extension.", file=sys.stderr)
+            sys.exit(1)
+          if text("m:configuration/m:publishingServerId") != "central":
+            print("Central Publishing server id must be central.", file=sys.stderr)
+            sys.exit(1)
+          if text("m:configuration/m:skipPublishing") == "true":
+            print("Central Publishing must not be skipped in the release profile.", file=sys.stderr)
+            sys.exit(1)
+          PY
+
       - name: Run release profile dry run
         run: ./mvnw -B -ntp -Prelease -Dgpg.skip=true -DskipTests clean verify
 
@@ -111,6 +162,7 @@ jobs:
             echo "- required publishing secrets are configured"
             echo "- tag exists in the checked-out repository"
             echo "- tag matches Maven project version"
+            echo "- Central Publishing release profile is active for published modules"
             echo "- release profile dry run"
             echo "- release and quality profiles during deploy"
           } >> "$GITHUB_STEP_SUMMARY"
