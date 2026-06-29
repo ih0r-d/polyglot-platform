@@ -18,9 +18,12 @@ Use this page together with:
 5. Confirm documentation and samples match the released API.
 6. Run `task release:publish:validate-local`.
 7. Run `task release -- <version>` to set the release version, update `CHANGELOG.md`, commit, tag, and push.
+   The release workflow runs only after the pushed `main` commit passes CI and the release tag points at
+   that same commit.
 8. Run `task version:bump -- patch` after the release if you want to move `main` to the next patch snapshot.
 9. Push the snapshot bump commit if you created one locally.
-10. Run the `Publish Maven Central` workflow manually with the exact release tag after the tag is in GitHub.
+10. Run the `Publish Maven Central` workflow manually with the exact release tag after GitHub Release
+    creation succeeds.
 11. Review and publish the validated deployment in Central Portal.
 
 ## Release Preflight
@@ -47,11 +50,16 @@ preflight keeps `.venv-docs/` to make repeated runs faster.
 
 ## Release Automation
 
-- Pushing a tag that matches `v*` runs `.github/workflows/release.yaml`.
-- That workflow verifies the tag matches the Maven project release version, runs the quality
-  verification profile, runs a non-publishing Maven `release` profile dry run with
-  `-Dgpg.skip=true -DskipTests`, and only then creates or updates the GitHub Release.
-- Maven Central publishing is intentionally not part of the tag-push workflow.
+- Pushing `main` runs `.github/workflows/ci.yml`. After that CI workflow succeeds for a `main` push,
+  `.github/workflows/release.yaml` starts from a `workflow_run` event.
+- If no release tag points at the CI commit SHA, the release workflow exits successfully without
+  deploying docs or creating a GitHub Release.
+- The release workflow checks out the exact CI commit SHA, fetches tags, and requires exactly one
+  release tag matching `vX.Y.Z` or `vX.Y.Z-rc.N` to point at that SHA.
+- That workflow verifies the discovered tag matches the Maven project release version, builds the
+  documentation Pages artifact, runs a non-publishing Maven `release` profile dry run with
+  `-Dgpg.skip=true -DskipTests`, deploys docs, and only then creates or updates the GitHub Release.
+- Maven Central publishing is intentionally not part of CI or the GitHub Release workflow.
 - Publishing to Maven Central runs only from `.github/workflows/publish.yaml`, triggered with `workflow_dispatch`.
 - `task release:publish:validate-local` verifies the Central Publishing effective POMs and deploy
   lifecycle locally with dummy `central` credentials and `-DskipPublishing=true`.
@@ -74,7 +82,7 @@ preflight keeps `.venv-docs/` to make repeated runs faster.
 
 ## After Release
 
-- Verify the GitHub Release was created or updated from the tag push workflow.
+- Verify the GitHub Release was created or updated after the successful `main` CI workflow.
 - Review and publish the Central Portal deployment after the manual publish workflow completes.
 - Verify published artifacts in Maven Central after Central Portal publishing completes.
 - Verify generated site and documentation references if they changed.

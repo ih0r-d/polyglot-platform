@@ -60,8 +60,9 @@ What they do:
 
 GitHub Actions CI lives in `.github/workflows/ci.yml`. It runs on pull requests, pushes to `main`,
 and manual `workflow_dispatch` runs. CI is intentionally separate from release and publishing:
-release verification and GitHub Release creation stay in `.github/workflows/release.yaml`, while
-Maven Central publishing stays manual in `.github/workflows/publish.yaml`.
+after successful `main` CI, `.github/workflows/release.yaml` creates a GitHub Release only when a
+release tag points at the same commit. Maven Central publishing stays manual in
+`.github/workflows/publish.yaml`.
 
 Dependency Review runs only for pull requests. OSV Scanner runs for pull requests, pushes to
 `main`, and manual CI runs. CI first generates a Maven CycloneDX aggregate SBOM with
