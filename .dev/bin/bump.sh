@@ -28,11 +28,18 @@ run_mvn versions:set \
   -DprocessAllModules=true \
   -DgenerateBackupPoms=false
 
+update_sample_polyglot_versions "$NEXT"
+"$SCRIPT_DIR/validate-sample-versions.sh" "$NEXT"
+
 pom_files=()
 while IFS= read -r pom_file; do
   pom_files+=("$pom_file")
 done < <(project_pom_files)
-git add "${pom_files[@]}"
+sample_pom_files=()
+while IFS= read -r pom_file; do
+  sample_pom_files+=("$pom_file")
+done < <(sample_pom_files)
+git add "${pom_files[@]}" "${sample_pom_files[@]}"
 git commit -m "chore(version): bump $CURRENT to $NEXT" || true
 
 echo "✅ Bumped: $CURRENT → $NEXT"

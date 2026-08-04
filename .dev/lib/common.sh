@@ -99,3 +99,23 @@ sample_pom_files() {
     find "$REPO_ROOT/samples" -type f -name pom.xml -print
   fi
 }
+
+update_sample_polyglot_versions() {
+  local version
+  local pom_file
+
+  version=${1:-}
+  if [ -z "$version" ]; then
+    echo "VERSION required for update_sample_polyglot_versions" >&2
+    return 1
+  fi
+
+  while IFS= read -r pom_file; do
+    if grep -q "<polyglot.version>" "$pom_file"; then
+      sed -i.bak \
+        "s:<polyglot.version>[^<]*</polyglot.version>:<polyglot.version>$version</polyglot.version>:g" \
+        "$pom_file"
+      rm -f "$pom_file.bak"
+    fi
+  done < <(sample_pom_files)
+}

@@ -40,17 +40,6 @@ managed_release_changes_only() {
   done
 }
 
-update_sample_polyglot_versions() {
-  local pom_file
-
-  for pom_file in "${sample_pom_files[@]}"; do
-    if grep -q "<polyglot.version>" "$pom_file"; then
-      sed -i.bak "s:<polyglot.version>[^<]*</polyglot.version>:<polyglot.version>$VERSION</polyglot.version>:g" "$pom_file"
-      rm -f "$pom_file.bak"
-    fi
-  done
-}
-
 already_prepared=false
 if ! git diff-index --quiet HEAD --; then
   if managed_release_changes_only && [ "$(current_version)" = "$VERSION" ]; then
@@ -70,7 +59,7 @@ if [ "$already_prepared" = false ]; then
     -DprocessAllModules=true \
     -DgenerateBackupPoms=false
 
-  update_sample_polyglot_versions
+  update_sample_polyglot_versions "$VERSION"
   "$SCRIPT_DIR/validate-sample-versions.sh" "$VERSION"
 
   git cliff --config .git-cliff.toml \
