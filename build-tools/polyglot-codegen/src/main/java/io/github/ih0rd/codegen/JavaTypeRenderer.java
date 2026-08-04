@@ -1,64 +1,73 @@
 package io.github.ih0rd.codegen;
 
-import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.ast.type.Type;
 
 import io.github.ih0rd.polyglot.model.types.PolyList;
 import io.github.ih0rd.polyglot.model.types.PolyMap;
 import io.github.ih0rd.polyglot.model.types.PolyPrimitive;
 import io.github.ih0rd.polyglot.model.types.PolyType;
 
-/** Maps portable contract types to Java source types and collects required imports. */
+/** Maps portable contract types to JavaParser AST type nodes. */
 public final class JavaTypeRenderer {
 
-  private final Set<String> imports = new HashSet<>();
-
-  /** Creates a fresh renderer with an empty import collection. */
+  /** Creates a fresh renderer. */
   public JavaTypeRenderer() {
-    // The import set starts empty and is populated lazily during rendering.
+    // The renderer is stateless; import collection is explicit for the generated AST.
   }
 
   /**
-   * Renders a portable type as a Java source type.
+   * Renders a portable type as a JavaParser AST type.
    *
    * @param type portable contract type
-   * @return Java source representation
+   * @return Java type representation
    */
-  public String render(PolyType type) {
+  public Type render(PolyType type) {
 
     if (type instanceof PolyPrimitive p) {
       return switch (p) {
-        case INT -> "Integer";
-        case FLOAT -> "Double";
-        case STRING -> "String";
-        case BOOLEAN -> "Boolean";
+        case INT -> classType(Integer.class);
+        case FLOAT -> classType(Double.class);
+        case STRING -> classType(String.class);
+        case BOOLEAN -> classType(Boolean.class);
       };
     }
 
     if (type instanceof PolyList list) {
-      imports.add("java.util.List");
-      return "List<" + render(list.elementType()) + ">";
+      return classType(List.class).setTypeArguments(render(list.elementType()));
     }
 
     if (type instanceof PolyMap map) {
-      imports.add("java.util.Map");
-      return "Map<" + render(map.keyType()) + ", " + render(map.valueType()) + ">";
+      return classType(Map.class).setTypeArguments(render(map.keyType()), render(map.valueType()));
     }
 
-    return "Object";
+    return classType(Object.class);
   }
 
   /**
-   * Returns the imports collected while rendering the current interface.
+   * Collects Java classes that should be imported for a portable type.
    *
-   * @return immutable view of the collected imports
+   * @param type portable contract type
+   * @param imports target import set
    */
-  public Set<String> getImports() {
-    return Set.copyOf(imports);
+  public void collectImports(PolyType type, Set<Class<?>> imports) {
+    if (type instanceof PolyList list) {
+      imports.add(List.class);
+      collectImports(list.elementType(), imports);
+    }
+
+    if (type instanceof PolyMap map) {
+      imports.add(Map.class);
+      collectImports(map.keyType(), imports);
+      collectImports(map.valueType(), imports);
+    }
   }
 
-  /** Clears collected imports before rendering the next contract. */
-  public void reset() {
-    imports.clear();
+  private static ClassOrInterfaceType classType(Class<?> type) {
+    return new ClassOrInterfaceType(null, type.getSimpleName());
   }
 }

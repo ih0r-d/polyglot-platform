@@ -131,10 +131,7 @@ final class CodegenMojoSupport {
 
     ScriptProcessingContext context =
         new ScriptProcessingContext(
-            generator,
-            javaGenerator,
-            outputRoot,
-            mode == Mode.CHECK || settings.failOnContractDrift());
+            generator, outputRoot, mode == Mode.CHECK || settings.failOnContractDrift());
 
     SummaryCounters counters = SummaryCounters.empty();
 
@@ -150,7 +147,8 @@ final class CodegenMojoSupport {
 
     for (Path script : scriptFiles) {
       counters = counters.incrementSupportedScripts();
-      ScriptSummary perScript = processScript(script, context, settings, effectivePackage, log);
+      ScriptSummary perScript =
+          processScript(script, context, javaGenerator, settings, effectivePackage, log);
 
       counters = counters.add(perScript);
 
@@ -185,6 +183,7 @@ final class CodegenMojoSupport {
   private static ScriptSummary processScript(
       Path script,
       ScriptProcessingContext context,
+      JavaInterfaceGenerator javaGenerator,
       Settings settings,
       String effectivePackage,
       Log log)
@@ -212,12 +211,13 @@ final class CodegenMojoSupport {
       List<String> driftMessages = new ArrayList<>();
 
       for (ContractClass contract : model.classes()) {
-        String javaSource = context.javaGenerator().generate(contract, effectivePackage);
+        String javaSource = javaGenerator.generate(contract, effectivePackage);
         Path target =
             context
                 .outputDir()
                 .resolve(effectivePackage.replace('.', '/'))
                 .resolve(contract.name() + ".java");
+        logDebug(log, "Generated Java contract " + contract.name() + " targets " + target);
 
         boolean drift = false;
         if (context.failOnDrift()) {
@@ -246,6 +246,9 @@ final class CodegenMojoSupport {
 
       return new ScriptSummary(
           model.classes().size(), written, skippedUnchanged, drifted, driftMessages);
+    } catch (JavaContractValidationException e) {
+      throw new MojoExecutionException(
+          "Invalid generated Java contract in script " + script + ": " + e.getMessage(), e);
     } catch (Exception e) {
       throw new MojoExecutionException("Failed processing script: " + script, e);
     }

@@ -122,6 +122,37 @@ class PolyglotCodegenMojoTest {
   }
 
   @Test
+  void executeFailsWithValidationMessageWhenGeneratedContractIsInvalid() throws Exception {
+    Path inputDirectory = Files.createDirectories(tempDir.resolve("scripts-invalid-contract"));
+    Path outputDirectory = tempDir.resolve("generated-invalid-contract");
+    Path script = inputDirectory.resolve("invalid_contract.py");
+    Files.writeString(
+        script,
+        """
+        polyglot.export_value("class", InvalidApi)
+
+        class InvalidApi:
+            def ping(self) -> int:
+                return 1
+        """);
+
+    PolyglotCodegenMojo mojo = new PolyglotCodegenMojo();
+    MavenProject project = new MavenProject();
+
+    setField(mojo, "inputDirectory", inputDirectory.toFile());
+    setField(mojo, "outputDirectory", outputDirectory.toFile());
+    setField(mojo, "basePackage", "com.example.polyglot");
+    setField(mojo, "project", project);
+    setField(mojo, "projectGroupId", "com.example");
+
+    MojoExecutionException exception = assertThrows(MojoExecutionException.class, mojo::execute);
+
+    assertTrue(exception.getMessage().contains("Invalid generated Java contract in script"));
+    assertTrue(exception.getMessage().contains("contract 'class'"));
+    assertTrue(exception.getMessage().contains("keyword"));
+  }
+
+  @Test
   void executeRespectsOnlyIncludedMethodsFlag() throws Exception {
     Path inputDirectory = Files.createDirectories(tempDir.resolve("scripts-only-included"));
     Path outputDirectory = tempDir.resolve("generated-only-included");

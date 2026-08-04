@@ -53,6 +53,7 @@
     <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
     <maven-plugin-api.version>3.9.15</maven-plugin-api.version>
     <google-java-format.version>1.28.0</google-java-format.version>
+    <javaparser.version>3.28.2</javaparser.version>
     <archunit.version>1.4.1</archunit.version>
     <jacoco.coverage.instruction.minimum>0.70</jacoco.coverage.instruction.minimum>
     <minimum-maven.version>3.9.0</minimum-maven.version>
@@ -175,6 +176,12 @@
         <groupId>org.junit.jupiter</groupId>
         <artifactId>junit-jupiter</artifactId>
         <version>${junit.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.github.javaparser</groupId>
+        <artifactId>javaparser-core</artifactId>
+        <version>${javaparser.version}</version>
       </dependency>
 
       <dependency>

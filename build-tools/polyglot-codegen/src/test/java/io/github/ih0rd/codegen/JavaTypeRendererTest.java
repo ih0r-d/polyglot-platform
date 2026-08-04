@@ -15,38 +15,36 @@ class JavaTypeRendererTest {
 
   @Test
   void render_ShouldHandlePrimitives() {
-    assertEquals("Integer", renderer.render(PolyPrimitive.INT));
-    assertEquals("Double", renderer.render(PolyPrimitive.FLOAT));
-    assertEquals("String", renderer.render(PolyPrimitive.STRING));
-    assertEquals("Boolean", renderer.render(PolyPrimitive.BOOLEAN));
+    assertEquals("Integer", renderer.render(PolyPrimitive.INT).toString());
+    assertEquals("Double", renderer.render(PolyPrimitive.FLOAT).toString());
+    assertEquals("String", renderer.render(PolyPrimitive.STRING).toString());
+    assertEquals("Boolean", renderer.render(PolyPrimitive.BOOLEAN).toString());
   }
 
   @Test
   void render_ShouldHandleUnknown() {
-    assertEquals("Object", renderer.render(new PolyUnknown()));
+    assertEquals("Object", renderer.render(new PolyUnknown()).toString());
   }
 
   @Test
   void render_ShouldHandleList() {
     // List<String>
     PolyList listType = new PolyList(PolyPrimitive.STRING);
-    assertEquals("List<String>", renderer.render(listType));
-    assertTrue(renderer.getImports().contains("java.util.List"));
+    assertEquals("List<String>", renderer.render(listType).toString());
 
     // List<Unknown> -> List<Object>
     PolyList unknownList = new PolyList(new PolyUnknown());
-    assertEquals("List<Object>", renderer.render(unknownList));
+    assertEquals("List<Object>", renderer.render(unknownList).toString());
   }
 
   @Test
   void render_ShouldHandleMap() {
     // Map<String, Integer>
     PolyMap mapType = new PolyMap(PolyPrimitive.STRING, PolyPrimitive.INT);
-    assertEquals("Map<String, Integer>", renderer.render(mapType));
-    assertTrue(renderer.getImports().contains("java.util.Map"));
+    assertEquals("Map<String, Integer>", renderer.render(mapType).toString());
 
     // Map<Unknown, Unknown> -> Map<Object, Object>
     PolyMap unknownMap = new PolyMap(new PolyUnknown(), new PolyUnknown());
-    assertEquals("Map<Object, Object>", renderer.render(unknownMap));
+    assertEquals("Map<Object, Object>", renderer.render(unknownMap).toString());
   }
 }

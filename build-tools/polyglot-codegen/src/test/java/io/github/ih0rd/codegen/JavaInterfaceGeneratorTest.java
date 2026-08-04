@@ -6,6 +6,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.github.javaparser.ast.CompilationUnit;
+
 import io.github.ih0rd.polyglot.model.ContractClass;
 import io.github.ih0rd.polyglot.model.ContractMethod;
 import io.github.ih0rd.polyglot.model.ContractParam;
@@ -61,5 +63,30 @@ class JavaInterfaceGeneratorTest {
     String source = generator.generate(clazz, "com.demo");
 
     assertTrue(source.contains("Object params(Integer a, List<String> b);"));
+  }
+
+  @Test
+  void generate_ShouldRenderUnicodeJavaIdentifiers() {
+    ContractParam param = new ContractParam("значення", PolyPrimitive.INT);
+    ContractMethod method = new ContractMethod("привіт", List.of(param), PolyPrimitive.STRING);
+    ContractClass clazz = new ContractClass("СервісApi", List.of(method));
+
+    String source = generator.generate(clazz, "com.demo");
+
+    assertTrue(source.contains("public interface СервісApi {"));
+    assertTrue(source.contains("String привіт(Integer значення);"));
+  }
+
+  @Test
+  void generateAst_ShouldExposeInspectableJavaAst() {
+    ContractMethod method = new ContractMethod("ping", List.of(), PolyPrimitive.STRING);
+    ContractClass clazz = new ContractClass("DebugApi", List.of(method));
+
+    CompilationUnit ast = generator.generateAst(clazz, "com.demo");
+
+    assertEquals("com.demo", ast.getPackageDeclaration().orElseThrow().getNameAsString());
+    assertTrue(ast.getInterfaceByName("DebugApi").isPresent());
+    assertTrue(
+        ast.getInterfaceByName("DebugApi").orElseThrow().getMethodsByName("ping").size() == 1);
   }
 }
