@@ -83,6 +83,19 @@ Implication:
 
 - the runtime is safe-by-serialization, not designed as a parallel execution engine.
 
+## Context Ownership And Close Semantics
+
+- Contexts created by executor factory methods such as `PyExecutor.create(...)` are owned by the
+  executor and are closed when the executor is closed.
+- The legacy `createWithContext(context, scriptSource)` factories and public constructors preserve
+  their historical behavior: the executor treats the caller-provided context as owned and closes it
+  on `close()`.
+- Callers that share or externally manage a context should use the overload that accepts
+  `ContextOwnership.BORROWED`. In that mode, `close()` closes the executor and releases its internal
+  caches, but leaves the supplied context open for the caller or another executor.
+- `close()` is idempotent. After an executor is closed, evaluation, binding, cache invalidation, and
+  reload operations fail with `IllegalStateException`.
+
 ## Fail-Fast Semantics
 
 - `validateBinding(...)` is the authoritative eager binding check.

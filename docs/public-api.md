@@ -34,6 +34,7 @@ by built-in implementations.
 
 - `PyExecutor`
 - `JsExecutor` as an experimental runtime type
+- `ContextOwnership`
 - runtime binding methods such as `bind(...)` and `validateBinding(...)`
 
 ### Spring Boot API

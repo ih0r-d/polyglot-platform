@@ -50,6 +50,19 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
     super(context, scriptSource);
   }
 
+  /**
+   * Creates a JavaScript executor from an existing GraalJS context with explicit context ownership.
+   *
+   * <p>JavaScript support is currently experimental.
+   *
+   * @param context GraalJS context
+   * @param scriptSource script source abstraction
+   * @param contextOwnership context lifecycle ownership
+   */
+  public JsExecutor(Context context, ScriptSource scriptSource, ContextOwnership contextOwnership) {
+    super(context, scriptSource, contextOwnership);
+  }
+
   @Override
   public String languageId() {
     return SupportedLanguage.JS.id();
@@ -135,6 +148,24 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
   public static JsExecutor createWithContext(Context context, ScriptSource scriptSource) {
 
     return new JsExecutor(context, scriptSource);
+  }
+
+  /**
+   * Creates a JavaScript executor with a caller-provided context and explicit lifecycle ownership.
+   *
+   * <p>Use {@link ContextOwnership#BORROWED} when the context is shared or closed by caller-managed
+   * infrastructure. Use {@link ContextOwnership#OWNED_BY_EXECUTOR} when closing this executor
+   * should also close the supplied context. JavaScript support is currently experimental.
+   *
+   * @param context GraalJS context supplied by the caller
+   * @param scriptSource script source implementation
+   * @param contextOwnership context lifecycle ownership
+   * @return configured executor bound to the provided context
+   */
+  public static JsExecutor createWithContext(
+      Context context, ScriptSource scriptSource, ContextOwnership contextOwnership) {
+
+    return new JsExecutor(context, scriptSource, contextOwnership);
   }
 
   /**

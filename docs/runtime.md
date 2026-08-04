@@ -172,6 +172,32 @@ Applications normally interact with the runtime through:
 
 `metadata()` returns a lightweight snapshot intended for diagnostics, actuator info, or metrics. It is not a stable serialization format.
 
+### Context Ownership
+
+Executor factories that create their own GraalVM `Context`, such as `PyExecutor.create(...)`, own
+that context and close it from `executor.close()`.
+
+The legacy `createWithContext(context, scriptSource)` overloads and public constructors keep their
+historical behavior: the executor closes the supplied context. This is source-compatible with
+existing applications that rely on executor-managed lifecycle.
+
+For shared or externally managed contexts, use the overload that accepts `ContextOwnership`:
+
+```java
+Context sharedContext = Context.newBuilder("python").allowAllAccess(true).build();
+PyExecutor executor =
+    PyExecutor.createWithContext(
+        sharedContext, scriptSource, ContextOwnership.BORROWED);
+```
+
+With `ContextOwnership.BORROWED`, `executor.close()` releases executor-local caches and marks the
+executor closed, but it does not close the supplied context. The caller remains responsible for
+closing the context after all borrowers are done.
+
+Executor access to a context is serialized per executor instance. If multiple executors share one
+borrowed context, callers must still coordinate access across those executors according to GraalVM's
+context lifecycle and threading constraints.
+
 ## Binding Conventions
 
 The runtime currently exposes three convention values:

@@ -51,6 +51,9 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
   /** Strategy used to resolve script content by logical name. */
   protected final ScriptSource scriptSource;
 
+  /** Lifecycle ownership of the underlying GraalVM context. */
+  private final ContextOwnership contextOwnership;
+
   /** Cache of evaluated or compiled sources keyed by Java contract type. */
   protected final Map<Class<?>, Source> sourceCache = new ConcurrentHashMap<>();
 
@@ -67,6 +70,18 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
    * @param scriptSource script source abstraction
    */
   protected AbstractPolyglotExecutor(Context context, ScriptSource scriptSource) {
+    this(context, scriptSource, ContextOwnership.OWNED_BY_EXECUTOR);
+  }
+
+  /**
+   * Creates a new executor instance with explicit context ownership.
+   *
+   * @param context GraalVM context
+   * @param scriptSource script source abstraction
+   * @param contextOwnership context lifecycle ownership
+   */
+  protected AbstractPolyglotExecutor(
+      Context context, ScriptSource scriptSource, ContextOwnership contextOwnership) {
     if (context == null) {
       throw new IllegalArgumentException("Context must not be null");
     }
@@ -75,6 +90,8 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
     }
     this.context = context;
     this.scriptSource = scriptSource;
+    this.contextOwnership =
+        Objects.requireNonNull(contextOwnership, "ContextOwnership must not be null");
   }
 
   /**
@@ -333,15 +350,28 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
     return info;
   }
 
-  /** Closes the underlying GraalVM context. */
+  /**
+   * Closes this executor.
+   *
+   * <p>The executor always releases its internal caches. The underlying GraalVM context is closed
+   * only when this executor owns it.
+   */
   @Override
   public void close() {
     synchronized (contextMonitor) {
       if (!closed.compareAndSet(false, true)) {
         return;
       }
-      context.close();
+      closeExecutorResources();
+      if (contextOwnership == ContextOwnership.OWNED_BY_EXECUTOR) {
+        context.close();
+      }
     }
+  }
+
+  /** Releases executor-owned resources that are independent from context ownership. */
+  protected void closeExecutorResources() {
+    sourceCache.clear();
   }
 
   /**

@@ -564,6 +564,119 @@ class PyExecutorTest {
   }
 
   @Test
+  void internallyCreatedContextIsClosedWithExecutor() {
+    Context createdContext = mock(Context.class);
+    ScriptSource createdScriptSource = mock(ScriptSource.class);
+    Consumer<Builder> customizer = mock(Consumer.class);
+
+    try (MockedStatic<PolyglotHelper> polyglotHelper = mockStatic(PolyglotHelper.class)) {
+      polyglotHelper
+          .when(() -> PolyglotHelper.newContext(SupportedLanguage.PYTHON, customizer))
+          .thenReturn(createdContext);
+
+      PyExecutor created = PyExecutor.create(createdScriptSource, customizer);
+
+      created.close();
+
+      verify(createdContext).close();
+    }
+  }
+
+  @Test
+  void createWithContextKeepsPreviousOwnedContextCloseSemantics() {
+    Context createdContext = mock(Context.class);
+    ScriptSource createdScriptSource = mock(ScriptSource.class);
+
+    PyExecutor created = PyExecutor.createWithContext(createdContext, createdScriptSource);
+
+    created.close();
+
+    verify(createdContext).close();
+  }
+
+  @Test
+  void callerProvidedOwnedContextIsClosedWithExecutor() {
+    Context createdContext = mock(Context.class);
+    ScriptSource createdScriptSource = mock(ScriptSource.class);
+
+    PyExecutor created =
+        PyExecutor.createWithContext(
+            createdContext, createdScriptSource, ContextOwnership.OWNED_BY_EXECUTOR);
+
+    created.close();
+
+    verify(createdContext).close();
+  }
+
+  @Test
+  void callerProvidedBorrowedContextIsNotClosedWithExecutor() {
+    Context createdContext = mock(Context.class);
+    ScriptSource createdScriptSource = mock(ScriptSource.class);
+
+    PyExecutor created =
+        PyExecutor.createWithContext(
+            createdContext, createdScriptSource, ContextOwnership.BORROWED);
+
+    created.close();
+
+    verify(createdContext, never()).close();
+  }
+
+  @Test
+  void borrowedContextRemainsAvailableToAnotherExecutorAfterClose() {
+    Context sharedContext = mock(Context.class);
+    Value result = mock(Value.class);
+    when(sharedContext.eval(any(Source.class))).thenReturn(result);
+    ScriptSource scriptSource = mock(ScriptSource.class);
+    PyExecutor first =
+        PyExecutor.createWithContext(sharedContext, scriptSource, ContextOwnership.BORROWED);
+    PyExecutor second =
+        PyExecutor.createWithContext(sharedContext, scriptSource, ContextOwnership.BORROWED);
+
+    first.close();
+
+    assertFalse(second.isClosed());
+    assertSame(result, second.evaluate("1 + 1"));
+    verify(sharedContext, never()).close();
+  }
+
+  @Test
+  void closeIsIdempotent() {
+    Context createdContext = mock(Context.class);
+    PyExecutor created = new PyExecutor(createdContext, mock(ScriptSource.class));
+
+    created.close();
+    created.close();
+
+    verify(createdContext).close();
+  }
+
+  @Test
+  void operationsFailAfterClose() {
+    PyExecutor created = new PyExecutor(mock(Context.class), mock(ScriptSource.class));
+
+    created.close();
+
+    assertThrows(IllegalStateException.class, () -> created.evaluate("1 + 1"));
+  }
+
+  @Test
+  void closeClearsPythonExecutorCaches() throws Exception {
+    PyExecutor created = new PyExecutor(mock(Context.class), mock(ScriptSource.class));
+    created.sourceCache.put(Api.class, mock(Source.class));
+    Field instanceField = PyExecutor.class.getDeclaredField("instanceCache");
+    instanceField.setAccessible(true);
+    Map<Class<?>, WeakReference<Value>> instanceCache =
+        (Map<Class<?>, WeakReference<Value>>) instanceField.get(created);
+    instanceCache.put(Api.class, new WeakReference<>(mock(Value.class)));
+
+    created.close();
+
+    assertTrue(created.sourceCache.isEmpty());
+    assertTrue(instanceCache.isEmpty());
+  }
+
+  @Test
   void preloadScriptDoesNotPopulateInterfaceSourceCache() throws Exception {
     Context ctx = mock(Context.class);
     PyExecutor exec = spy(newExec(ctx));

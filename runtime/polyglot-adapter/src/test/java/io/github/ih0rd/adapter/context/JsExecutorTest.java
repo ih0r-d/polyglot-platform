@@ -1,6 +1,7 @@
 package io.github.ih0rd.adapter.context;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,11 +25,9 @@ import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 
 import io.github.ih0rd.adapter.exceptions.BindingException;
 import io.github.ih0rd.adapter.exceptions.InvocationException;
@@ -48,13 +48,14 @@ class JsExecutorTest {
   @Mock private Value function;
   @Mock private Value result;
 
-  @Spy @InjectMocks private JsExecutor executor;
+  private JsExecutor executor;
 
   private AutoCloseable mocks;
 
   @BeforeEach
   void setUp() {
     mocks = MockitoAnnotations.openMocks(this);
+    executor = spy(new JsExecutor(context, scriptSource));
   }
 
   @AfterEach
@@ -170,6 +171,114 @@ class JsExecutorTest {
 
     assertSame(createdContext, created.context);
     assertSame(createdScriptSource, created.scriptSource);
+  }
+
+  @Test
+  void internallyCreatedContextIsClosedWithExecutor() {
+    Context createdContext = mock(Context.class);
+    ScriptSource createdScriptSource = mock(ScriptSource.class);
+    @SuppressWarnings("unchecked")
+    Consumer<Context.Builder> customizer = (Consumer<Context.Builder>) mock(Consumer.class);
+
+    try (MockedStatic<PolyglotHelper> polyglotHelper = mockStatic(PolyglotHelper.class)) {
+      polyglotHelper
+          .when(() -> PolyglotHelper.newContext(SupportedLanguage.JS, customizer))
+          .thenReturn(createdContext);
+
+      JsExecutor created = JsExecutor.create(createdScriptSource, customizer);
+
+      created.close();
+
+      verify(createdContext).close();
+    }
+  }
+
+  @Test
+  void createWithContextKeepsPreviousOwnedContextCloseSemantics() {
+    Context createdContext = mock(Context.class);
+    ScriptSource createdScriptSource = mock(ScriptSource.class);
+
+    JsExecutor created = JsExecutor.createWithContext(createdContext, createdScriptSource);
+
+    created.close();
+
+    verify(createdContext).close();
+  }
+
+  @Test
+  void callerProvidedOwnedContextIsClosedWithExecutor() {
+    Context createdContext = mock(Context.class);
+    ScriptSource createdScriptSource = mock(ScriptSource.class);
+
+    JsExecutor created =
+        JsExecutor.createWithContext(
+            createdContext, createdScriptSource, ContextOwnership.OWNED_BY_EXECUTOR);
+
+    created.close();
+
+    verify(createdContext).close();
+  }
+
+  @Test
+  void callerProvidedBorrowedContextIsNotClosedWithExecutor() {
+    Context createdContext = mock(Context.class);
+    ScriptSource createdScriptSource = mock(ScriptSource.class);
+
+    JsExecutor created =
+        JsExecutor.createWithContext(
+            createdContext, createdScriptSource, ContextOwnership.BORROWED);
+
+    created.close();
+
+    verify(createdContext, never()).close();
+  }
+
+  @Test
+  void borrowedContextRemainsAvailableToAnotherExecutorAfterClose() {
+    Context sharedContext = mock(Context.class);
+    Value value = mock(Value.class);
+    when(sharedContext.eval(any(Source.class))).thenReturn(value);
+    ScriptSource createdScriptSource = mock(ScriptSource.class);
+    JsExecutor first =
+        JsExecutor.createWithContext(sharedContext, createdScriptSource, ContextOwnership.BORROWED);
+    JsExecutor second =
+        JsExecutor.createWithContext(sharedContext, createdScriptSource, ContextOwnership.BORROWED);
+
+    first.close();
+
+    assertFalse(second.isClosed());
+    assertSame(value, second.evaluate("1 + 1"));
+    verify(sharedContext, never()).close();
+  }
+
+  @Test
+  void closeIsIdempotent() {
+    Context createdContext = mock(Context.class);
+    JsExecutor created = new JsExecutor(createdContext, mock(ScriptSource.class));
+
+    created.close();
+    created.close();
+
+    verify(createdContext).close();
+  }
+
+  @Test
+  void operationsFailAfterClose() {
+    JsExecutor created = new JsExecutor(mock(Context.class), mock(ScriptSource.class));
+
+    created.close();
+
+    assertThrows(IllegalStateException.class, () -> created.evaluate("1 + 1"));
+  }
+
+  @Test
+  void closeClearsJavaScriptExecutorCaches() {
+    JsExecutor created = new JsExecutor(mock(Context.class), mock(ScriptSource.class));
+    created.sourceCache.put(JsApi.class, mock(Source.class));
+
+    created.close();
+
+    assertTrue(created.sourceCache.isEmpty());
   }
 
   @Test

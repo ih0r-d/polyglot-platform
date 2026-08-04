@@ -66,6 +66,17 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
     super(context, scriptSource);
   }
 
+  /**
+   * Creates a Python executor from an existing GraalPy context with explicit context ownership.
+   *
+   * @param context GraalPy context
+   * @param scriptSource script source abstraction
+   * @param contextOwnership context lifecycle ownership
+   */
+  public PyExecutor(Context context, ScriptSource scriptSource, ContextOwnership contextOwnership) {
+    super(context, scriptSource, contextOwnership);
+  }
+
   @Override
   public String languageId() {
     return SupportedLanguage.PYTHON.id();
@@ -139,6 +150,24 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   public static PyExecutor createWithContext(Context context, ScriptSource scriptSource) {
 
     return new PyExecutor(context, scriptSource);
+  }
+
+  /**
+   * Creates a Python executor with a caller-provided context and explicit lifecycle ownership.
+   *
+   * <p>Use {@link ContextOwnership#BORROWED} when the context is shared or closed by caller-managed
+   * infrastructure. Use {@link ContextOwnership#OWNED_BY_EXECUTOR} when closing this executor
+   * should also close the supplied context.
+   *
+   * @param context GraalPy context supplied by the caller
+   * @param scriptSource script source implementation
+   * @param contextOwnership context lifecycle ownership
+   * @return configured executor bound to the provided context
+   */
+  public static PyExecutor createWithContext(
+      Context context, ScriptSource scriptSource, ContextOwnership contextOwnership) {
+
+    return new PyExecutor(context, scriptSource, contextOwnership);
   }
 
   /**
@@ -429,6 +458,13 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
           instanceCache.clear();
           sourceCache.clear();
         });
+  }
+
+  /** Clears Python-specific caches when the executor is closed. */
+  @Override
+  protected void closeExecutorResources() {
+    instanceCache.clear();
+    super.closeExecutorResources();
   }
 
   private void reloadSingleUnchecked(Class<?> iface, Convention convention) {
