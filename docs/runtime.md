@@ -56,6 +56,13 @@ Logical names are derived from interface names:
 
 The actual physical path depends on the chosen `ScriptSource`.
 
+Logical script names are not raw paths. Built-in `ScriptSource` implementations accept relative
+`/`-separated names without the language extension, including nested names such as
+`scripts/utils/helper`. They reject `null`, blank values, path traversal, absolute paths, Windows
+drive or UNC paths, backslash separators, and resource prefixes such as `file:` or `classpath:`.
+`FileSystemScriptSource` also rejects symbolic links that resolve outside the configured language
+directory under the configured base directory.
+
 ### Binding and Invocation
 
 `bind(Class<T>)` creates a JDK dynamic proxy. Each interface method becomes a guest-language method call with the same method name.

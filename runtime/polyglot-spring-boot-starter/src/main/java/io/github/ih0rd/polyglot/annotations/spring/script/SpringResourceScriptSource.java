@@ -9,6 +9,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 
 import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.model.config.ScriptNames;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
 /**
@@ -78,7 +79,8 @@ public final class SpringResourceScriptSource implements ScriptSource {
 
   /** Resolves a Spring {@link Resource} for the given logical script name. */
   private Resource resolve(String scriptName) {
-    return resourceLoader.getResource(basePath + scriptName + language.ext());
+    return resourceLoader.getResource(
+        basePath + ScriptNames.requireValid(scriptName) + language.ext());
   }
 
   /** Normalizes the base path so resource resolution always appends to a trailing slash. */

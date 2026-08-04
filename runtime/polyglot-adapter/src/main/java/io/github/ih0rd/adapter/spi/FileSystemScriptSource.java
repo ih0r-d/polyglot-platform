@@ -5,8 +5,10 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.model.config.ScriptNames;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
 /**
@@ -28,7 +30,8 @@ public final class FileSystemScriptSource implements ScriptSource {
    * @param baseDir base directory containing language subfolders
    */
   public FileSystemScriptSource(Path baseDir) {
-    this.baseDir = baseDir;
+    this.baseDir =
+        Objects.requireNonNull(baseDir, "baseDir must not be null").toAbsolutePath().normalize();
   }
 
   /**
@@ -40,7 +43,23 @@ public final class FileSystemScriptSource implements ScriptSource {
    */
   @Override
   public boolean exists(SupportedLanguage language, String scriptName) {
-    return Files.exists(resolve(language, scriptName));
+    Path resolved = resolve(language, scriptName);
+    try {
+      Path languageReal = languageDirectoryRealPath(language, scriptName);
+      if (!Files.exists(resolved)) {
+        return false;
+      }
+      Path resolvedReal = resolved.toRealPath();
+      if (!resolvedReal.startsWith(languageReal)) {
+        throw new IllegalArgumentException(
+            "Invalid logical script name '"
+                + scriptName
+                + "': resolved path escapes language directory");
+      }
+      return true;
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   /**
@@ -53,7 +72,9 @@ public final class FileSystemScriptSource implements ScriptSource {
    */
   @Override
   public Reader open(SupportedLanguage language, String scriptName) throws IOException {
-    return Files.newBufferedReader(resolve(language, scriptName), StandardCharsets.UTF_8);
+    Path resolved = resolve(language, scriptName);
+    Path realPath = resolveRealPath(language, scriptName, resolved);
+    return Files.newBufferedReader(realPath, StandardCharsets.UTF_8);
   }
 
   /**
@@ -64,6 +85,47 @@ public final class FileSystemScriptSource implements ScriptSource {
    * @return resolved file path
    */
   private Path resolve(SupportedLanguage language, String scriptName) {
-    return baseDir.resolve(language.name().toLowerCase()).resolve(scriptName + language.ext());
+    String logicalName = ScriptNames.requireValid(scriptName);
+    Path languageDir = languageDirectory(language);
+    Path resolved = languageDir.resolve(logicalName + language.ext()).normalize();
+    if (!resolved.startsWith(languageDir)) {
+      throw new IllegalArgumentException(
+          "Invalid logical script name '"
+              + scriptName
+              + "': resolved path escapes language directory");
+    }
+    return resolved;
+  }
+
+  private Path resolveRealPath(SupportedLanguage language, String scriptName, Path resolved)
+      throws IOException {
+
+    Path languageReal = languageDirectoryRealPath(language, scriptName);
+    Path resolvedReal = resolved.toRealPath();
+    if (!resolvedReal.startsWith(languageReal)) {
+      throw new IllegalArgumentException(
+          "Invalid logical script name '"
+              + scriptName
+              + "': resolved path escapes language directory");
+    }
+    return resolvedReal;
+  }
+
+  private Path languageDirectoryRealPath(SupportedLanguage language, String scriptName)
+      throws IOException {
+
+    Path baseReal = baseDir.toRealPath();
+    Path languageReal = languageDirectory(language).toRealPath();
+    if (!languageReal.startsWith(baseReal)) {
+      throw new IllegalArgumentException(
+          "Invalid logical script name '"
+              + scriptName
+              + "': language directory escapes base directory");
+    }
+    return languageReal;
+  }
+
+  private Path languageDirectory(SupportedLanguage language) {
+    return baseDir.resolve(language.name().toLowerCase()).normalize();
   }
 }

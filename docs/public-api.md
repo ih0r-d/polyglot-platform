@@ -24,6 +24,12 @@ For the current `0.5.x` release-preparation line:
 - `@ExperimentalApi` as the repository marker for bounded published surface
 - `ScriptSource`
 
+`ScriptSource` accepts logical script names, not raw filesystem paths or resource locations. A
+logical script name is a relative `/`-separated name without the language extension, for example
+`forecast_service` or `scripts/utils/helper`. Path traversal, absolute paths, Windows drive or UNC
+paths, backslash separators, and URI/resource prefixes such as `file:` or `classpath:` are rejected
+by built-in implementations.
+
 ### Runtime API
 
 - `PyExecutor`

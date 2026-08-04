@@ -18,9 +18,17 @@ class InMemoryScriptSourceTest {
   @Test
   void existsUsesLanguageAndScriptKey() {
     InMemoryScriptSource source =
-        new InMemoryScriptSource(Map.of("python/demo", "print('ok')", "js/app", "1 + 1"));
+        new InMemoryScriptSource(
+            Map.of(
+                "python/demo",
+                "print('ok')",
+                "python/scripts/utils/helper",
+                "nested",
+                "js/app",
+                "1 + 1"));
 
     assertTrue(source.exists(SupportedLanguage.PYTHON, "demo"));
+    assertTrue(source.exists(SupportedLanguage.PYTHON, "scripts/utils/helper"));
     assertFalse(source.exists(SupportedLanguage.PYTHON, "app"));
   }
 
@@ -40,5 +48,16 @@ class InMemoryScriptSourceTest {
     InMemoryScriptSource source = new InMemoryScriptSource(Map.of());
 
     assertThrows(IllegalArgumentException.class, () -> source.open(SupportedLanguage.PYTHON, "x"));
+  }
+
+  @Test
+  void rejectsUnsafeLogicalNames() {
+    InMemoryScriptSource source = new InMemoryScriptSource(Map.of());
+
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class, () -> source.exists(SupportedLanguage.PYTHON, "../x"));
+
+    assertTrue(exception.getMessage().contains("Invalid logical script name '../x'"));
   }
 }

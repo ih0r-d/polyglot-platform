@@ -47,6 +47,14 @@ class ClasspathScriptSourceTest {
   }
 
   @Test
+  void existsSupportsNestedLogicalNames() throws Exception {
+    when(classLoader.getResource("python/scripts/utils/helper.py"))
+        .thenReturn(URI.create("file:/tmp/helper.py").toURL());
+
+    assertTrue(source.exists(SupportedLanguage.PYTHON, "scripts/utils/helper"));
+  }
+
+  @Test
   void existsReturnsFalseWhenResourceIsMissing() {
     when(classLoader.getResource("js/missing.js")).thenReturn(null);
 
@@ -88,5 +96,22 @@ class ClasspathScriptSourceTest {
 
     assertThrows(
         IllegalArgumentException.class, () -> source.open(SupportedLanguage.PYTHON, "missing"));
+  }
+
+  @Test
+  void rejectsUnsafeLogicalNamesBeforeClasspathLookup() {
+    assertInvalid("../outside", "'../outside'");
+    assertInvalid("/python/demo", "'/python/demo'");
+    assertInvalid("C:\\python\\demo", "'C:\\python\\demo'");
+    assertInvalid("classpath:python/demo", "'classpath:python/demo'");
+  }
+
+  private void assertInvalid(String scriptName, String expectedValue) {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> source.exists(SupportedLanguage.PYTHON, scriptName));
+
+    assertTrue(exception.getMessage().contains("Invalid logical script name " + expectedValue));
   }
 }

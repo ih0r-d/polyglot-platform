@@ -52,6 +52,15 @@ class SpringResourceScriptSourceTest {
   }
 
   @Test
+  void existsSupportsNestedLogicalNames() {
+    when(resourceLoader.getResource("classpath:/python/scripts/utils/helper.py"))
+        .thenReturn(resource);
+    when(resource.exists()).thenReturn(true);
+
+    assertTrue(source.exists(SupportedLanguage.PYTHON, "scripts/utils/helper"));
+  }
+
+  @Test
   void openNormalizesBasePathAndReadsUtf8Content() throws Exception {
     source = new SpringResourceScriptSource(resourceLoader, SupportedLanguage.JS, "classpath:/js");
     when(resourceLoader.getResource("classpath:/js/demo.js")).thenReturn(resource);
@@ -80,5 +89,25 @@ class SpringResourceScriptSourceTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> new SpringResourceScriptSource(resourceLoader, SupportedLanguage.PYTHON, "  "));
+  }
+
+  @Test
+  void rejectsUnsafeLogicalNamesBeforeResourceLookup() {
+    assertInvalid("../outside", "'../outside'");
+    assertInvalid("/python/demo", "'/python/demo'");
+    assertInvalid("C:/python/demo", "'C:/python/demo'");
+    assertInvalid("C:\\python\\demo", "'C:\\python\\demo'");
+    assertInvalid("file:/tmp/demo", "'file:/tmp/demo'");
+    assertInvalid("classpath:python/demo", "'classpath:python/demo'");
+    assertInvalid("scripts\\..\\demo", "'scripts\\..\\demo'");
+  }
+
+  private void assertInvalid(String scriptName, String expectedValue) {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> source.exists(SupportedLanguage.PYTHON, scriptName));
+
+    assertTrue(exception.getMessage().contains("Invalid logical script name " + expectedValue));
   }
 }

@@ -6,6 +6,7 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 
 import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.model.config.ScriptNames;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
 /**
@@ -76,6 +77,9 @@ public final class ClasspathScriptSource implements ScriptSource {
    * @return resource path relative to classpath root
    */
   private String resolve(SupportedLanguage language, String scriptName) {
-    return language.name().toLowerCase() + "/" + scriptName + language.ext();
+    return language.name().toLowerCase()
+        + "/"
+        + ScriptNames.requireValid(scriptName)
+        + language.ext();
   }
 }

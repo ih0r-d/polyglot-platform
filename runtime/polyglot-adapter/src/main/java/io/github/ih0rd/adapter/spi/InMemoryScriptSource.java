@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.model.config.ScriptNames;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
 /**
@@ -71,6 +72,6 @@ public final class InMemoryScriptSource implements ScriptSource {
    * @return composite key
    */
   private String key(SupportedLanguage language, String scriptName) {
-    return language.name().toLowerCase() + "/" + scriptName;
+    return language.name().toLowerCase() + "/" + ScriptNames.requireValid(scriptName);
   }
 }
