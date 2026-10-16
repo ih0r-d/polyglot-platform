@@ -54,6 +54,10 @@ setup_java_home() {
   local java_bin
 
   setup_sdkman_env
+  if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then
+    export JAVA_HOME
+    return
+  fi
   java_bin="$(command -v java)"
   export JAVA_HOME
   JAVA_HOME="$(cd "$(dirname "$java_bin")/.." && pwd -P)"
@@ -78,7 +82,7 @@ run_mvn() {
   cd_repo_root
   setup_java_home
   setup_maven_opts
-  print_info "JDK: $(java -version 2>&1 | head -n 1)"
+  print_info "JDK: $("$JAVA_HOME/bin/java" -version 2>&1 | head -n 1)"
   print_info "Maven: ./mvnw -B -ntp $*"
   ./mvnw -B -ntp "$@"
 }
