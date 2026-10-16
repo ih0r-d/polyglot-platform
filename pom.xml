@@ -490,6 +490,50 @@
 
   <profiles>
     <profile>
+      <id>api-compat</id>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.revapi</groupId>
+              <artifactId>revapi-maven-plugin</artifactId>
+              <version>0.15.1</version>
+              <dependencies>
+                <dependency>
+                  <groupId>org.revapi</groupId>
+                  <artifactId>revapi-java</artifactId>
+                  <version>0.28.4</version>
+                </dependency>
+              </dependencies>
+              <configuration>
+                <oldVersion>0.4.0</oldVersion>
+                <failBuildOnProblemsFound>true</failBuildOnProblemsFound>
+                <failOnUnresolvedArtifacts>true</failOnUnresolvedArtifacts>
+                <failOnUnresolvedDependencies>true</failOnUnresolvedDependencies>
+                <failCriticality>error</failCriticality>
+                <analysisConfiguration>
+                  <revapi.java>
+                    <missing-classes>
+                      <behavior>error</behavior>
+                    </missing-classes>
+                  </revapi.java>
+                </analysisConfiguration>
+              </configuration>
+              <executions>
+                <execution>
+                  <id>check-api-compatibility</id>
+                  <phase>verify</phase>
+                  <goals>
+                    <goal>check</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+    <profile>
       <id>quality</id>
       <build>
         <plugins>

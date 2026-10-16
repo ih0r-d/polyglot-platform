@@ -58,23 +58,50 @@ What they do:
 
 ## Java API Compatibility
 
-Run the opt-in API gate after activating the intended JDK (`sdk env` for full runtime work):
+Run the opt-in API gate after activating the pinned GraalVM (`sdk env`):
 
 ```bash
-./mvnw -B -ntp -Papi-compat -pl api/polyglot-model -am clean verify
+./mvnw -B -ntp -Papi-compat -pl runtime/polyglot-spring-boot-starter -am clean verify
 ```
 
-The `api-compat` profile is defined only in the API parent. Revapi Maven plugin `0.15.1` with
-Java analyzer `0.28.4` compares both `polyglot-annotations` and `polyglot-model` against their
-published `io.github.ih0r-d` artifacts at exactly `0.4.0`. Confirm two `Comparing` lines in the
-output, one for each artifact, followed by successful API checks. Runtime, Spring and codegen
-are outside this gate. Ordinary builds do not activate it.
+This checks `polyglot-annotations`, `polyglot-model`, `polyglot-adapter` and
+`polyglot-spring-boot-starter` against their published `io.github.ih0r-d` artifacts at exactly
+`0.4.0`. Confirm four `Comparing` lines, one for each artifact, followed by successful API checks.
+For only the two API modules, use `-pl api/polyglot-model` instead. Codegen remains outside the gate.
 
-The gate fails on breaking or potentially breaking differences (including source-only SPI
-changes), unresolved artifacts/dependencies and missing API classes. Compatible additions are
-allowed. There are currently no exclusions or ignored differences: this conservatively also checks
-`SupportedLanguage.JS` and internal model helpers without promoting them to supported contracts.
-Do not exclude the whole language enum or parser/source SPI to suppress a failure.
+The existing `api-compat` profile shares Revapi Maven plugin `0.15.1`, Java analyzer `0.28.4`,
+strict resolution settings and the verify execution through root plugin management. Only the API
+and runtime parents opt in to execution; ordinary builds do not activate it. Breaking or potentially
+breaking binary/source differences, unresolved artifacts/dependencies and missing API classes fail
+the build. Compatible additions are allowed.
+
+Runtime coverage includes `PyExecutor` and inherited public methods, `PolyglotHelper`, context
+ownership/lifecycle and built-in script sources. Spring coverage includes client annotations,
+`PolyglotExecutors`, configuration types, `PolyglotContextCustomizer` and `SpringResourceScriptSource`.
+The only API exclusion is the exact documented starter `internal` package. The executor base class
+is retained so inherited public calls cannot disappear from analysis; checking its protected surface
+conservatively does not establish a supported subclassing SPI. Experimental JavaScript and legacy
+utilities are also checked conservatively, without promoting their support level.
+
+`SpringPolyglotContextFactory` remains checked pending maintainer classification. Other public Spring
+wiring types also remain checked; there is no broad Spring package or annotation-based exclusion.
+
+Three narrowly scoped diagnostic rules use `documented` criticality rather than fail:
+
+- `java.class.externalClassExposedInAPI` for the additive `ContextOwnership` enum, exposed from the
+  separately checked adapter through new overloads; the rule requires the current adapter archive
+  in a supplementary role. Existing signatures/ownership defaults remain.
+- `java.method.varargOverloadsOnlyDifferInVarargParameter` for the existing Micrometer `sla`,
+  `Tags.and/of` overloads, only when both dependency archives are exactly `micrometer-core:1.17.0`.
+- The same diagnostic for `ResolvableType.forClassWithGenerics`, only when both archives are
+  exactly `spring-core:7.0.8`. These upstream overload ambiguities already exist in the baseline;
+  they are not new project incompatibilities. They also reproduce when comparing published starter
+  `0.4.0` with itself. Other difference codes remain blocking.
+
+The dependency rules require both archive versions to match exactly. An upgrade stops matching
+these rules; any remaining diagnostics then fail the gate and require review. Do not widen the
+version patterns automatically. Unused old-version rules do not fail by themselves and should be
+removed during that review.
 
 Baseline artifacts must come from Maven Central or a trusted mirror. A locally installed `0.4.0`
 can shadow the published release; for an independent baseline check, use a fresh temporary Maven
@@ -82,9 +109,10 @@ repository with `-Dmaven.repo.local=/absolute/path/to/empty-cache`. If a configu
 unavailable, use an approved settings file through Maven's `-s` option; do not substitute a locally
 rebuilt baseline silently.
 
-This checks Java API compatibility, not runtime semantics, configuration defaults or generated text.
-Existing tests and release review remain necessary. Before extending the gate, resolve the pending
-boundaries in [public API](public-api.md), including inherited executor methods and Spring wiring.
+This checks Java API compatibility, not runtime semantics, Spring property defaults or generated
+text. Existing tests and release review remain necessary; see [public API](public-api.md) for pending
+classifications. New ownership API absent in `0.4.0` needs a later released baseline to detect its
+future removal; additive presence alone is not a separate baseline guarantee.
 
 ## Continuous Integration
 

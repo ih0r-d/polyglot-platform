@@ -57,6 +57,65 @@
 
     <profiles>
         <profile>
+            <id>api-compat</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.revapi</groupId>
+                        <artifactId>revapi-maven-plugin</artifactId>
+                        <configuration>
+                            <analysisConfiguration>
+                                <revapi.filter>
+                                    <elements>
+                                        <exclude>
+                                            <!-- Explicitly internal starter support; keep public wiring APIs checked. -->
+                                            <item>
+                                                <matcher>java-package</matcher>
+                                                <match>io.github.ih0rd.polyglot.annotations.spring.internal</match>
+                                            </item>
+                                        </exclude>
+                                    </elements>
+                                </revapi.filter>
+                                <revapi.differences>
+                                    <differences>
+                                        <item>
+                                            <code>java.class.externalClassExposedInAPI</code>
+                                            <new>enum io.github.ih0rd.adapter.context.ContextOwnership</new>
+                                            <newArchive>io.github.ih0r-d:polyglot-adapter:jar:${project.version}</newArchive>
+                                            <newArchiveRole>supplementary</newArchiveRole>
+                                            <criticality>documented</criticality>
+                                            <justification>Additive ownership enum exposed through new executor overloads; existing signatures and legacy ownership remain unchanged. The adapter is checked separately.</justification>
+                                        </item>
+                                        <!-- Revapi reports these existing ambiguities even for unchanged upstream APIs. -->
+                                        <item>
+                                            <code>java\.method\.varargOverloadsOnlyDifferInVarargParameter</code>
+                                            <regex>true</regex>
+                                            <old>method (io\.micrometer\.core\.instrument\.(?:DistributionSummary\.Builder|distribution\.DistributionStatisticConfig\.Builder)) \1::sla\((?:double|long)\[\]\)|method (io\.micrometer\.core\.instrument\.Tags) \2::(?:and|of)\((?:java\.lang\.String|io\.micrometer\.core\.instrument\.Tag)\[\]\)</old>
+                                            <new>method (io\.micrometer\.core\.instrument\.(?:DistributionSummary\.Builder|distribution\.DistributionStatisticConfig\.Builder)) \1::sla\((?:double|long)\[\]\)|method (io\.micrometer\.core\.instrument\.Tags) \2::(?:and|of)\((?:java\.lang\.String|io\.micrometer\.core\.instrument\.Tag)\[\]\)</new>
+                                            <oldArchive>io\.micrometer:micrometer-core:jar:1\.17\.0</oldArchive>
+                                            <newArchive>io\.micrometer:micrometer-core:jar:1\.17\.0</newArchive>
+                                            <criticality>documented</criticality>
+                                            <justification>Unchanged Micrometer 1.17.0 varargs ambiguities already exist in the published baseline; retain the diagnostic without treating it as a project regression. Other difference codes and dependency versions remain checked.</justification>
+                                        </item>
+                                        <item>
+                                            <code>java\.method\.varargOverloadsOnlyDifferInVarargParameter</code>
+                                            <regex>true</regex>
+                                            <old>method org\.springframework\.core\.ResolvableType org\.springframework\.core\.ResolvableType::forClassWithGenerics\(java\.lang\.Class&lt;\?&gt;, (java\.lang\.Class&lt;\?&gt;|org\.springframework\.core\.ResolvableType)\[\]\)</old>
+                                            <new>method org\.springframework\.core\.ResolvableType org\.springframework\.core\.ResolvableType::forClassWithGenerics\(java\.lang\.Class&lt;\?&gt;, (java\.lang\.Class&lt;\?&gt;|org\.springframework\.core\.ResolvableType)\[\]\)</new>
+                                            <oldArchive>org\.springframework:spring-core:jar:7\.0\.8</oldArchive>
+                                            <newArchive>org\.springframework:spring-core:jar:7\.0\.8</newArchive>
+                                            <criticality>documented</criticality>
+                                            <justification>Unchanged Spring Core 7.0.8 overload ambiguity exists in both APIs; only this diagnostic for these pinned members is non-blocking.</justification>
+                                        </item>
+                                    </differences>
+                                </revapi.differences>
+                            </analysisConfiguration>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>release</id>
             <build>
                 <plugins>
