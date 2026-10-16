@@ -122,6 +122,20 @@ and manual `workflow_dispatch` runs. CI is intentionally separate from release a
 on the same commit, then deploys docs and creates the GitHub Release. Maven Central publishing stays
 manual in `.github/workflows/publish.yaml`.
 
+The independent `API Compatibility / Revapi` job runs on the same pull request, `main` push and
+manual events. It uses GraalVM JDK 25 and the existing `api-compat` profile for all four modules.
+It skips test compilation/execution and JaCoCo because existing jobs provide those checks; it
+still packages production classes and runs Revapi. Maven failures propagate through the log pipe,
+and the job requires a comparison line for each module to reject skipped checks. Maven caching
+is reused for third-party dependencies; cached `io.github.ih0r-d` artifacts are discarded before
+comparison so locally installed platform jars cannot shadow published Maven Central baselines.
+
+To make this check mandatory before merging, a repository administrator must enable **Require
+status checks to pass before merging** in the branch protection rule or ruleset for `main` and
+select **API Compatibility / Revapi** from this workflow after its first GitHub run. Keep existing
+required checks selected. This repository change does not configure or verify that server-side
+requirement. See [GitHub's required status check documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging).
+
 Dependency Review runs only for pull requests. OSV Scanner runs for pull requests, pushes to
 `main`, and manual CI runs. CI first generates a Maven CycloneDX aggregate SBOM with
 `./mvnw -B -ntp -Psbom -DskipTests verify`, then OSV scans only that SBOM; it does not recursively
@@ -137,6 +151,8 @@ flowchart TD
 
     J21["Stage 1: Baseline / Java 21<br/>mvn clean test<br/>artifact: maven-test-reports-java21"]
     G25["Stage 1: Runtime / GraalVM 25<br/>mvn clean test<br/>artifact: maven-test-reports-graalvm25"]
+
+    API["API Compatibility / Revapi<br/>GraalVM 25, api-compat<br/>tests and JaCoCo skipped"]
 
     DOCS["Stage 2: Docs Build<br/>artifact: docs-site"]
     SAMPLES["Stage 2: Samples validation<br/>Java Maven Example<br/>Java Maven Codegen Example<br/>Spring Boot Example<br/>+ AOT only on manual"]

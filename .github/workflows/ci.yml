@@ -224,6 +224,38 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  api-compatibility:
+    name: API Compatibility / Revapi
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Set up GraalVM JDK 25
+        uses: graalvm/setup-graalvm@6f3fa030c4b8f77c1f554a860f593a654538fa38 # v1
+        with:
+          distribution: graalvm-community
+          java-version: "25"
+          cache: maven
+
+      - name: Discard cached platform artifacts
+        run: rm -rf "$HOME/.m2/repository/io/github/ih0r-d"
+
+      - name: Check API compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./mvnw -B -ntp -Papi-compat -pl runtime/polyglot-spring-boot-starter -am clean verify \
+            -Dmaven.test.skip=true -Djacoco.skip=true | tee "$RUNNER_TEMP/api-compat.log"
+
+          for artifact in polyglot-annotations polyglot-model polyglot-adapter polyglot-spring-boot-starter; do
+            if ! grep -Fq "Comparing [io.github.ih0r-d:${artifact}:jar:" "$RUNNER_TEMP/api-compat.log"; then
+              echo "::error::Revapi did not compare ${artifact}"
+              exit 1
+            fi
+          done
+
   docs:
     name: Docs Build
     runs-on: ubuntu-latest
