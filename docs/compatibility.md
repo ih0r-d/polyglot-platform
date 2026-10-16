@@ -135,7 +135,9 @@ their actual removal still needs an explicit release decision and notice to know
 
 The root build must retain explicit Maven plugin versions and reproducible build settings.
 Compatibility changes require focused tests and user-visible changelog/release notes. These are
-release-review requirements; automated binary/source enforcement has not yet been introduced.
+release-review requirements. The opt-in `api-compat` Revapi gate checks the two API artifacts
+against published `0.4.0`; runtime, starter and codegen are not yet covered. See
+[the verification command](developer-tooling.md#java-api-compatibility).
 
 ## Current Java Support Story
 

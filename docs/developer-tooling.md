@@ -56,6 +56,36 @@ What they do:
 - `task docs:build`: run a strict local documentation build
 - `task docs:clean`: remove local MkDocs site output
 
+## Java API Compatibility
+
+Run the opt-in API gate after activating the intended JDK (`sdk env` for full runtime work):
+
+```bash
+./mvnw -B -ntp -Papi-compat -pl api/polyglot-model -am clean verify
+```
+
+The `api-compat` profile is defined only in the API parent. Revapi Maven plugin `0.15.1` with
+Java analyzer `0.28.4` compares both `polyglot-annotations` and `polyglot-model` against their
+published `io.github.ih0r-d` artifacts at exactly `0.4.0`. Confirm two `Comparing` lines in the
+output, one for each artifact, followed by successful API checks. Runtime, Spring and codegen
+are outside this gate. Ordinary builds do not activate it.
+
+The gate fails on breaking or potentially breaking differences (including source-only SPI
+changes), unresolved artifacts/dependencies and missing API classes. Compatible additions are
+allowed. There are currently no exclusions or ignored differences: this conservatively also checks
+`SupportedLanguage.JS` and internal model helpers without promoting them to supported contracts.
+Do not exclude the whole language enum or parser/source SPI to suppress a failure.
+
+Baseline artifacts must come from Maven Central or a trusted mirror. A locally installed `0.4.0`
+can shadow the published release; for an independent baseline check, use a fresh temporary Maven
+repository with `-Dmaven.repo.local=/absolute/path/to/empty-cache`. If a configured mirror is
+unavailable, use an approved settings file through Maven's `-s` option; do not substitute a locally
+rebuilt baseline silently.
+
+This checks Java API compatibility, not runtime semantics, configuration defaults or generated text.
+Existing tests and release review remain necessary. Before extending the gate, resolve the pending
+boundaries in [public API](public-api.md), including inherited executor methods and Spring wiring.
+
 ## Continuous Integration
 
 GitHub Actions CI lives in `.github/workflows/ci.yml`. It runs on pull requests, pushes to `main`,
