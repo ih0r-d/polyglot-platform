@@ -33,8 +33,19 @@ For this repository, `experimental` means:
 - the capability exists and is tested at a bounded level
 - bugs in the documented behavior should still be fixed
 - the surface is not a parity target before `1.0.0`
-- the contract may still be narrowed, clarified, or explicitly limited before stabilization
+- the contract may change before stabilization; release notes must describe breaking changes and migration limitations
 - support claims for that surface should stay narrower than the Python-first path
+
+Experimental JavaScript scope includes `SupportedLanguage.JS`, `JsExecutor`, starter JavaScript
+properties and auto-configuration, and the JavaScript methods on `PolyglotExecutors`. Not every
+facade method currently carries `@ExperimentalApi`; absence of that marker does not establish
+Python-level guarantees. The JavaScript parser stub throws `UnsupportedOperationException` and is
+not evidence of supported JavaScript code generation.
+
+Supported API and SPI boundaries, including unresolved Java codegen decisions, are recorded only in
+[public API](public-api.md). Internal implementation details have no public compatibility guarantee;
+experimental surfaces have no Python parity or long-term behavioral guarantee. Neither category
+justifies silently changing a documented supported Python contract.
 
 ## `1.0.0` Direction
 

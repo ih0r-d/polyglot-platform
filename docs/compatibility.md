@@ -81,12 +81,61 @@ Do not infer support from:
 
 ## Compatibility Contract
 
-- The root build must keep explicit Maven plugin versions and reproducible build settings.
-- Public artifacts in `api/` and stable runtime modules should preserve backward compatibility
-  within a minor release line unless release notes state otherwise.
-- Samples are reference verification inputs, not compatibility guarantees by themselves.
-- Experimental or incubating APIs should be documented as such before release.
-- Support claims must follow verified automation, not aspiration.
+This policy applies to the supported boundaries in [public API](public-api.md). Pending
+classifications there remain unresolved recommendations, not retroactive guarantees. The current
+release comparison baseline is `v0.4.0`; a policy alone does not establish that HEAD is fully
+compatible or that an automated API gate exists.
+
+| Contract | Required compatibility review |
+| --- | --- |
+| Binary | Existing compiled consumers must link against supported replacement artifacts; preserve accessible signatures, including inherited executor methods |
+| Source | Existing valid supported usage must recompile; review overload ambiguity, generics, annotations and checked exceptions as well as method presence |
+| Behavior | Preserve documented naming/export resolution, exception categories/causes, context ownership, cache, concurrency and lifecycle semantics; bug/security corrections need explicit release notes and migration guidance when observable |
+| Configuration | Preserve documented Spring property names, types, defaults and activation behavior, plus plugin goal names, parameters/defaults and lifecycle/source registration |
+| SPI | Preserve existing implementations as well as callers; adding an abstract method can break implementors even when ordinary callers still compile |
+| Generated source / Maven workflow | Unchanged valid supported contracts and configuration must produce deterministic compatible source; review text, checksums and `check` drift behavior as well as Java signatures |
+
+The generated-source fix preserves the tested `v0.4.0` LF layout for empty interfaces, multiple
+methods and nested generics. It is not proof of byte compatibility for every historical input.
+Current output uses LF; legacy CRLF files can still drift. The `JavaTypeRenderer` Java API break is
+separate and unresolved; see the pending decisions in [public API](public-api.md).
+
+These guarantees do not cover GraalVM implementation internals, arbitrary serialized model or
+metadata values, unsupported runtime capabilities or experimental JavaScript behavior. Supported
+version claims remain limited to the verification matrix above. BOM alignment and successful
+samples do not establish compatibility with every external dependency combination.
+
+### Versioning
+
+- **Before `1.0.0`:** PATCH releases preserve supported contracts. Breaking changes between MINOR
+  releases require an explicit compatibility decision, release notes identifying affected usage,
+  and migration guidance; a `0.x` version is not permission for silent breaks. Experimental
+  changes must communicate their scope and limitations. Internal implementation details carry no
+  public compatibility guarantee.
+- **From `1.0.0`:** follow Semantic Versioning for supported contracts: PATCH for compatible fixes,
+  MINOR for backward-compatible additions and deprecations, MAJOR for breaking changes. A change
+  affecting source, binary, documented behavior, configuration, SPI or build workflow compatibility
+  must be evaluated, not just a Java signature diff. Experimental limitations must remain explicit.
+
+### Deprecation And Removal
+
+Deprecation must name the replacement or explain why none exists, identify the affected usage and
+provide migration guidance. Use `@Deprecated(since = ...)` for Java API and document configuration
+or workflow deprecations in release notes. `forRemoval = true` signals intent, not a removal date.
+
+For supported pre-1.0 APIs, retain deprecated behavior through at least one released MINOR line
+before removal in a later MINOR release. An exceptional correctness/security break requires an
+explicit maintainer decision and documented migration impact. In `1.x` and later, supported API
+removal requires a MAJOR release and prior deprecation in at least one released MINOR version.
+Deprecations must remain usable during their transition; adding a warning does not justify an
+earlier incompatible implementation change.
+
+Legacy unsupported utilities such as `CommonUtils` are not newly covered by that retention promise;
+their actual removal still needs an explicit release decision and notice to known consumers.
+
+The root build must retain explicit Maven plugin versions and reproducible build settings.
+Compatibility changes require focused tests and user-visible changelog/release notes. These are
+release-review requirements; automated binary/source enforcement has not yet been introduced.
 
 ## Current Java Support Story
 
