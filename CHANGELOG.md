@@ -5,6 +5,7 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Fixed
+- Upgrade Bouncy Castle to 1.85 for CVE-2026-8763 and CVE-2026-13506, and use Log4j API 2.25.5 in the Spring Boot integration and SpotBugs tooling for CVE-2026-49844.
 - Restore the v0.4.0 blank-line layout and checksums in LF-generated Java sources, preventing formatting-only drift in Maven codegen checks.
 
 ## [0.4.0] - 2026-06-29
