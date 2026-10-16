@@ -56,7 +56,6 @@ Current strengths:
 - clearer fail-fast and warmup/preload behavior
 - stronger build/release discipline
 - codegen workflow moving from convenience tooling toward CI-usable enforcement
-- better release/build discipline
 
 Current weaknesses:
 
@@ -121,20 +120,19 @@ Keep out of scope:
 - concurrency redesign without a proven need
 - hot reload / live replacement semantics
 
-## 8. Positioning Toward `0.3.0`
+## 8. Positioning Toward `0.5.0`
 
-`0.3.0` should be positioned internally as:
+Reviewed at `e1e913a` on 2026-10-16. Earlier 0.3.x lifecycle, strictness and sample-CI batches
+are implemented baselines, not a reason to repeat those projects. Current work should enforce the
+new compatibility policy, resolve remaining API decisions and investigate concrete runtime gaps.
 
-- the release that stabilizes Python runtime behavior enough to support stronger confidence
-- the release that makes codegen strictness and drift checks credible in CI
-- the release that makes docs and semantics line up tightly
-- the release that keeps JS support bounded, honest, and explicitly experimental
+Keep Java core framework-independent and Spring Boot the primary integration. Safe cleanup follows
+correctness evidence; performance follows repeatable measurements. GraalVM/GraalPy changes require
+an applicable use case, compatible toolchain and measured results rather than version freshness.
 
-It should not be positioned as:
-
-- the release that adds many new integration surfaces
-- the release that makes JS equal to Python
-- the release that chases breadth
+Status/research live in `ROADMAP.md`; the reviewable task queue lives in `NEXT-STEPS.md`. Do not add
+another roadmap or copy the queue into this strategy note. New framework integrations and expanded
+JavaScript support remain deferred.
 
 ## 9. Positioning Toward `1.0.0`
 
