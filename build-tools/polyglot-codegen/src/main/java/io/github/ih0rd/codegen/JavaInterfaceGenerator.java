@@ -59,9 +59,40 @@ public final class JavaInterfaceGenerator {
                 () ->
                     new IllegalStateException(
                         "Generated AST is missing interface: " + contract.name()));
-    String checksum = sha256(javaInterface.toString() + NL);
+    // Preserve the v0.4.0 layout: a blank line after '{', but none between methods.
+    StringBuilder interfaceBody =
+        new StringBuilder("public interface ")
+            .append(javaInterface.getNameAsString())
+            .append(" {")
+            .append(NL)
+            .append(NL);
+    for (MethodDeclaration method : javaInterface.getMethods()) {
+      interfaceBody.append("    ").append(method).append(NL);
+    }
+    interfaceBody.append("}").append(NL);
 
-    return GENERATED_HEADER_TEMPLATE.replace("${checksum}", checksum) + compilationUnit;
+    StringBuilder source =
+        new StringBuilder(
+            GENERATED_HEADER_TEMPLATE.replace("${checksum}", sha256(interfaceBody.toString())));
+    source
+        .append("package ")
+        .append(compilationUnit.getPackageDeclaration().orElseThrow().getNameAsString())
+        .append(";")
+        .append(NL)
+        .append(NL);
+    compilationUnit
+        .getImports()
+        .forEach(
+            declaration ->
+                source
+                    .append("import ")
+                    .append(declaration.getNameAsString())
+                    .append(";")
+                    .append(NL));
+    if (!compilationUnit.getImports().isEmpty()) {
+      source.append(NL);
+    }
+    return source.append(interfaceBody).toString();
   }
 
   /**

@@ -2,6 +2,11 @@
 
 All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- Restore the v0.4.0 blank-line layout and checksums in LF-generated Java sources, preventing formatting-only drift in Maven codegen checks.
+
 ## [0.4.0] - 2026-06-29
 
 
