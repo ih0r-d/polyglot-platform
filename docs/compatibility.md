@@ -97,8 +97,9 @@ Do not infer support from:
 
 This policy applies to the supported boundaries in [public API](public-api.md). Pending
 classifications there remain unresolved recommendations, not retroactive guarantees. The current
-release comparison baseline is `v0.4.0`; a policy alone does not establish that HEAD is fully
-compatible or that an automated API gate exists.
+release comparison baseline is `v0.4.0`. The opt-in Revapi gate runs in local verification and CI
+for the two API artifacts, adapter and Spring starter. It checks Java API differences, while
+documented behavior and configuration contracts still require separate review.
 
 | Contract | Required compatibility review |
 | --- | --- |

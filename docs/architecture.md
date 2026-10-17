@@ -91,6 +91,12 @@ The build-tools layer performs static contract extraction and Java source genera
 - a small CLI entry point
 
 `polyglot-codegen-maven-plugin` integrates the generator into Maven and registers generated sources during `generate-sources`.
+It also provides opt-in `validate-contracts` checks for existing Java-to-Python bindings. Those
+checks use static source analysis and do not initialize GraalVM or execute Python.
+
+Two contributor tools sit outside the runtime layers: the opt-in Revapi Maven profile checks Java
+API compatibility, and the standalone JMH project under `benchmarks/` records invocation and
+startup measurements. Neither adds a production runtime dependency.
 
 JavaScript contract generation is not implemented yet. The runtime supports JavaScript execution as
 an experimental bounded path, but the current code generator throws

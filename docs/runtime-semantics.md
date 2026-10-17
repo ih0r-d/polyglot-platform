@@ -101,6 +101,10 @@ Implication:
 - `validateBinding(...)` is the authoritative eager binding check.
 - In the Spring starter, `polyglot.core.fail-fast=true` eagerly instantiates discovered
   `@PolyglotClient` beans during startup.
+- Validation resolves scripts and exports without invoking bound business methods; evaluating a
+  Python module and constructing an exported class can still run application initialization code.
+- This runtime check is distinct from the Maven `validate-contracts` goal, which statically checks a
+  documented Python subset without initializing GraalVM or executing Python.
 - Startup failure is expected behavior when documented binding requirements are not met.
 
 ## Security Contract

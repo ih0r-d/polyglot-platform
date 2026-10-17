@@ -74,6 +74,10 @@ What they do:
 - `task docs:build`: run a strict local documentation build
 - `task docs:clean`: remove local MkDocs site output
 
+For static Java-to-Python contract checks, see the opt-in `validate-contracts` goal and its
+`plugin-it` Maven Invoker fixtures in [Code Generation](codegen.md#opt-in-java-to-python-contract-validation).
+The goal is disabled by default and does not execute Python modules or business methods.
+
 ## Java API Compatibility
 
 Run the opt-in API gate after activating the pinned GraalVM (`sdk env`):
@@ -136,6 +140,17 @@ text. Existing tests and release review remain necessary; see [public API](publi
 classifications. New ownership API absent in `0.4.0` needs a later released baseline to detect its
 future removal; additive presence alone is not a separate baseline guarantee.
 
+## Performance Baseline
+
+The standalone JMH project documented in the repository's
+[`benchmarks/README.md`](https://github.com/ih0r-d/polyglot-platform/blob/main/benchmarks/README.md) measures Java call
+controls, direct Polyglot `Value` invocation, the adapter's bound interface, context initialization,
+and small/large array transfers. It is outside the root reactor and adds no runtime dependency.
+Use the pinned Oracle GraalVM `25.0.4.1.1`, do not run other builds during a measurement, and
+record the raw JSON with host and JVM metadata. The checked-in
+[baseline](https://github.com/ih0r-d/polyglot-platform/blob/main/benchmarks/BASELINE.md) is a single-machine exploratory result, not a CI threshold or
+performance guarantee.
+
 ## Continuous Integration
 
 GitHub Actions CI lives in `.github/workflows/ci.yml`. It runs on pull requests, pushes to `main`,
@@ -171,8 +186,8 @@ runs so they do not appear as skipped jobs.
 flowchart TD
     DG["Stage 0: Dependency & Vulnerability Gate<br/>Dependency Review: PR only<br/>OSV Scanner: Maven CycloneDX SBOM<br/>artifact: osv-sbom-reports"]
 
-    J21["Stage 1: Baseline / Java 21<br/>mvn clean test<br/>artifact: maven-test-reports-java21"]
-    G25["Stage 1: Runtime / GraalVM 25<br/>mvn clean test<br/>artifact: maven-test-reports-graalvm25"]
+    J21["Stage 1: Baseline / Java 21<br/>./mvnw clean test<br/>artifact: maven-test-reports-java21"]
+    G25["Stage 1: Runtime / GraalVM 25<br/>./mvnw clean test<br/>artifact: maven-test-reports-graalvm25"]
 
     API["API Compatibility / Revapi<br/>GraalVM 25, api-compat<br/>tests and JaCoCo skipped"]
 

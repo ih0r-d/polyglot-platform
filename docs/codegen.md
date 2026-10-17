@@ -182,9 +182,9 @@ Additional Maven plugin options:
 
 DX workflow pattern:
 
-- local update: `mvn polyglot:generate`
-- CI verification: `mvn polyglot:check`
-- local diagnostics alias: `mvn polyglot:doctor` (same behavior as `check`)
+- local update: `./mvnw polyglot:generate`
+- CI verification: `./mvnw polyglot:check`
+- local diagnostics alias: `./mvnw polyglot:doctor` (same behavior as `check`)
 
 Recommended policy:
 

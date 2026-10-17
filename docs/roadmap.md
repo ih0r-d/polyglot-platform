@@ -27,16 +27,17 @@ The immediate documentation goals are:
 
 ## Near-Term Technical Work
 
-The next release line is focused on credibility and release quality, not platform expansion.
+The current `0.5.0-SNAPSHOT` line has completed the main incremental hardening work: GraalVM/GraalPy
+is aligned to `25.0.4.1.1`, Revapi checks the four API/runtime artifacts against `v0.4.0`, Spring
+startup fail-fast behavior has real-Python integration coverage, and the Maven plugin can opt into
+static Python module/symbol/positional-signature validation with annotation discovery. A standalone
+JMH baseline records invocation, transfer, import and context-startup costs.
 
-Current `0.5.0` direction:
+The remaining work is compatibility boundary decisions, evidence-driven runtime/lifecycle tests,
+small safe cleanups, and a bounded stabilization review. Internal planning files track proposed
+tasks; they are not product or release guarantees.
 
-- make Python runtime semantics explicit enough to be trusted
-- keep Spring startup/fail-fast/preload behavior aligned with those semantics
-- improve code generation reliability with stricter type handling and drift checks
-- keep JavaScript claims bounded to the experimental runtime surface that actually exists
-
-Not the focus of `0.5.0`:
+Deferred:
 
 - JavaScript code generation
 - JavaScript parity work

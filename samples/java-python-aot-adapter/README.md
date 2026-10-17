@@ -63,7 +63,7 @@ Without `polyglot.export_value`, the adapter would have nothing named `QuoteApi`
 
 ## Package and Run on a JVM
 
-Navigate to the demo directory and package the application:
+From the repository root, package the application with the root Maven wrapper:
 ```bash
 ./mvnw -f samples/java-python-aot-adapter/pom.xml clean package
 ```
@@ -78,6 +78,10 @@ Quote: {'basePrice': 100.0, 'tier': 'GOLD', 'discountRate': 0.15, 'vatRate': 0.2
 ## Build and Run a Native Image
 
 The project uses the [Maven plugin for GraalVM Native Image](https://graalvm.github.io/native-build-tools/latest/maven-plugin.html) to build and package it as a native executable.
+This AOT path is verified manually, not by the regular sample CI job. Do not infer general
+Native Image support from this example; package compatibility and resource requirements depend on
+the exact deployment target.
+
 ```bash
 ./mvnw -f samples/java-python-aot-adapter/pom.xml native:compile
 ```
@@ -88,6 +92,16 @@ Run it:
 ./samples/java-python-aot-adapter/target/java-python-aot-adapter
 ```
 The output should be the same as when running on the JVM.
+
+### Context ownership
+
+The sample passes a caller-created context to the legacy two-argument
+`PyExecutor.createWithContext(context, scriptSource)` factory. That overload treats the context as
+owned by the executor, which closes it when the executor closes. The sample also declares the
+context as a separate try-with-resources value; applications adapting this pattern should choose
+one clear owner. For a caller-managed or shared context, use the overload with
+`ContextOwnership.BORROWED`, then close the context only after its borrowers are finished. See
+[context ownership semantics](../../docs/runtime-semantics.md#context-ownership-and-close-semantics).
 
 ## Why Use the Adapter Instead of the Raw Polyglot API?
 

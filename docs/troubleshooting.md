@@ -337,6 +337,18 @@ class ForecastService:
 polyglot.export_value("ForecastService", ForecastService)
 ```
 
+## Build-Time Contract Validation Failures
+
+The opt-in `polyglot:validate-contracts` goal reports a missing Python module, exported contract,
+method, or compatible positional argument range with Java/Python source locations where available.
+Check that `inputDirectory` points to the Python source root and that the exported module and symbol
+follow the conventions in [Code Generation](codegen.md#opt-in-java-to-python-contract-validation).
+
+Dynamic or unsupported syntax is rejected conservatively; it is not evidence that the runtime
+binding would fail. The validator never imports or executes Python. Keep validation disabled for
+existing builds unless explicitly enabled with `-Dpolyglot.codegen.validateContracts=true`;
+annotated-contract discovery also requires `-Dpolyglot.codegen.discoverContracts=true`.
+
 ## Codegen Drift And Check Failures
 
 Symptom:
@@ -360,8 +372,8 @@ Fix:
 Common workflow:
 
 ```bash
-mvn -B -ntp polyglot:generate
-mvn -B -ntp polyglot:check
+./mvnw -B -ntp polyglot:generate
+./mvnw -B -ntp polyglot:check
 ```
 
 ## JavaScript Support Limitations

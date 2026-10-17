@@ -47,8 +47,11 @@ by built-in implementations.
 ### Build-Time API
 
 - `polyglot-codegen-maven-plugin` goals:
-  `generate`, `check`, `doctor`
-- documented plugin parameters such as `strictMode`, `skipUnchanged`, and `failOnContractDrift`
+  `generate`, `check`, `doctor`, `validate-contracts`
+- documented plugin parameters and defaults, including `onlyIncludedMethods`, `strictMode`,
+  `failOnNoContracts`, `skipUnchanged`, `failOnContractDrift`, and the opt-in `validateContracts`,
+  `discoverContracts`, `contracts`, `inputDirectory` and `sourceDirectory` settings for Python
+  contract validation
 
 ## Module Boundaries
 

@@ -1,8 +1,9 @@
 # Examples
 
-The repository contains maintained sample projects that demonstrate how the runtime adapter is used
-in practice.
-The `samples/polyglot-ai-demo` module is intentionally excluded from the documentation set.
+The repository contains maintained sample projects that demonstrate runtime and build-time use of
+the adapter. The standalone performance harness is documented in the repository's
+[`benchmarks/README.md`](https://github.com/ih0r-d/polyglot-platform/blob/main/benchmarks/README.md)
+and is not a maintained consumer sample.
 
 Examples are included here as supporting material after the main onboarding and conceptual documentation.
 
@@ -17,6 +18,7 @@ Examples are included here as supporting material after the main onboarding and 
 | [`samples/java-maven-example`](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/java-maven-example)                 | Direct use of `PyExecutor` and the experimental `JsExecutor` with explicit `ScriptSource` wiring | Framework-neutral runtime adapter |
 | [`samples/java-maven-codegen-example`](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/java-maven-codegen-example) | Build-time Java interface generation from Python contracts, followed by runtime binding | Code generation + runtime adapter |
 | [`samples/spring-boot-example`](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/spring-boot-example)               | Spring Boot auto-configuration, `@PolyglotClient` registration, actuator, and metrics   | Spring Boot integration layer     |
+| [`samples/java-python-aot-adapter`](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/java-python-aot-adapter) | Manual Java/Python packaging and Native Image experiment | AOT-oriented sample; verification is manual |
 
 ## What Each Example Helps You Learn
 
@@ -52,6 +54,10 @@ It demonstrates:
 - `@PolyglotClient`
 - Spring-managed executors
 - actuator and metrics integration
+
+The codegen Maven plugin also has real Maven Invoker fixtures for build-time contract validation
+and annotation discovery. They run with the `plugin-it` profile; see
+[`Code Generation`](codegen.md#opt-in-java-to-python-contract-validation).
 
 ## Notes About Sample Versioning
 

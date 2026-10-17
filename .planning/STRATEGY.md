@@ -55,15 +55,19 @@ Current strengths:
 - coherent starter model
 - clearer fail-fast and warmup/preload behavior
 - stronger build/release discipline
-- codegen workflow moving from convenience tooling toward CI-usable enforcement
+- opt-in static contract validation and annotation discovery in Maven
+- API compatibility checks for the two API modules, runtime adapter and Spring starter
+- a reproducible, exploratory Java/Python JMH baseline
 
 Current weaknesses:
 
 - runtime semantics still need to stay explicit and stable
-- cache invalidation and source identity semantics are still coarse
+- cache invalidation and source identity semantics are intentionally coarse
 - preload is easy to misunderstand without careful docs
 - codegen remains intentionally narrow and parser-fragile outside the documented Python subset
 - JavaScript support is real but explicitly experimental and narrow
+- codegen Java API compatibility decisions remain open; `JavaTypeRenderer` already changed since
+  `v0.4.0` and codegen is outside the current Revapi gate
 
 ## 5. Product Priorities
 
@@ -122,9 +126,10 @@ Keep out of scope:
 
 ## 8. Positioning Toward `0.5.0`
 
-Reviewed at `e1e913a` on 2026-10-16. Earlier 0.3.x lifecycle, strictness and sample-CI batches
-are implemented baselines, not a reason to repeat those projects. Current work should enforce the
-new compatibility policy, resolve remaining API decisions and investigate concrete runtime gaps.
+Reviewed at `2a8ff35` on 2026-10-17. Earlier lifecycle, strictness, sample-CI, Revapi, build-time
+contract-validation, GraalVM patch-upgrade and benchmark-baseline work is implemented; do not
+reopen those tasks without new evidence. Current work should resolve remaining API decisions and
+investigate concrete runtime gaps.
 
 Keep Java core framework-independent and Spring Boot the primary integration. Safe cleanup follows
 correctness evidence; performance follows repeatable measurements. GraalVM/GraalPy changes require
@@ -138,10 +143,10 @@ JavaScript support remain deferred.
 
 The path to `1.0.0` should be:
 
-1. tighten Python semantics
-2. stabilize starter/runtime behavior
-3. keep docs aligned with reality
-4. only then evaluate whether any additional scope is justified
+1. resolve supported API boundaries and the existing codegen compatibility break
+2. verify runtime concurrency, context lifecycle and configuration contracts
+3. keep docs, samples, compatibility automation and release evidence aligned
+4. evaluate additional scope only when a concrete use case and tests justify it
 
 `1.0.0` should mean:
 

@@ -5,14 +5,18 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ih0r-d_polyglot-adapter&metric=coverage)](https://sonarcloud.io/summary/new_code?id=ih0r-d_polyglot-adapter)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-`polyglot-adapter` provides runtime and build-time support for executing Python and JavaScript on
-the JVM through GraalVM Polyglot.
+`polyglot-platform` provides Java applications with typed access to Python through GraalVM Polyglot,
+a framework-neutral runtime adapter, a Spring Boot starter, and Maven build tools. JavaScript is
+available only as an experimental runtime path; JavaScript code generation is unsupported.
 
 It provides:
 
 - runtime execution APIs for embedded polyglot calls
-- Spring Boot integration for declarative client binding
-- build-time code generation from contracts
+- Java ↔ Python interface binding through `PyExecutor` and `ScriptSource`
+- Spring Boot auto-configuration for declarative clients, startup validation, metrics, and actuator
+- Python-to-Java interface generation and opt-in build-time module, symbol, and positional-arity
+  validation, including discovery of explicitly annotated `@PolyglotClient` interfaces
+- opt-in Revapi checks for supported Java APIs and a standalone JMH performance baseline
 
 ## Runtime Positioning
 
@@ -49,6 +53,10 @@ Current verified repository line:
 - repository CI explicitly exercises Java 21 as the minimum baseline
 - runtime modules and maintained sample verification currently run on Java 25 / GraalVM 25.x
 - the repository currently verifies a Spring Boot 4.1.0 starter and maintained sample line
+
+The pinned GraalVM/GraalPy Maven artifacts are `25.0.4.1.1`. The recorded JMH results are a
+single-machine exploratory baseline, not a CI performance gate or a performance guarantee; see
+[`benchmarks/README.md`](benchmarks/README.md) and [`benchmarks/BASELINE.md`](benchmarks/BASELINE.md).
 
 Current contract boundaries:
 
@@ -160,6 +168,16 @@ polyglot:
     warmup-on-startup: true
 ```
 
+With `polyglot.core.fail-fast=true` (the default), the starter eagerly creates discovered client
+beans and resolves their Python bindings during startup. It does not call bound business methods,
+but loading a Python module and constructing its exported class can run initialization code. Set
+`polyglot.core.fail-fast=false` to defer validation for clients that are not otherwise eagerly
+requested. This runtime check is distinct from the opt-in Maven `validate-contracts` goal, which
+statically checks a supported Python source subset without starting GraalVM or executing Python.
+See [runtime semantics](docs/runtime-semantics.md#fail-fast-semantics),
+[code generation and validation](docs/codegen.md#opt-in-java-to-python-contract-validation), and
+[troubleshooting](docs/troubleshooting.md#preload-and-fail-fast-startup-failures).
+
 When `@EnablePolyglotClients` does not declare `basePackages`, the starter scans the package of the importing configuration class.
 
 Add only the language runtimes you enable:
@@ -222,6 +240,8 @@ task docs:clean
 For contribution workflow details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 For the full command reference and developer tooling model, see
 [`docs/developer-tooling.md`](docs/developer-tooling.md).
+For API boundaries and supported versions, see [Public API](docs/public-api.md),
+[Stability](docs/stability.md), and [Compatibility](docs/compatibility.md).
 
 ### CI Flow
 

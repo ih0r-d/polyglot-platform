@@ -21,6 +21,8 @@ Use this site in the following order:
 - [Runtime](runtime.md)
 - [Runtime Semantics](runtime-semantics.md)
 - [Code Generation](codegen.md)
+- [Developer Tooling](developer-tooling.md)
+- [Stability](stability.md)
 - [Troubleshooting](troubleshooting.md)
 - [Examples](examples.md)
 - [Release Checklist](release-checklist.md)

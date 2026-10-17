@@ -294,7 +294,15 @@ Operational properties:
 Starter behavior:
 
 - `polyglot.core.fail-fast=true` eagerly instantiates discovered `@PolyglotClient` beans during
-  startup so invalid contracts fail before the application begins serving requests.
+  startup so invalid bindings fail before the application begins serving requests. Binding checks
+  resolve the script and export without calling bound business methods; evaluating the Python module
+  and constructing an exported class can still execute initialization code.
+- The default is `true`. Setting `polyglot.core.fail-fast=false` defers validation of otherwise
+  unrequested clients, although injecting a client into an eager singleton can still validate it
+  during startup. This does not disable context creation, warmup, or configured preload scripts.
+- This runtime validation is distinct from the opt-in Maven `polyglot:validate-contracts` goal. The
+  Maven goal statically checks a supported Java/Python source subset without creating a GraalVM
+  context or executing Python; see [Code Generation](codegen.md#opt-in-java-to-python-contract-validation).
 - `polyglot.core.log-metadata-on-startup=true` emits a single startup summary at the configured
   `polyglot.core.log-level`.
 - `polyglot.python.preload-scripts` and `polyglot.js.preload-scripts` evaluate the listed logical
