@@ -290,6 +290,19 @@ polyglot:
 
 This expects `python/bootstrap.py`.
 
+Startup binding validation already uses `polyglot.core.fail-fast` (default: `true`).
+It checks discovered Python clients, including generated `@PolyglotClient` interfaces,
+through the executor's existing `validateBinding(...)` mechanism. Missing scripts,
+exports, or callable methods fail startup; the exception cause chain identifies the
+client and missing binding. Bound business methods are not invoked, but evaluating
+Python modules and constructing exported classes can execute initialization code.
+
+Set `polyglot.core.fail-fast=false` to defer validation of otherwise unrequested
+client beans until lookup. Injecting a client into an eager singleton can still
+validate it during startup. This setting does not disable Python executor/context
+creation, warmup, or explicitly configured preload scripts. The starter-owned
+executor closes its context on shutdown and failed startup.
+
 ## Codegen Parser Limitations
 
 Symptom:

@@ -72,6 +72,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Real Python startup validation tests; not part of the starter runtime dependencies. -->
+        <dependency>
+            <groupId>org.graalvm.python</groupId>
+            <artifactId>python-embedding</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
