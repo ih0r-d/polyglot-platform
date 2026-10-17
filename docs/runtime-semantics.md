@@ -96,6 +96,12 @@ Implication:
 - `close()` is idempotent. After an executor is closed, evaluation, binding, cache invalidation, and
   reload operations fail with `IllegalStateException`.
 
+Sharing a caller-managed Engine across separate Contexts is opt-in through existing customizers;
+see the [shared Engine recipe](runtime.md#opt-in-shared-python-engine). Closing one executor-owned
+Context does not close an explicitly supplied Engine. The Engine owner closes it only after every
+Context using it is closed. Engine sharing does not merge guest globals, executor caches or Context
+locks, and does not change the default creation path. It is distinct from borrowing one Context.
+
 ## Fail-Fast Semantics
 
 - `validateBinding(...)` is the authoritative eager binding check.

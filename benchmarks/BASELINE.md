@@ -123,3 +123,56 @@ starter factory. More forks/longer runs are needed before defining performance b
 - `git diff --check`, new-file whitespace checks, shell syntax and original user-file hashes: PASS.
 
 Production configuration, project/dependency versions, public API and runtime semantics are unchanged.
+
+## Shared Engine Context Creation
+
+Recorded 2026-10-17 on production sources at HEAD
+`617ac235c0cafa28e1f7ed2b7be1681252133da9`, with `ContextCreationBenchmark` and the
+shared-Engine documentation/integration tests uncommitted. Hardware, OS, Oracle GraalVM JDK and
+GraalPy versions are the same as above. No production implementation or dependency changes.
+The benchmark build used the existing temporary Maven settings/cache documented above.
+
+Commands (with the pinned `JAVA_HOME`):
+
+```bash
+benchmarks/run.sh ContextCreationBenchmark -foe true -rf json \
+  -rff benchmarks/target/context-creation.json
+benchmarks/run.sh ContextCreationBenchmark -p strategy=shared,independent -foe true -rf json \
+  -rff benchmarks/target/context-creation-repeat.json
+```
+
+The actual runs additionally set `JAVA_TOOL_OPTIONS=-Djmh.ignoreLock=true` to bypass an existing
+JMH lock; no other benchmarks/builds/tests ran concurrently. The JMH fork socket required local
+sandbox permission. JVM arguments and per-fork measurements are recorded in
+[context-creation.json](results/context-creation.json) and
+[context-creation-repeat.json](results/context-creation-repeat.json).
+
+Both strategies use identical access/Python settings through the existing helper overload and
+perform eager Python initialization. `independent` creates one implicit Engine per Context;
+`shared` creates one explicit Engine per trial. Each fork performs five single-operation warmups
+and five measurements, on one thread. Context close is outside measurement; the shared Engine
+closes after the last Context. Its initial construction is outside measurement. This is repeated
+Context creation, not cold application startup; the existing `StartupBenchmark` is unchanged.
+
+| Run | Independent Engine, ms/op | Shared Engine, ms/op | Mean time reduction |
+| --- | ---: | ---: | ---: |
+| context-creation.json | 134.014 ± 49.517 | 78.899 ± 28.062 | 41.1% |
+| context-creation-repeat.json | 154.254 ± 81.704 | 68.139 ± 19.017 | 55.8% |
+
+Errors are JMH's 99.9% confidence interval half-widths, with 25 observations across five forks per
+strategy. Mean direction repeats with reversed order, consistent with the earlier isolated
+experiment, but intervals overlap in both runs. These noisy desktop measurements do not establish
+a precise percentage guarantee or a strict significance gate. No allocations, native memory,
+steady-state invocation throughput, third-party package imports or Native Image results are
+claimed for this experiment. Warmup does not establish complete guest compilation convergence.
+
+The opt-in application-owned Engine recipe uses existing APIs and does not change library defaults.
+It is useful to evaluate for applications creating many Contexts. A single default Spring executor
+already reuses its Context; the benchmark is not evidence of faster first application startup.
+Integration tests check isolated globals/bindings, executor-owned versus borrowed Contexts,
+Engine reuse after closing Contexts, and Spring-managed/external Engine shutdown handling.
+
+Verification for this addition: full `./mvnw -B -ntp -Pquality,api-compat verify` with the pinned
+JDK and temporary settings/cache above passed (386 tests, no failures/errors/skips; all four
+Revapi modules compared against published `0.4.0`). Standalone benchmark package/formatting,
+strict `task docs:build`, `task docs:clean`, and `git diff --check` also passed.

@@ -45,6 +45,52 @@ For Python, context creation uses `GraalPyResources.contextBuilder(...)` with a 
 > user-supplied scripts. See
 > [`runtime-semantics.md`](runtime-semantics.md#security-contract) for the full security contract.
 
+### Opt-In Shared Python Engine
+
+The existing APIs support a caller-owned `org.graalvm.polyglot.Engine`; no new factory or global
+singleton is required. Each Context still initializes Python and keeps its own guest globals.
+An Engine can share code caches across Contexts; it does not share Python objects or the adapter's
+per-executor caches.
+
+```java
+try (Engine engine = Engine.newBuilder("python")
+        .option("engine.WarnInterpreterOnly", "false").build()) {
+    try (Context context = PolyglotHelper.newContext(
+            SupportedLanguage.PYTHON, false,
+            builder -> builder.engine(engine)
+                .allowAllAccess(true)
+                .allowExperimentalOptions(true)
+                .option("python.WarnExperimentalFeatures", "false"));
+         PyExecutor executor = PyExecutor.createWithContext(
+            context, scriptSource, ContextOwnership.OWNED_BY_EXECUTOR)) {
+        // Bind and call application contracts here; other Contexts can use the same Engine.
+    }
+    // Closing the executor/Context leaves the Engine available for another Context.
+}
+```
+
+Imports are from `org.graalvm.polyglot` (`Engine`, `Context`),
+`io.github.ih0rd.adapter.context` (`PolyglotHelper`, `PyExecutor`, `ContextOwnership`), and
+`io.github.ih0rd.polyglot` (`SupportedLanguage`). `scriptSource` is the application's `ScriptSource`.
+
+Pass `false` for recommended defaults and restore the access/Python options explicitly as above.
+Otherwise the helper's `engine.WarnInterpreterOnly` option on `Context.Builder` conflicts with an
+explicit Engine. Engine-level options belong on `Engine.Builder`. This opt-in configuration keeps
+the same trusted-code access policy as the default helper; it does not add a sandbox.
+
+The application owns the Engine and closes it **after all its Contexts and executors**. Sharing an
+Engine differs from sharing a Context: each executor can own its separate Context. Use
+`ContextOwnership.BORROWED` only when the caller also manages that Context. Executor serialization
+is unchanged; this recipe makes no concurrent native-extension or shared-Context throughput claim.
+All Contexts on one Engine must use the same host-access configuration and compatible
+language options; GraalVM rejects conflicting configurations.
+
+This is useful when repeatedly creating Contexts. It does not eliminate first Python initialization
+or guarantee a faster single-Context Spring startup. The standalone
+[JMH benchmark](https://github.com/ih0r-d/polyglot-platform/blob/main/benchmarks/README.md)
+separates cold startup from repeated Context creation. Upstream documents
+[Engine code sharing](https://www.graalvm.org/jdk25/reference-manual/embed-languages/#code-caching-across-multiple-contexts).
+
 ### Script Resolution
 
 Executors never read the filesystem or classpath directly. They ask `ScriptSource` whether a logical script exists and open it through a `Reader`.
@@ -312,6 +358,72 @@ Starter behavior:
 - `polyglot.python.safe-defaults=true` applies the starter's recommended GraalPy defaults. When
   disabled, the starter creates a more minimal Python context and expects applications to provide
   their own `PolyglotContextCustomizer` beans if they need additional options.
+
+### Shared Engine in Spring Boot
+
+Configure Python and provide the existing customizer SPI. Restore the access/Python defaults
+explicitly:
+
+```properties
+polyglot.python.enabled=true
+polyglot.python.safe-defaults=false
+polyglot.python.resources-path=classpath:python
+```
+
+The configuration below
+declares an executor bean with an explicit Engine dependency so Spring closes that executor
+before the Engine. The starter backs off for this bean and keeps its normal client, warmup,
+preload and fail-fast integration. This uses supported helper/executor/customizer APIs rather
+than depending on Spring wiring implementation classes; no new starter property or Engine
+auto-detection is involved.
+
+```java
+@Configuration(proxyBeanMethods = false)
+class SharedPythonEngineConfig {
+    @Bean(destroyMethod = "close")
+    Engine pythonEngine() {
+        return Engine.newBuilder("python")
+            .option("engine.WarnInterpreterOnly", "false").build();
+    }
+
+    @Bean
+    PolyglotContextCustomizer sharedPythonEngine(Engine pythonEngine) {
+        return (language, builder) -> {
+            if (language == SupportedLanguage.PYTHON) {
+                builder.engine(pythonEngine)
+                    .allowAllAccess(true)
+                    .allowExperimentalOptions(true)
+                    .option("python.WarnExperimentalFeatures", "false");
+            }
+        };
+    }
+
+    @Bean(destroyMethod = "close")
+    @DependsOn("pythonEngine")
+    PyExecutor pyExecutor(
+            @Qualifier("pyScriptSource") ScriptSource scriptSource,
+            ObjectProvider<PolyglotContextCustomizer> customizers) {
+        Context context = PolyglotHelper.newContext(SupportedLanguage.PYTHON, false,
+            builder -> customizers.orderedStream()
+                .forEach(c -> c.customize(SupportedLanguage.PYTHON, builder)));
+        return PyExecutor.createWithContext(
+            context, scriptSource, ContextOwnership.OWNED_BY_EXECUTOR);
+    }
+}
+```
+
+Use Spring's `org.springframework.context.annotation` annotations and
+`org.springframework.beans.factory.ObjectProvider`, plus
+`org.springframework.beans.factory.annotation.Qualifier`. The SPI type is
+`io.github.ih0rd.polyglot.annotations.spring.context.PolyglotContextCustomizer`;
+`ScriptSource` is `io.github.ih0rd.polyglot.model.config.ScriptSource`. Runtime imports are the
+same as in the core recipe above.
+
+For an Engine shared across separate Spring applications, its external owner must keep it alive
+until **all** those applications close. Register only customizers referencing that Engine; do not
+let an individual application's shutdown close it. Any additional Context created manually
+remains the caller's responsibility and must close before its Engine. Default starter
+configuration continues to create independent Engines and use the existing lifecycle.
 
 ## Operational Behavior
 

@@ -19,6 +19,10 @@ benchmarks/run.sh InvocationBenchmark -bm thrpt -tu s -prof gc -foe true \
   -rf json -rff benchmarks/target/throughput.json
 benchmarks/run.sh StartupBenchmark -foe true \
   -rf json -rff benchmarks/target/startup.json
+benchmarks/run.sh ContextCreationBenchmark -foe true \
+  -rf json -rff benchmarks/target/context-creation.json
+benchmarks/run.sh ContextCreationBenchmark -p strategy=shared,independent -foe true \
+  -rf json -rff benchmarks/target/context-creation-repeat.json
 ```
 
 `run.sh` forwards all arguments to JMH and uses `JAVA_HOME/bin/java` for the host and forks.
@@ -28,7 +32,9 @@ machine using a consistent power mode. Results are local observations, not CI pe
 
 The benchmark annotation defaults use one thread, two forks, five one-second warmup iterations
 and five one-second measurement iterations. Startup uses five independent forks with no warmup
-and exactly one operation per fork. Each fork uses `-Xms512m -Xmx2g`. For publication or small
+and exactly one operation per fork. Repeated Context creation uses five forks, five single-operation
+warmup iterations and five single-operation measurements per fork; it closes each Context outside the timed method.
+Each fork uses `-Xms512m -Xmx2g`. For publication or small
 regressions, increase durations/forks and inspect raw iteration variability; do not treat a short
 warmup as proof that guest compilation has converged.
 
@@ -50,6 +56,18 @@ warmup as proof that guest compilation has converged.
 - `firstModuleEvaluation`: define the small Python contract in an already initialized context.
 - `firstStdlibImport`: first `import json` in an already initialized context. Imports performed by
   GraalPy initialization are outside this operation; this is not a fully cold filesystem import.
+
+`ContextCreationBenchmark` compares `strategy=independent` (a new implicit Engine per Context)
+with `strategy=shared` (one caller-owned Engine per trial). Both explicitly reproduce the helper's
+Python defaults through its existing overload. Engine-level options are set on the Engine for the
+shared strategy. Each measurement creates and initializes one new Python Context, including VFS
+creation; no business methods/imports are added. Context close is outside timing and Engine close
+runs after all Contexts. Shared Engine construction is outside timing: this measures repeated
+creation, not total application startup or the first Engine. Warmup does not prove complete guest
+compilation convergence. Reverse strategy order for a repeat and compare uncertainty before
+claiming a benefit. Default runtime behavior is unchanged. See the
+[runtime recipe](../docs/runtime.md#opt-in-shared-python-engine) and recorded results in
+[BASELINE.md](BASELINE.md#shared-engine-context-creation).
 
 Steady-state setup initializes one owned Context, validates/binds once, resolves direct callables
 and checks equivalent results before measurements. No imports, Context construction or deliberate
