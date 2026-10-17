@@ -195,7 +195,7 @@ Recommended policy:
 For parser limitations, drift failures, and common check/doctor symptoms, see
 [`troubleshooting.md`](troubleshooting.md).
 
-## Opt-In Java-to-Python Symbol Validation
+## Opt-In Java-to-Python Contract Validation
 
 `polyglot:validate-contracts` checks explicitly selected Java interface sources against
 Python sources without creating a GraalVM context, importing modules, or executing Python.
@@ -270,9 +270,29 @@ plain local classes, non-underscore-prefixed methods with single-line signatures
 nested declarations, tabs, multiline strings and escaped line continuations are unsupported.
 Method bodies are inspected as source only and never executed.
 
-This checks declared symbol existence, not Python syntax validity, import availability,
-argument/return types, constructor success, or full runtime equivalence. It is not full Python
-type safety. Dynamic contracts should retain runtime `validateBinding(...)` or Spring fail-fast
+For each Java method, validation also checks its declared parameter count against the Python
+instance method's accepted positional range: required parameters through total parameters,
+excluding the implicitly bound first receiver (`self`, or another name). Python defaults make
+parameters optional. Every Java overload is checked independently. Java arrays and Java varargs
+each count as one declared parameter; the runtime does not flatten that array into guest arguments.
+
+For example, `def hello(self, name, count=2):` accepts one or two Java arguments. A zero-argument
+Java declaration fails with Java and Python source locations:
+
+```text
+GreetingApi.java:2: module 'greeting_api', symbol 'GreetingApi.hello': Java supplies 0 positional argument(s); Python accepts 1..2 (receiver excluded), declared at .../greeting_api.py:2
+```
+
+Single-line positional signatures support annotations, trailing commas, and defaults containing
+quoted strings or balanced containers. Default expressions are inspected only to establish
+whether a parameter is optional; their values are never evaluated. `*args`, `**kwargs`, keyword-only
+parameters (`*`), positional-only markers (`/`), lambda defaults, call expressions and formatted string expressions
+in signatures, and parenthesized return annotations are unsupported and fail validation. Missing receivers, duplicate parameters,
+unbalanced signatures and required parameters after defaults also fail conservatively.
+
+This checks declared symbol existence and positional arity, not Python syntax validity, import
+availability, argument/return types, default-expression success, constructor success, or full runtime
+equivalence. It is not full Python type safety. Dynamic contracts should retain runtime `validateBinding(...)` or Spring fail-fast
 validation. Existing generation, drift checks, runtime and Spring defaults are unchanged.
 
 The packaged-plugin integration fixture uses the Apache Maven Invoker Plugin only in the

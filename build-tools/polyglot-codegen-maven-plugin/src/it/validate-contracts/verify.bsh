@@ -4,7 +4,10 @@ for (String expected : new String[] {
     "Python contract validation passed: 1 Java source(s)",
     "Missing Python module 'missing_api'",
     "GreetingApi.java:2: module 'greeting_api', symbol 'GreetingApi.hello': Missing Python method",
-    "Unsupported static Python contract"
+    "Unsupported static Python contract",
+    "SignatureApi.java:2: module 'signature_api', symbol 'SignatureApi.required': Java supplies 1 positional argument(s); Python accepts 2..2",
+    "SignatureApi.java:2: module 'signature_api', symbol 'SignatureApi.required': Java supplies 1 positional argument(s); Python accepts 0..0",
+    "Unsupported static Python signature"
 }) {
     if (!log.contains(expected)) throw new AssertionError("Missing diagnostic: " + expected);
 }

@@ -3,7 +3,9 @@ package io.github.ih0rd.codegen;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -67,8 +69,9 @@ final class PythonBindingValidator {
     }
     String source = Files.readString(python);
     ContractClass target;
+    Map<String, Map<String, PythonPositionalSignature>> signatures;
     try {
-      checkStaticSubset(source, python);
+      signatures = checkStaticSubset(source, python);
       target =
           new PythonContractParser()
                   .parse(
@@ -101,7 +104,7 @@ final class PythonBindingValidator {
                 + symbol
                 + "': Unsupported static contract: the codegen parser excludes underscore-prefixed methods.");
       }
-      if (!available.contains(symbol)) {
+      if (!available.contains(symbol) || !signatures.get(name).containsKey(symbol)) {
         throw new IllegalArgumentException(
             javaSource
                 + ":"
@@ -114,6 +117,30 @@ final class PythonBindingValidator {
                 + symbol
                 + "': Missing Python method in "
                 + python);
+      }
+      PythonPositionalSignature signature = signatures.get(name).get(symbol);
+      int arguments = method.getParameters().size();
+      if (arguments < signature.required() || arguments > signature.maximum()) {
+        throw new IllegalArgumentException(
+            javaSource
+                + ":"
+                + method.getBegin().orElseThrow().line
+                + ": module '"
+                + module
+                + "', symbol '"
+                + name
+                + "."
+                + symbol
+                + "': Java supplies "
+                + arguments
+                + " positional argument(s); Python accepts "
+                + signature.required()
+                + ".."
+                + signature.maximum()
+                + " (receiver excluded), declared at "
+                + python
+                + ":"
+                + signature.line());
       }
     }
   }
@@ -149,10 +176,11 @@ final class PythonBindingValidator {
     }
   }
 
-  private static void checkStaticSubset(String source, Path file) {
-    Set<String> classes = new HashSet<>();
-    Set<String> exports = new HashSet<>();
-    Set<String> methods = new HashSet<>();
+  private static Map<String, Map<String, PythonPositionalSignature>> checkStaticSubset(
+      String source, Path file) {
+    Map<String, Map<String, PythonPositionalSignature>> classes = new HashMap<>();
+    Map<String, Map<String, PythonPositionalSignature>> exports = new HashMap<>();
+    Map<String, PythonPositionalSignature> methods = new HashMap<>();
     int classIndent = -1;
     int methodIndent = -1;
     String currentClass = null;
@@ -174,17 +202,18 @@ final class PythonBindingValidator {
         if (line.equals("import polyglot")) continue;
         if (CLASS.matcher(line).matches()) {
           currentClass = line.substring(6, line.indexOf(':')).trim();
-          if (!classes.add(currentClass)) unsupported(file, i, "duplicate class " + currentClass);
+          methods = new HashMap<>();
+          if (classes.putIfAbsent(currentClass, methods) != null)
+            unsupported(file, i, "duplicate class " + currentClass);
           classIndent = indent;
-          methods.clear();
           continue;
         }
         var export = EXPORT.matcher(line);
         if (export.matches()) {
-          if (!classes.contains(export.group(3)))
+          if (!classes.containsKey(export.group(3)))
             unsupported(file, i, "export target is not a preceding local class");
-          if (!exports.add(export.group(2)))
-            unsupported(file, i, "duplicate export " + export.group(2));
+          if (exports.putIfAbsent(export.group(2), Map.copyOf(classes.get(export.group(3))))
+              != null) unsupported(file, i, "duplicate export " + export.group(2));
           continue;
         }
         unsupported(
@@ -203,7 +232,7 @@ final class PythonBindingValidator {
       if (METHOD.matcher(line).matches()) {
         String method = line.substring(4, line.indexOf('(')).trim();
         if (method.startsWith("__")) unsupported(file, i, "special method " + method);
-        if (!methods.add(method))
+        if (methods.putIfAbsent(method, PythonPositionalSignature.parse(line, file, i + 1)) != null)
           unsupported(file, i, "duplicate method " + currentClass + "." + method);
         methodIndent = indent;
       } else if (!line.equals("pass")) {
@@ -213,6 +242,7 @@ final class PythonBindingValidator {
             "class-level statement, decorator, inheritance or unsupported method signature");
       }
     }
+    return exports;
   }
 
   private static void unsupported(Path file, int zeroBasedLine, String reason) {

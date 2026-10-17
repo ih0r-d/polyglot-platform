@@ -184,6 +184,178 @@ class PolyglotValidateContractsMojoTest {
     assertDoesNotThrow(mojo::execute);
   }
 
+  @Test
+  void matchingRequiredInstanceArgumentsPass() throws Exception {
+    var mojo = configured(pythonMethod("self, name: str, count: int"));
+    javaMethods("String hello(String name, int count);");
+    assertDoesNotThrow(mojo::execute);
+  }
+
+  @Test
+  void defaultsAcceptEveryArityInTheRangeIncludingOverloads() throws Exception {
+    var mojo = configured(pythonMethod("self, name: str, count: int = 2, label: str = 'a,b=)'"));
+    javaMethods(
+        "String hello(String name); String hello(String name, int count); String hello(String name, int count, String label);");
+    assertDoesNotThrow(mojo::execute);
+  }
+
+  @Test
+  void tooFewArgumentsReportBothLocationsAndAcceptedRange() throws Exception {
+    var mojo = configured(pythonMethod("self, name, count=2"));
+    String message = assertThrows(MojoFailureException.class, mojo::execute).getMessage();
+    for (String part :
+        List.of(
+            "GreetingApi.java:2",
+            "module 'greeting_api'",
+            "GreetingApi.hello",
+            "Java supplies 0",
+            "Python accepts 1..2",
+            "greeting_api.py:2")) {
+      assertTrue(message.contains(part), message);
+    }
+  }
+
+  @Test
+  void tooManyArgumentsFail() throws Exception {
+    var mojo = configured(pythonMethod("self, name, count=2"));
+    javaMethods("String hello(String name, int count, String extra);");
+    String message = assertThrows(MojoFailureException.class, mojo::execute).getMessage();
+    assertTrue(message.contains("Java supplies 3"), message);
+    assertTrue(message.contains("Python accepts 1..2"), message);
+  }
+
+  @Test
+  void receiverNameAndAnnotationDoNotChangeBoundArgumentCount() throws Exception {
+    for (String parameters :
+        List.of("self", "self: GreetingApi", "receiver", "receiver: GreetingApi")) {
+      var mojo = configured(pythonMethod(parameters));
+      assertDoesNotThrow(mojo::execute);
+    }
+  }
+
+  @Test
+  void nestedAnnotationsAndDefaultsDoNotCreateExtraParameters() throws Exception {
+    var mojo =
+        configured(
+            pythonMethod(
+                "self, values: dict[str, list[int]] = {'a': [1, 2]}, point = (1, 2), text = 'it\\'s,ok'"));
+    assertDoesNotThrow(mojo::execute);
+    javaMethods("String hello(Object values, Object point, String text);");
+    assertDoesNotThrow(mojo::execute);
+  }
+
+  @Test
+  void javaArrayAndVarargsEachSupplyOneGuestArgument() throws Exception {
+    for (String parameter : List.of("String[] values", "String... values")) {
+      var mojo = configured(pythonMethod("self, values"));
+      javaMethods("String hello(" + parameter + ");");
+      assertDoesNotThrow(mojo::execute);
+    }
+  }
+
+  @Test
+  void multipleMethodsAreCheckedIndependently() throws Exception {
+    var mojo =
+        configured(
+            """
+        class GreetingApi:
+            def hello(self, name):
+                raise AssertionError('must not execute')
+            def count(self, limit=5):
+                return limit
+        polyglot.export_value('GreetingApi', GreetingApi)
+        """);
+    javaMethods("String hello(String name); int count();");
+    assertDoesNotThrow(mojo::execute);
+    javaMethods("String hello(String name); int count(int limit, int extra);");
+    assertTrue(
+        assertThrows(MojoFailureException.class, mojo::execute)
+            .getMessage()
+            .contains("GreetingApi.count"));
+  }
+
+  @Test
+  void exportAliasesUseTheTargetClassSignature() throws Exception {
+    var mojo =
+        configured(
+            pythonMethod("self, name")
+                .replace("class GreetingApi:", "class Implementation:")
+                .replace("'GreetingApi', GreetingApi", "'GreetingApi', Implementation"));
+    javaMethods("String hello(String name);");
+    assertDoesNotThrow(mojo::execute);
+  }
+
+  @Test
+  void unsupportedSignaturesNeverPass() throws Exception {
+    for (String parameters :
+        List.of(
+            "self, *args",
+            "self, **kwargs",
+            "self, *, name",
+            "self, name, /",
+            "",
+            "self, first=1, second",
+            "self, first, first",
+            "self, value=lambda x,y: x",
+            "self, value=make_default(1, 2)",
+            "self: resolve_receiver()",
+            "self, text=f'{1, 2}'",
+            "self,, value",
+            "self, value=",
+            "self, value=[1,2",
+            "self, value='unterminated")) {
+      var mojo = configured(pythonMethod(parameters));
+      String message = assertThrows(MojoFailureException.class, mojo::execute).getMessage();
+      assertTrue(message.contains("Unsupported static Python signature"), message);
+      assertTrue(message.contains("greeting_api.py:2"), message);
+    }
+  }
+
+  @Test
+  void dynamicReturnAnnotationsDoNotProduceASignatureMatch() throws Exception {
+    var mojo =
+        configured(
+            pythonMethod("self").replace("def hello(self):", "def hello(self) -> mutate():"));
+    assertTrue(
+        assertThrows(MojoFailureException.class, mojo::execute)
+            .getMessage()
+            .contains("Unsupported static Python signature"));
+  }
+
+  @Test
+  void parserFalsePositiveCannotProduceASignatureMatch() throws Exception {
+    var mojo =
+        configured(
+            """
+        class GreetingApi:
+            def hello(self):
+                default = 1
+        polyglot.export_value('GreetingApi', GreetingApi)
+        """);
+    javaMethods("String ault();");
+    String message = assertThrows(MojoFailureException.class, mojo::execute).getMessage();
+    assertTrue(message.contains("GreetingApi.ault"), message);
+    assertTrue(message.contains("Missing Python method"), message);
+  }
+
+  @Test
+  void disabledValidationSkipsSignatureFailures() throws Exception {
+    var mojo = configured(pythonMethod("self, *args"));
+    set(mojo, "validateContracts", false);
+    assertDoesNotThrow(mojo::execute);
+  }
+
+  private String pythonMethod(String parameters) {
+    return "class GreetingApi:\n    def hello("
+        + parameters
+        + "):\n        raise AssertionError('must not execute')\npolyglot.export_value('GreetingApi', GreetingApi)\n";
+  }
+
+  private void javaMethods(String methods) throws Exception {
+    Files.writeString(
+        directory.resolve("GreetingApi.java"), "interface GreetingApi {\n    " + methods + "\n}\n");
+  }
+
   private String validPython() {
     return "class GreetingApi:\n    def hello(self):\n        pass\npolyglot.export_value('GreetingApi', GreetingApi)\n";
   }

@@ -5,6 +5,7 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Added
+- Extend opt-in Maven `validate-contracts` checks to positional argument counts, accounting for bound instance receivers and Python defaults, with conservative errors for unsupported signatures.
 - Add opt-in Maven `validate-contracts` static symbol checks for explicitly selected Java/Python class-export bindings; dynamic or unsupported constructs fail with source diagnostics without executing Python.
 
 ### Fixed
