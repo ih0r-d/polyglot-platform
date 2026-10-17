@@ -87,4 +87,35 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>plugin-it</id>
+            <build>
+                <plugins>
+                    <!-- Exercise the packaged plugin in real, isolated Maven builds. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-invoker-plugin</artifactId>
+                        <version>3.10.1</version>
+                        <configuration>
+                            <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+                            <localRepositoryPath>${project.build.directory}/it-repository</localRepositoryPath>
+                            <settingsFile>${session.request.userSettingsFile}</settingsFile>
+                            <postBuildHookScript>verify</postBuildHookScript>
+                            <goals><goal>verify</goal></goals>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>contract-validation-it</id>
+                                <goals>
+                                    <goal>install</goal>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

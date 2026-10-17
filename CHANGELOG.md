@@ -4,6 +4,9 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 
 ## [Unreleased]
 
+### Added
+- Add opt-in Maven `validate-contracts` static symbol checks for explicitly selected Java/Python class-export bindings; dynamic or unsupported constructs fail with source diagnostics without executing Python.
+
 ### Fixed
 - Align GraalVM/GraalPy dependencies and sample embedding plugins to 25.0.4.1.1, pin the exact local Oracle runtime, and document its additive upstream Revapi callback diagnostic.
 - Upgrade Bouncy Castle to 1.85 for CVE-2026-8763 and CVE-2026-13506, and use Log4j API 2.25.5 in the Spring Boot integration and SpotBugs tooling for CVE-2026-49844.

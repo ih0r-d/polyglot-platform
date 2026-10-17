@@ -1,0 +1,12 @@
+String log = new String(java.nio.file.Files.readAllBytes(new File(basedir, "build.log").toPath()), java.nio.charset.StandardCharsets.UTF_8);
+for (String expected : new String[] {
+    "Python contract validation disabled",
+    "Python contract validation passed: 1 Java source(s)",
+    "Missing Python module 'missing_api'",
+    "GreetingApi.java:2: module 'greeting_api', symbol 'GreetingApi.hello': Missing Python method",
+    "Unsupported static Python contract"
+}) {
+    if (!log.contains(expected)) throw new AssertionError("Missing diagnostic: " + expected);
+}
+if (new File(basedir, "business-function-executed").exists()) throw new AssertionError("Python business function executed");
+return true;

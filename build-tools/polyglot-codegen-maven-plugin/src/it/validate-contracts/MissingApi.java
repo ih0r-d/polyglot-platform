@@ -1,0 +1,3 @@
+interface MissingApi {
+    String hello();
+}

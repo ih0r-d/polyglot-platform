@@ -148,15 +148,16 @@ Current Java rendering behavior is conservative:
 
 ## Maven Plugin Usage
 
-The Maven plugin goal is:
+The Maven plugin goals are:
 
 ```text
 polyglot:generate
 polyglot:check
 polyglot:doctor
+polyglot:validate-contracts
 ```
 
-Default behavior:
+Generation defaults:
 
 - phase: `generate-sources`
 - input directory: `${project.basedir}/src/main/resources`
@@ -193,6 +194,93 @@ Recommended policy:
 
 For parser limitations, drift failures, and common check/doctor symptoms, see
 [`troubleshooting.md`](troubleshooting.md).
+
+## Opt-In Java-to-Python Symbol Validation
+
+`polyglot:validate-contracts` checks explicitly selected Java interface sources against
+Python sources without creating a GraalVM context, importing modules, or executing Python.
+It complements `check`/`doctor`, which compare generated text rather than existing Java bindings.
+The goal is disabled by default, including when configured as an execution.
+
+```xml
+<plugin>
+    <groupId>io.github.ih0r-d</groupId>
+    <artifactId>polyglot-codegen-maven-plugin</artifactId>
+    <version>0.5.0-SNAPSHOT</version>
+    <configuration>
+        <inputDirectory>${project.basedir}/src/main/resources/python</inputDirectory>
+        <contracts>
+            <contract>${project.basedir}/src/main/java/example/GreetingApi.java</contract>
+        </contracts>
+    </configuration>
+    <executions>
+        <execution>
+            <id>validate-python-contracts</id>
+            <goals><goal>validate-contracts</goal></goals>
+        </execution>
+    </executions>
+</plugin>
+```
+
+Enable validation for this build:
+
+```bash
+./mvnw -Dpolyglot.codegen.validateContracts=true verify
+```
+
+Alternatively, set `<validateContracts>true</validateContracts>` in an opt-in Maven profile.
+The goal's default phase is `verify`; it writes no files and registers no source roots.
+`contracts` must contain at least one existing Java source when enabled. Generated interfaces
+can be selected by their generated-source paths after the `generate` execution has run.
+
+For `interface GreetingApi { String hello(); }`, the expected source is
+`inputDirectory/greeting_api.py`, following the runtime's naming convention:
+
+```python
+import polyglot
+
+class GreetingApi:
+    def hello(self):
+        return "hello"
+
+polyglot.export_value("GreetingApi", GreetingApi)
+```
+
+Success reports `Python contract validation passed: 1 Java source(s).` Removing `hello`
+fails Maven with a diagnostic such as:
+
+```text
+GreetingApi.java:1: module 'greeting_api', symbol 'GreetingApi.hello': Missing Python method in .../greeting_api.py
+```
+
+A missing module reports the expected Python file and Java contract. Unsupported Python
+constructs report a Python file/line and fail, rather than silently validating an uncertain binding.
+
+This first version supports one top-level Java interface per selected file without inheritance,
+and the `DEFAULT`/`BY_INTERFACE_EXPORT` class-export convention. An optional `@PolyglotClient`
+annotation must explicitly select `SupportedLanguage.PYTHON`; auto language selection and
+`BY_METHOD_NAME` are not inferred. Selection in `contracts` is sufficient for plain interfaces;
+Spring scanning is not involved.
+
+Python validation reuses `PythonContractParser` behind a conservative static-subset check:
+plain local classes, non-underscore-prefixed methods with single-line signatures, and literal top-level
+`polyglot.export_value("Name", ClassName)` calls after the class declaration. Only
+`import polyglot` is accepted at module level. Inheritance, decorators, special methods
+(including `__init__`), dictionary/factory exports, conditional declarations, rebinding,
+nested declarations, tabs, multiline strings and escaped line continuations are unsupported.
+Method bodies are inspected as source only and never executed.
+
+This checks declared symbol existence, not Python syntax validity, import availability,
+argument/return types, constructor success, or full runtime equivalence. It is not full Python
+type safety. Dynamic contracts should retain runtime `validateBinding(...)` or Spring fail-fast
+validation. Existing generation, drift checks, runtime and Spring defaults are unchanged.
+
+The packaged-plugin integration fixture uses the Apache Maven Invoker Plugin only in the
+`plugin-it` profile, with an isolated repository and cloned fixtures:
+
+```bash
+./mvnw -B -ntp -Pplugin-it -pl build-tools/polyglot-codegen-maven-plugin -am verify
+```
 
 ## Relationship to Runtime Execution
 
