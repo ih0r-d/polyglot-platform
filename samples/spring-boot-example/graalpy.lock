@@ -6,7 +6,7 @@
 # 
 # This file contains a list of all required Python packages with their specific versions,
 # based on the packages defined in the plugin configuration and their dependencies.
-# graalpy-version: 25.0.2
+# graalpy-version: 25.0.4.1.1
 # input-packages: faker==26.0.0,tabulate==0.9.0,numpy==2.2.4
 Faker==26.0.0
 numpy==2.2.4

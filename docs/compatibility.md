@@ -9,13 +9,13 @@ change before stronger support claims are made.
 The current `0.5.x` release-preparation line verifies the following:
 
 - Maven wrapper and CI workflows on Maven 3.9+
-- pinned local SDKMAN runtime: Java `25-graalce`
+- pinned local SDKMAN runtime: Oracle GraalVM `25.0.4.1.1-graal` (locally registered SDKMAN candidate)
 - repository minimum Java version: 21
 - root CI baseline workflow on Java 21
 - root CI runtime workflow on GraalVM JDK 25
 - all modules compiled with `maven.compiler.release=21`
 - root enforcer minimum Java version: 21
-- GraalVM dependency line: `25.0.2`
+- GraalVM dependency line: `25.0.4.1.1`
 - Spring Boot repository dependency-management line: `4.1.0`
 - maintained Spring sample currently aligned to Spring Boot `4.1.0`
 - maintained sample smoke verification on GraalVM JDK 25 for:
@@ -43,9 +43,23 @@ runtime work, maintained samples, and full test execution, contributors are expe
 | Maven                                | 3.9+                  | root enforcer and wrapper usage                                     | Release and CI assume the wrapper                                           |
 | Java minimum for repository modules  | 21                    | root `pom.xml`, module POMs, Java 21 CI build                       | The repository contract now uses Java 21 as the minimum baseline            |
 | Java runtime verification line       | 25                    | `.sdkmanrc`, GraalVM 25 CI runtime job, sample verification on 25   | GraalVM 25.x remains the current verified runtime lane                      |
-| GraalVM runtime deps                 | 25.0.2                | root dependency management, sample POMs, sample workflows           | Current maintained runtime line                                             |
+| GraalVM runtime deps                 | 25.0.4.1.1            | root dependency management, sample POMs, sample workflows           | Current maintained runtime line                                             |
 | Spring Boot starter line             | 4.1.0                 | root dependency management, starter tests, maintained Spring sample | Verified in the current repository line, not a broad historical range claim |
 | Maintained sample smoke verification | Java 25 / GraalVM 25  | `ci.yml`, sample POMs                                               | Samples are verification inputs, not independent support guarantees         |
+
+## Oracle Patch Verification
+
+The patch upgrade was verified locally on macOS AArch64 with Oracle GraalVM
+`25.0.4.1.1`, JDK `25.0.4.1.1+1-LTS-jvmci-b01`, and GraalVM/GraalPy Maven artifacts
+`25.0.4.1.1`. Repository tests, quality checks, Revapi, maintained sample builds and a
+Python package smoke test are the verification inputs. Java 21 remains the compile baseline.
+See [developer tooling](developer-tooling.md#pinned-oracle-graalvm) for the exact local setup.
+
+CI retains its GraalVM Community JDK 25 host lane; that selector is not proof of the exact Oracle
+patch. The pinned setup action's Oracle `java-version` resolver rejects five-part versions and
+uses a different download endpoint, so exact Oracle patch installation in CI remains separate
+work. Do not infer Linux, Windows or Native Image verification for this patch from the local JVM
+results.
 
 ## Target Support, Not Yet Verified
 

@@ -17,8 +17,8 @@
         <python.package.3>langdetect</python.package.3>
         <python.package.4>textblob</python.package.4>
 
-        <graal.version>25.0.2</graal.version>
-        <graalpy-plugin.version>25.0.2</graalpy-plugin.version>
+        <graal.version>25.0.4.1.1</graal.version>
+        <graalpy-plugin.version>25.0.4.1.1</graalpy-plugin.version>
     </properties>
     <dependencyManagement>
         <dependencies>

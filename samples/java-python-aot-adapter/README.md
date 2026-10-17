@@ -44,9 +44,10 @@ Without `polyglot.export_value`, the adapter would have nothing named `QuoteApi`
 
 ## Prerequisites
 
-- GraalVM 25. You can install it with SDKMAN!:
+- Oracle GraalVM 25.0.4.1.1, registered with SDKMAN! as described in
+  [developer tooling](../../docs/developer-tooling.md#pinned-oracle-graalvm):
     ```bash
-    sdk install java 25-graalce
+    sdk use java 25.0.4.1.1-graal
     ```
 - Clone the Polyglot Platform repository and run the setup steps.
     ```bash

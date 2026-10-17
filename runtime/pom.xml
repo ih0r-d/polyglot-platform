@@ -86,6 +86,14 @@
                                             <criticality>documented</criticality>
                                             <justification>Additive ownership enum exposed through new executor overloads; existing signatures and legacy ownership remain unchanged. The adapter is checked separately.</justification>
                                         </item>
+                                        <item>
+                                            <code>java.class.externalClassExposedInAPI</code>
+                                            <new>interface org.graalvm.polyglot.Engine.CancellationCallback</new>
+                                            <newArchive>org.graalvm.polyglot:polyglot:jar:25.0.4.1.1</newArchive>
+                                            <newArchiveRole>supplementary</newArchiveRole>
+                                            <criticality>documented</criticality>
+                                            <justification>Polyglot 25.0.4.1.1 adds Engine.persistCache(CancellationCallback); the callback is newly reachable through existing Context/Engine APIs. No existing member is removed or changed. Other types, difference codes and artifact versions remain checked.</justification>
+                                        </item>
                                         <!-- Revapi reports these existing ambiguities even for unchanged upstream APIs. -->
                                         <item>
                                             <code>java\.method\.varargOverloadsOnlyDifferInVarargParameter</code>

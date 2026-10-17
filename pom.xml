@@ -59,7 +59,7 @@
     <minimum-maven.version>3.9.0</minimum-maven.version>
     <minimum-java.version>21</minimum-java.version>
 
-    <graal.version>25.0.2</graal.version>
+    <graal.version>25.0.4.1.1</graal.version>
     <junit.version>6.0.3</junit.version>
     <mockito.version>5.22.0</mockito.version>
     <assertj.version>3.27.7</assertj.version>

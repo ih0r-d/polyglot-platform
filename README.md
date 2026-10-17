@@ -40,6 +40,7 @@ It provides:
 
 - Repository minimum Java: JDK 21+, Maven 3.9+
 - Verified runtime line: GraalVM JDK 25.x, Maven 3.9+
+- Pinned local runtime and GraalVM/GraalPy Maven artifacts: Oracle GraalVM `25.0.4.1.1`
 - CI and local quality checks assume the Maven wrapper: `./mvnw`
 
 Current verified repository line:
@@ -55,7 +56,9 @@ Current contract boundaries:
 - JavaScript remains part of the published API surface, but only as an explicitly experimental path
 - internal starter types and runtime implementation classes are not supported extension points
 
-When working from this repository, load the pinned SDKMAN environment first:
+Register the exact Oracle JDK as described in
+[developer tooling](docs/developer-tooling.md#pinned-oracle-graalvm), then load the pinned SDKMAN
+environment:
 
 ```bash
 sdk env

@@ -13,7 +13,7 @@ Developer automation scripts require `bash`. Maven commands should be run throug
 
 ## First-Time Setup
 
-After cloning the repository:
+After cloning the repository, register the [pinned Oracle GraalVM](#pinned-oracle-graalvm):
 
 ```bash
 sdk env
@@ -29,6 +29,24 @@ To enable only the local hooks without running the full setup flow:
 ```bash
 task dev:hooks
 ```
+
+## Pinned Oracle GraalVM
+
+The local SDKMAN candidate is `25.0.4.1.1-graal`. Register an exact Oracle GraalVM
+`25.0.4.1.1` installation under that name if it is not available in the SDKMAN catalog:
+
+```bash
+sdk install java 25.0.4.1.1-graal /absolute/path/to/graalvm/Contents/Home
+sdk env
+java -version
+```
+
+`Contents/Home` applies to macOS; use the extracted JDK root on Linux. Verify both
+`GRAALVM_VERSION="25.0.4.1.1"` and `JAVA_VERSION="25.0.4.1.1"` in the JDK `release` file.
+For macOS AArch64, the exact archive is
+[Oracle GDS GraalVM 25.0.4.1.1](https://gds.oracle.com/download/graal/25/archive/graalvm-jdk-25.0.4.1.1_macos-aarch64_bin.tar.gz),
+with SHA-256 `e14dbe0dac6451c170c8b9403b04993bc8ae22e24f8b6c2a5b15e1803824e97c`.
+Do not infer the patch version from `25/latest` or a short SDKMAN alias.
 
 ## Contributor Commands
 
@@ -86,11 +104,15 @@ utilities are also checked conservatively, without promoting their support level
 `SpringPolyglotContextFactory` remains checked pending maintainer classification. Other public Spring
 wiring types also remain checked; there is no broad Spring package or annotation-based exclusion.
 
-Three narrowly scoped diagnostic rules use `documented` criticality rather than fail:
+Four narrowly scoped diagnostic rules use `documented` criticality rather than fail:
 
 - `java.class.externalClassExposedInAPI` for the additive `ContextOwnership` enum, exposed from the
   separately checked adapter through new overloads; the rule requires the current adapter archive
   in a supplementary role. Existing signatures/ownership defaults remain.
+- `java.class.externalClassExposedInAPI` for exactly `Engine.CancellationCallback` from the
+  supplementary `org.graalvm.polyglot:polyglot:jar:25.0.4.1.1` archive. This upstream type is
+  exposed by the additive `Engine.persistCache(CancellationCallback)` method; existing members
+  remain. Other classes, difference codes and artifact versions do not match this rule.
 - `java.method.varargOverloadsOnlyDifferInVarargParameter` for the existing Micrometer `sla`,
   `Tags.and/of` overloads, only when both dependency archives are exactly `micrometer-core:1.17.0`.
 - The same diagnostic for `ResolvableType.forClassWithGenerics`, only when both archives are
@@ -98,8 +120,8 @@ Three narrowly scoped diagnostic rules use `documented` criticality rather than 
   they are not new project incompatibilities. They also reproduce when comparing published starter
   `0.4.0` with itself. Other difference codes remain blocking.
 
-The dependency rules require both archive versions to match exactly. An upgrade stops matching
-these rules; any remaining diagnostics then fail the gate and require review. Do not widen the
+The overload rules require both archive versions to match exactly; the callback rule pins its
+new archive. An upgrade stops matching these rules; any remaining diagnostics then fail the gate and require review. Do not widen the
 version patterns automatically. Unused old-version rules do not fail by themselves and should be
 removed during that review.
 

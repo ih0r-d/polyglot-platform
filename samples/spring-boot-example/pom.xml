@@ -22,8 +22,8 @@
         <python.package.3>numpy==2.2.4</python.package.3>
 
         <!-- GraalVM / GraalPy -->
-        <graal.version>25.0.2</graal.version>
-        <graalpy-plugin.version>25.0.2</graalpy-plugin.version>
+        <graal.version>25.0.4.1.1</graal.version>
+        <graalpy-plugin.version>25.0.4.1.1</graalpy-plugin.version>
 
     </properties>
 
