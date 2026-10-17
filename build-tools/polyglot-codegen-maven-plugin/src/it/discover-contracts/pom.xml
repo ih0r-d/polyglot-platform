@@ -1,0 +1,31 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>contract.validation.it</groupId>
+    <artifactId>discover-contracts</artifactId>
+    <version>1</version>
+    <packaging>pom</packaging>
+    <properties>
+        <java.sources>sources</java.sources>
+        <python.sources>python</python.sources>
+    </properties>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.github.ih0r-d</groupId>
+                <artifactId>polyglot-codegen-maven-plugin</artifactId>
+                <version>@project.version@</version>
+                <configuration>
+                    <sourceDirectory>${project.basedir}/${java.sources}</sourceDirectory>
+                    <inputDirectory>${project.basedir}/${python.sources}</inputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals><goal>validate-contracts</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

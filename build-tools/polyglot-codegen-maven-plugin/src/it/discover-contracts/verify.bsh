@@ -1,0 +1,15 @@
+String log = new String(java.nio.file.Files.readAllBytes(new File(basedir, "build.log").toPath()), java.nio.charset.StandardCharsets.UTF_8);
+for (String expected : new String[] {
+    "Discovered 2 @PolyglotClient Java source(s)",
+    "Python contract validation passed: 2 Java source(s)",
+    "Configure contracts",
+    "Python contract validation disabled",
+    "Missing Python module 'greeting_api'",
+    "GreetingApi.java:6: module 'greeting_api', symbol 'GreetingApi.hello': Missing Python method",
+    "Java supplies 0 positional argument(s); Python accepts 1..1",
+    "Unsupported @PolyglotClient"
+}) {
+    if (!log.contains(expected)) throw new AssertionError("Missing diagnostic: " + expected);
+}
+if (new File(basedir, "business-function-executed").exists()) throw new AssertionError("Python business function executed");
+return true;

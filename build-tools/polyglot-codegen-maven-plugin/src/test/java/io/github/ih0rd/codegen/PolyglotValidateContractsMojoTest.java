@@ -345,6 +345,157 @@ class PolyglotValidateContractsMojoTest {
     assertDoesNotThrow(mojo::execute);
   }
 
+  @Test
+  void discoversAnnotatedContractWithoutExplicitList() throws Exception {
+    var mojo = discovered(validPython());
+    assertDoesNotThrow(mojo::execute);
+  }
+
+  @Test
+  void discoveryIgnoresUnrelatedInterfacesAnnotationsAndJava21Records() throws Exception {
+    var mojo = discovered(validPython());
+    Files.writeString(
+        directory.resolve("sources/Unrelated.java"), "interface Unrelated { String missing(); }");
+    Files.writeString(
+        directory.resolve("sources/Foreign.java"),
+        "import other.PolyglotClient; @PolyglotClient interface Foreign { String missing(); }");
+    Files.writeString(directory.resolve("sources/Data.java"), "record Data(String name) {}");
+    assertDoesNotThrow(mojo::execute);
+  }
+
+  @Test
+  void discoveryChecksMultipleContractsIncludingFullyQualifiedAnnotation() throws Exception {
+    var mojo = discovered(validPython());
+    Files.writeString(
+        directory.resolve("sources/OtherApi.java"),
+        "@io.github.ih0rd.polyglot.annotations.PolyglotClient(languages = io.github.ih0rd.polyglot.SupportedLanguage.PYTHON) interface OtherApi { String hello(); }");
+    Files.writeString(
+        directory.resolve("other_api.py"), validPython().replace("GreetingApi", "OtherApi"));
+    assertDoesNotThrow(mojo::execute);
+    Files.delete(directory.resolve("other_api.py"));
+    assertTrue(
+        assertThrows(MojoFailureException.class, mojo::execute)
+            .getMessage()
+            .contains("Missing Python module 'other_api'"));
+  }
+
+  @Test
+  void discoveryRetainsMissingModuleMethodAndArityDiagnostics() throws Exception {
+    var mojo = discovered(validPython());
+    Files.delete(directory.resolve("greeting_api.py"));
+    assertTrue(
+        assertThrows(MojoFailureException.class, mojo::execute)
+            .getMessage()
+            .contains("Missing Python module"));
+    Files.writeString(
+        directory.resolve("greeting_api.py"), validPython().replace("hello", "other"));
+    assertTrue(
+        assertThrows(MojoFailureException.class, mojo::execute)
+            .getMessage()
+            .contains("GreetingApi.hello"));
+    Files.writeString(directory.resolve("greeting_api.py"), pythonMethod("self, required"));
+    String message = assertThrows(MojoFailureException.class, mojo::execute).getMessage();
+    assertTrue(message.contains("GreetingApi.java:3"), message);
+    assertTrue(message.contains("Python accepts 1..1"), message);
+  }
+
+  @Test
+  void explicitContractsTakePrecedenceOverDiscovery() throws Exception {
+    var mojo = configured(validPython());
+    set(mojo, "discoverContracts", true);
+    set(mojo, "sourceDirectory", directory.resolve("does-not-exist").toFile());
+    assertDoesNotThrow(mojo::execute);
+  }
+
+  @Test
+  void discoveryIsOptInAndValidationRemainsDisabledByDefault() throws Exception {
+    var mojo = new PolyglotValidateContractsMojo();
+    set(mojo, "discoverContracts", true);
+    assertDoesNotThrow(mojo::execute);
+    var explicit = configured(validPython());
+    set(explicit, "contracts", List.of());
+    set(explicit, "sourceDirectory", directory.toFile());
+    assertTrue(
+        assertThrows(MojoFailureException.class, explicit::execute)
+            .getMessage()
+            .contains("Configure contracts"));
+  }
+
+  @Test
+  void discoveryFailsWhenSourceRootMissingOrNoContractsFound() throws Exception {
+    var mojo = discovered(validPython());
+    set(mojo, "sourceDirectory", directory.resolve("absent").toFile());
+    assertTrue(
+        assertThrows(MojoFailureException.class, mojo::execute)
+            .getMessage()
+            .contains("sourceDirectory is not a directory"));
+    set(mojo, "sourceDirectory", directory.resolve("sources").toFile());
+    Files.writeString(directory.resolve("sources/GreetingApi.java"), "interface GreetingApi {}");
+    assertTrue(
+        assertThrows(MojoFailureException.class, mojo::execute)
+            .getMessage()
+            .contains("No @PolyglotClient"));
+  }
+
+  @Test
+  void discoveredUnsupportedContractsFailRatherThanBeingSkipped() throws Exception {
+    for (String source :
+        List.of(
+            "import io.github.ih0rd.polyglot.annotations.PolyglotClient; @PolyglotClient interface GreetingApi {}",
+            "import io.github.ih0rd.polyglot.annotations.PolyglotClient; @PolyglotClient(languages=SupportedLanguage.JS) interface GreetingApi {}",
+            "import io.github.ih0rd.polyglot.annotations.PolyglotClient; @PolyglotClient(languages=SupportedLanguage.PYTHON, convention=Convention.BY_METHOD_NAME) interface GreetingApi {}",
+            "import io.github.ih0rd.polyglot.annotations.PolyglotClient; @PolyglotClient(languages=SupportedLanguage.PYTHON) class GreetingApi {}",
+            "import io.github.ih0rd.polyglot.annotations.PolyglotClient; class Outer { @PolyglotClient(languages=SupportedLanguage.PYTHON) interface GreetingApi {} }",
+            "import io.github.ih0rd.polyglot.annotations.PolyglotClient; @PolyglotClient(languages=SupportedLanguage.PYTHON) interface GreetingApi extends Parent {}")) {
+      var mojo = discovered(validPython());
+      Files.writeString(directory.resolve("sources/GreetingApi.java"), source);
+      assertTrue(
+          assertThrows(MojoFailureException.class, mojo::execute)
+              .getMessage()
+              .contains("Unsupported"));
+    }
+  }
+
+  @Test
+  void ambiguousWildcardOrShadowedAnnotationsAreUnsupported() throws Exception {
+    for (String source :
+        List.of(
+            "import io.github.ih0rd.polyglot.annotations.*; @PolyglotClient(languages=SupportedLanguage.PYTHON) interface GreetingApi {}",
+            "import io.github.ih0rd.polyglot.annotations.PolyglotClient; @PolyglotClient interface GreetingApi { @interface PolyglotClient {} }")) {
+      var mojo = discovered(validPython());
+      Files.writeString(directory.resolve("sources/GreetingApi.java"), source);
+      assertTrue(
+          assertThrows(MojoFailureException.class, mojo::execute)
+              .getMessage()
+              .contains("Unsupported ambiguous"));
+    }
+  }
+
+  @Test
+  void invalidJavaSourcesFailDiscoveryWithTheirPath() throws Exception {
+    var mojo = discovered(validPython());
+    Files.writeString(directory.resolve("sources/Broken.java"), "not valid Java");
+    String message = assertThrows(MojoFailureException.class, mojo::execute).getMessage();
+    assertTrue(message.contains("Broken.java"), message);
+    assertTrue(message.contains("Cannot discover"), message);
+  }
+
+  private PolyglotValidateContractsMojo discovered(String python) throws Exception {
+    var mojo = configured(python);
+    Path sources = Files.createDirectories(directory.resolve("sources"));
+    Files.writeString(
+        sources.resolve("GreetingApi.java"),
+        """
+        import io.github.ih0rd.polyglot.annotations.PolyglotClient;
+        @PolyglotClient(languages = SupportedLanguage.PYTHON)
+        interface GreetingApi { String hello(); }
+        """);
+    set(mojo, "contracts", List.of());
+    set(mojo, "discoverContracts", true);
+    set(mojo, "sourceDirectory", sources.toFile());
+    return mojo;
+  }
+
   private String pythonMethod(String parameters) {
     return "class GreetingApi:\n    def hello("
         + parameters

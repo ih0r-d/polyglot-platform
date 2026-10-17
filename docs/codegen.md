@@ -230,7 +230,8 @@ Enable validation for this build:
 
 Alternatively, set `<validateContracts>true</validateContracts>` in an opt-in Maven profile.
 The goal's default phase is `verify`; it writes no files and registers no source roots.
-`contracts` must contain at least one existing Java source when enabled. Generated interfaces
+`contracts` must contain at least one existing Java source when enabled, unless annotation
+discovery below is enabled. Generated interfaces
 can be selected by their generated-source paths after the `generate` execution has run.
 
 For `interface GreetingApi { String hello(); }`, the expected source is
@@ -295,7 +296,65 @@ availability, argument/return types, default-expression success, constructor suc
 equivalence. It is not full Python type safety. Dynamic contracts should retain runtime `validateBinding(...)` or Spring fail-fast
 validation. Existing generation, drift checks, runtime and Spring defaults are unchanged.
 
-The packaged-plugin integration fixture uses the Apache Maven Invoker Plugin only in the
+### Annotation Discovery for Spring Boot Projects
+
+Existing `@PolyglotClient` declarations can replace the manual `<contracts>` list. For example,
+keep the application's existing contract:
+
+```java
+import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.annotations.PolyglotClient;
+
+@PolyglotClient(languages = SupportedLanguage.PYTHON)
+public interface GreetingApi {
+    String hello();
+}
+```
+
+Configure the same plugin execution as above, but omit `<contracts>`. Then enable both flags:
+
+```bash
+./mvnw -Dpolyglot.codegen.validateContracts=true -Dpolyglot.codegen.discoverContracts=true verify
+```
+
+Alternatively, put `<validateContracts>true</validateContracts>` and
+`<discoverContracts>true</discoverContracts>` in the plugin configuration of an opt-in Maven
+profile. Before discovery, adding a client required another `<contract>` entry; with discovery,
+adding its existing Java annotation is sufficient.
+
+Discovery scans `.java` files recursively under `sourceDirectory` (default:
+`${project.build.sourceDirectory}`, normally `src/main/java`) in sorted order. `inputDirectory`
+continues to select the Python root. A nonempty explicit `<contracts>` list takes precedence,
+even with discovery enabled, and retains its existing validation behavior. Discovery itself and
+validation are both disabled by default; enabling discovery alone does not validate anything.
+An enabled discovery run with no annotated contracts fails, so an incorrect source root cannot
+silently pass as a successful validation.
+
+The plugin identifies the exact framework-neutral `io.github.ih0rd.polyglot.annotations.PolyglotClient`
+annotation through an explicit Java import or its fully qualified name. Unannotated interfaces
+and explicitly imported foreign annotations with the same simple name are ignored. Wildcard-only
+or locally shadowed annotation resolution fails as unsupported; use an explicit import or fully
+qualified annotation instead. Java parsing does not require compiled application classes.
+
+Discovered contracts go through the same module, export, method and positional-arity checks as
+explicit contracts. They must explicitly select `SupportedLanguage.PYTHON` and use
+`DEFAULT`/`BY_INTERFACE_EXPORT`. AUTO/multiple-language selection, JS, inherited/nested interfaces
+and other unsupported forms fail rather than being counted as successfully validated.
+
+This is source discovery, not Spring bean discovery: no `ApplicationContext`, GraalVM `Context`,
+application class loading or Python execution is involved. It does not interpret `@EnablePolyglotClients`,
+Spring profiles, conditions, properties, or dependency JARs. Only the configured source root is
+scanned; tests and additional generated-source roots are not implicitly included. Set
+`sourceDirectory` to a narrower source directory when needed. All Python subset restrictions above
+continue to apply.
+
+The maintained Spring sample already uses explicit Python `@PolyglotClient` annotations, but its
+Python implementations use imports, constructors and docstrings outside the current static subset.
+This feature does not enable validation in that sample or change its runtime behavior. Spring
+startup fail-fast remains the runtime check for such contracts; discovery does not widen the
+Python parser's capabilities.
+
+The packaged-plugin integration fixtures use the Apache Maven Invoker Plugin only in the
 `plugin-it` profile, with an isolated repository and cloned fixtures:
 
 ```bash

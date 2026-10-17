@@ -11,7 +11,7 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
-/** Opt-in static symbol checks for explicitly selected Java/Python interface-export contracts. */
+/** Opt-in static validation of selected or source-discovered Java/Python contracts. */
 @Mojo(name = "validate-contracts", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true)
 public final class PolyglotValidateContractsMojo extends AbstractMojo {
 
@@ -23,6 +23,12 @@ public final class PolyglotValidateContractsMojo extends AbstractMojo {
 
   @Parameter private List<File> contracts;
 
+  @Parameter(property = "polyglot.codegen.discoverContracts", defaultValue = "false")
+  private boolean discoverContracts;
+
+  @Parameter(defaultValue = "${project.build.sourceDirectory}")
+  private File sourceDirectory;
+
   /** Creates the contract validation goal. */
   public PolyglotValidateContractsMojo() {}
 
@@ -33,14 +39,40 @@ public final class PolyglotValidateContractsMojo extends AbstractMojo {
           .info("Python contract validation disabled (polyglot.codegen.validateContracts=false).");
       return;
     }
-    if (contracts == null || contracts.isEmpty()) {
-      throw new MojoFailureException(
-          "Configure contracts with at least one Java interface source file.");
+    List<File> selected = contracts;
+    if (selected == null || selected.isEmpty()) {
+      if (!discoverContracts) {
+        throw new MojoFailureException(
+            "Configure contracts with at least one Java interface source file, or enable polyglot.codegen.discoverContracts.");
+      }
+      if (sourceDirectory == null) {
+        throw new MojoFailureException("Configure sourceDirectory for contract discovery.");
+      }
+      try {
+        selected = AnnotatedContractDiscovery.discover(sourceDirectory.toPath());
+      } catch (IllegalArgumentException ex) {
+        throw new MojoFailureException(ex.getMessage(), ex);
+      } catch (IOException ex) {
+        throw new MojoExecutionException(
+            "Cannot discover Java contracts in " + sourceDirectory, ex);
+      }
+      if (selected.isEmpty()) {
+        throw new MojoFailureException(
+            "No @PolyglotClient contract sources discovered in "
+                + sourceDirectory
+                + "; check sourceDirectory or configure explicit contracts.");
+      }
+      getLog()
+          .info(
+              "Discovered "
+                  + selected.size()
+                  + " @PolyglotClient Java source(s) in "
+                  + sourceDirectory);
     }
     if (inputDirectory == null || !inputDirectory.isDirectory()) {
       throw new MojoFailureException("Python inputDirectory is not a directory: " + inputDirectory);
     }
-    for (File contract : contracts) {
+    for (File contract : selected) {
       if (contract == null || !contract.isFile()) {
         throw new MojoFailureException("Java contract source does not exist: " + contract);
       }
@@ -52,6 +84,6 @@ public final class PolyglotValidateContractsMojo extends AbstractMojo {
         throw new MojoExecutionException("Cannot read contract sources for " + contract, ex);
       }
     }
-    getLog().info("Python contract validation passed: " + contracts.size() + " Java source(s).");
+    getLog().info("Python contract validation passed: " + selected.size() + " Java source(s).");
   }
 }
