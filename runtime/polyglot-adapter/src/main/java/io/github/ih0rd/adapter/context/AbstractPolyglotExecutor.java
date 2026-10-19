@@ -191,14 +191,28 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
                   }
                   return result.as(method.getReturnType());
                 } catch (PolyglotException e) {
-                  if (e.isInterrupted()) {
-                    Thread.currentThread().interrupt();
-                  }
+                  restoreInterrupt(e);
                   throw new InvocationException(
                       "Failed to invoke polyglot method: " + methodName, e);
+                } catch (InvocationException e) {
+                  restoreInterrupt(e);
+                  throw e;
                 }
               }
             });
+  }
+
+  private static void restoreInterrupt(Throwable failure) {
+    // Language-specific execution may have wrapped the guest exception before it reaches bind.
+    while (failure instanceof InvocationException && failure.getCause() != null) {
+      failure = failure.getCause();
+    }
+    if (failure instanceof PolyglotException guest
+        && (guest.isInterrupted()
+            || (guest.isHostException()
+                && guest.asHostException() instanceof InterruptedException))) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   /**

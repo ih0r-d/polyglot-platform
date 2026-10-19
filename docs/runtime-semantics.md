@@ -153,7 +153,11 @@ The original `PolyglotException` is preserved as the cause.
 
 If the `PolyglotException` signals a thread interrupt (`isInterrupted() == true`), the adapter
 re-sets the thread interrupt flag before throwing `InvocationException`, so callers that check
-`Thread.interrupted()` will observe the interrupt.
+`Thread.interrupted()` will observe the interrupt. For bound calls, this also applies when Python
+execution has already wrapped the guest exception in `InvocationException`, or GraalVM exposes a
+host `InterruptedException` through `PolyglotException.asHostException()`. Existing exception
+wrappers and causes are retained. The invocation monitor is released on failure; acquiring that
+monitor remains non-interruptible, as with any Java `synchronized` block.
 
 Callers should expect adapter exceptions from all guest execution paths. Neither is checked, so
 explicit handling is optional but recommended for resilience.

@@ -13,9 +13,11 @@ import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
+import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,7 @@ import org.springframework.context.annotation.Configuration;
 
 import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.adapter.exceptions.BindingException;
+import io.github.ih0rd.adapter.exceptions.InvocationException;
 import io.github.ih0rd.adapter.exceptions.ScriptNotFoundException;
 import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
@@ -75,6 +78,51 @@ class FailFastStartupIntegrationTest {
             context -> {
               assertThat(context).hasNotFailed();
               assertThat(context.getBean(FailingPythonClient.class).hello()).isEqualTo("hello");
+            });
+  }
+
+  @Test
+  void interruptedClientRestoresStatusAndAllowsSpringShutdown() throws Exception {
+    writeClient("started.countDown()\n        getattr(blocker, 'await')()\n        return 'hello'");
+    CountDownLatch started = new CountDownLatch(1);
+    CountDownLatch blocker = new CountDownLatch(1);
+    withPython(true)
+        .run(
+            application -> {
+              assertThat(application).hasNotFailed();
+              python.getBindings("python").putMember("started", started);
+              python.getBindings("python").putMember("blocker", blocker);
+              FailingPythonClient client = application.getBean(FailingPythonClient.class);
+              PyExecutor executor = application.getBean(PyExecutor.class);
+              AtomicBoolean interrupted = new AtomicBoolean();
+              FutureTask<Void> invocation =
+                  new FutureTask<>(
+                      () -> {
+                        try {
+                          assertThatThrownBy(client::hello)
+                              .isInstanceOf(InvocationException.class)
+                              .hasCauseInstanceOf(PolyglotException.class);
+                          interrupted.set(Thread.currentThread().isInterrupted());
+                          return null;
+                        } finally {
+                          Thread.interrupted();
+                        }
+                      });
+              Thread caller = new Thread(invocation, "interrupted-spring-client");
+              caller.start();
+              try {
+                assertThat(started.await(10, TimeUnit.SECONDS)).isTrue();
+                caller.interrupt();
+                invocation.get(10, TimeUnit.SECONDS);
+                assertThat(interrupted.get()).isTrue();
+                assertThat(executor.evaluate("40 + 2").asInt()).isEqualTo(42);
+                application.getSourceApplicationContext().close();
+                assertThat(executor.isClosed()).isTrue();
+              } finally {
+                blocker.countDown();
+                caller.join(TimeUnit.SECONDS.toMillis(10));
+                assertThat(caller.isAlive()).isFalse();
+              }
             });
   }
 
