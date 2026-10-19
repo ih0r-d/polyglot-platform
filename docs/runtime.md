@@ -132,6 +132,36 @@ by guest code during proxy method invocation is wrapped as `InvocationException`
 [`runtime-semantics.md`](runtime-semantics.md#exception-contract) for the full exception contract.
 For symptom-oriented fixes, see [`troubleshooting.md`](troubleshooting.md).
 
+### Array, Collection and Buffer Transfers
+
+Arguments are passed through the existing Polyglot API; the adapter does not serialize them or
+pre-copy Java arrays/collections into Python-owned containers. Creating `list(values)` in Python
+materializes a separate Python list. Returning the original Java array can preserve its identity;
+returning a Python list as `int[]` instead eagerly converts and copies its elements into a Java
+array. Those are different contracts, so an automatic snapshot or array-reuse shortcut is unsafe.
+
+Result conversion remains `Value.as(method.getReturnType())`, including configured custom target
+mappings. A Java `List` return type normally exposes a guest-backed view, not an eagerly detached
+array; its operations require an open Context. The binding uses the raw return class, not generic
+component information. Choosing a view can avoid eager materialization when that lifetime and
+mutation behavior suits the application's existing contract, but is not a drop-in array replacement.
+See upstream [Value conversion rules](https://docs.oracle.com/en/graalvm/jdk/25/sdk/org/graalvm/polyglot/Value.html#as(java.lang.Class)).
+
+On the verified GraalPy **25.0.4.1.1** JVM setup, Java heap/direct `ByteBuffer` objects expose
+buffer elements to the Java Polyglot API, but Python `memoryview(buffer)`, `len(buffer)` and
+`list(buffer)` reject them. Java methods such as absolute `get(index)` remain callable from Python
+with the configured host access. Per-byte host calls are not a bulk buffer transfer; preserve the
+buffer's position/limit, read-only status and signed Java byte semantics when using that route.
+Python `bytes` results can be copied into Java `byte[]` through the existing result conversion.
+No automatic zero-copy buffer interoperability is promised. Newer upstream
+[25.1 release notes](https://www.graalvm.org/release-notes/25.1/) describe foreign-buffer Python
+protocol support; that is not evidence of support on this pinned LTS version or a reason to upgrade
+within a data-transfer optimization task.
+
+The standalone data-transfer benchmarks separate argument passing, Python materialization,
+Python-only computation and Java result conversion. See
+[benchmark instructions](https://github.com/ih0r-d/polyglot-platform/blob/main/benchmarks/README.md).
+
 ## Python Runtime Details
 
 `PyExecutor` is convention-driven.

@@ -25,6 +25,10 @@ benchmarks/run.sh ContextCreationBenchmark -p strategy=shared,independent -foe t
   -rf json -rff benchmarks/target/context-creation-repeat.json
 ```
 
+Reinstall the reactor artifacts after every runtime edit or revert: the standalone project resolves
+installed SNAPSHOT jars, and root `verify` alone does not refresh them. A stale jar invalidates a
+committed-baseline comparison even when the source tree is clean.
+
 `run.sh` forwards all arguments to JMH and uses `JAVA_HOME/bin/java` for the host and forks.
 Do not run Maven, tests or other benchmarks concurrently with measurement. Preserve JSON results,
 command lines, Git SHA, JVM version/options, OS, CPU and RAM with each report. Run on an idle
@@ -79,6 +83,50 @@ The GC profiler reports JVM allocation estimates (bytes/op), not Python retained
 memory. Startup and steady-state scores use different modes/units and must not be combined into
 one average. Throughput is measured in a separate run, not computed from latency. Scalar scores
 are repeated for each size parameter; `size` only affects transfer operations.
+
+## Data Transfer Investigation
+
+`DataTransferBenchmark` uses representative `int[]` and `ArrayList<Integer>` inputs, heap/direct
+`ByteBuffer`, and a prebuilt Python list at sizes 100, 1,000 and 100,000. Setup checks array/buffer
+contents, the view's last element and the Python sum. A guarded guest export keeps the prebuilt list
+stable if the executor's weak Java `Value` wrapper is collected. Runtime caches are unchanged.
+
+- `arrayLength`: boundary/proxy control without iterating or copying the input.
+- `arrayMaterialize`, `listMaterialize`: Python `list(values)` plus Java `int[]` conversion.
+- `heapBufferMaterialize`, `directBufferMaterialize`: Python calls Java absolute `get(i)` per byte,
+  then converts the Python list to `byte[]`. These are supported host-method copies, not Python
+  buffer-protocol or zero-copy measurements. Inputs have position zero and limit equal to capacity.
+- `pythonArrayResult`: return a prebuilt guest list as `int[]`, without rebuilding/transforming it.
+- `pythonListResult`: return a guest-backed `List` view without consuming it; its score is not the
+  cost of copying all elements or of subsequently traversing the view.
+- `pythonCompute`: sum the prebuilt guest list, returning one scalar; no size-dependent host input.
+- `directGuestMaterialize`: direct cached callable, returning the Python list as `Value` without
+  Java array conversion. Comparing with the bound path is diagnostic, not a pure subtraction of
+  independent overheads.
+- `directArrayResult`, `enteredArrayResult`: identical `Value.as(int[].class)` conversion, with
+  implicit versus explicit Context entry. The latter is an isolated diagnostic, not runtime policy.
+
+The defaults match invocation benchmarks. The exploratory matrix uses shorter explicit settings
+below; these runs do not establish JIT convergence or small regression thresholds. Repeat promising
+candidates with the longer defaults before making a production change. Measure latency and
+throughput independently; the GC profiler estimates JVM allocation, not native copies/retained heap.
+
+```bash
+benchmarks/run.sh 'DataTransferBenchmark.(arrayLength|arrayMaterialize|listMaterialize|heapBufferMaterialize|directBufferMaterialize|pythonArrayResult|pythonListResult|pythonCompute|directGuestMaterialize)$' \
+  -bm avgt -tu us -f 2 -wi 3 -i 3 -w 500ms -r 500ms -prof gc -foe true \
+  -rf json -rff benchmarks/target/transfer-baseline-average.json
+benchmarks/run.sh 'DataTransferBenchmark.(arrayLength|arrayMaterialize|listMaterialize|heapBufferMaterialize|directBufferMaterialize|pythonArrayResult|pythonListResult|pythonCompute|directGuestMaterialize)$' \
+  -bm thrpt -tu s -f 2 -wi 3 -i 3 -w 500ms -r 500ms -prof gc -foe true \
+  -rf json -rff benchmarks/target/transfer-baseline-throughput.json
+benchmarks/run.sh 'DataTransferBenchmark.(directArrayResult|enteredArrayResult)$' \
+  -p size=100000 -bm avgt -prof gc -foe true \
+  -rf json -rff benchmarks/target/transfer-entry-control.json
+```
+
+These fixtures are deliberately limited to single-threaded JVM execution with the pinned runtime.
+Do not infer NumPy, all primitive types, concurrent Context access or Native Image performance.
+The existing conversion contracts and buffer limitations are described in
+[Runtime](../docs/runtime.md#array-collection-and-buffer-transfers).
 
 JMH follows the [OpenJDK JMH harness and samples](https://github.com/openjdk/jmh).
 See [BASELINE.md](BASELINE.md) for the recorded local measurements and limitations.
