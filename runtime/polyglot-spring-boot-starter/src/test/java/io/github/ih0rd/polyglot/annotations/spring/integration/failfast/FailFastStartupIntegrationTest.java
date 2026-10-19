@@ -6,10 +6,17 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.HostAccess;
+import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -68,6 +75,83 @@ class FailFastStartupIntegrationTest {
             context -> {
               assertThat(context).hasNotFailed();
               assertThat(context.getBean(FailingPythonClient.class).hello()).isEqualTo("hello");
+            });
+  }
+
+  @Test
+  void springShutdownWaitsForClientResultConversion() throws Exception {
+    writeClient("return 'hello'");
+    CountDownLatch converting = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    HostAccess access =
+        HostAccess.newBuilder(HostAccess.ALL)
+            .targetTypeMapping(
+                Value.class,
+                String.class,
+                Value::isString,
+                value -> {
+                  converting.countDown();
+                  try {
+                    if (!release.await(10, TimeUnit.SECONDS)) {
+                      throw new AssertionError("Timed out waiting to finish conversion");
+                    }
+                  } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError("Interrupted during conversion", e);
+                  }
+                  return value.asString();
+                },
+                HostAccess.TargetMappingPrecedence.HIGHEST)
+            .build();
+    withPython(true, access)
+        .run(
+            application -> {
+              assertThat(application).hasNotFailed();
+              FailingPythonClient client = application.getBean(FailingPythonClient.class);
+              PyExecutor executor = application.getBean(PyExecutor.class);
+              FutureTask<String> invocation = new FutureTask<>(client::hello);
+              CountDownLatch closing = new CountDownLatch(1);
+              FutureTask<Void> shutdown =
+                  new FutureTask<>(
+                      () -> {
+                        closing.countDown();
+                        application.getSourceApplicationContext().close();
+                        return null;
+                      });
+              Thread caller = new Thread(invocation, "spring-python-client");
+              Thread closer = new Thread(shutdown, "spring-context-close");
+              caller.start();
+              try {
+                assertThat(converting.await(10, TimeUnit.SECONDS)).isTrue();
+                closer.start();
+                assertThat(closing.await(10, TimeUnit.SECONDS)).isTrue();
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+                ThreadInfo info;
+                do {
+                  info = ManagementFactory.getThreadMXBean().getThreadInfo(closer.threadId());
+                  if (info != null
+                      && info.getThreadState() == Thread.State.BLOCKED
+                      && info.getLockOwnerId() == caller.threadId()) {
+                    break;
+                  }
+                  assertThat(closer.isAlive()).as("shutdown must wait for conversion").isTrue();
+                  Thread.yield();
+                } while (System.nanoTime() < deadline);
+                assertThat(info).isNotNull();
+                assertThat(info.getThreadState()).isEqualTo(Thread.State.BLOCKED);
+                assertThat(info.getLockOwnerId()).isEqualTo(caller.threadId());
+                assertThat(executor.isClosed()).isFalse();
+                release.countDown();
+                assertThat(invocation.get(10, TimeUnit.SECONDS)).isEqualTo("hello");
+                shutdown.get(10, TimeUnit.SECONDS);
+                assertThatThrownBy(client::hello).isInstanceOf(IllegalStateException.class);
+              } finally {
+                release.countDown();
+                caller.join(TimeUnit.SECONDS.toMillis(10));
+                closer.join(TimeUnit.SECONDS.toMillis(10));
+                assertThat(caller.isAlive()).isFalse();
+                assertThat(closer.isAlive()).isFalse();
+              }
             });
   }
 
@@ -131,10 +215,14 @@ class FailFastStartupIntegrationTest {
   }
 
   private ApplicationContextRunner withPython(boolean failFast) {
+    return withPython(failFast, HostAccess.ALL);
+  }
+
+  private ApplicationContextRunner withPython(boolean failFast, HostAccess access) {
     SpringPolyglotContextFactory factory = mock(SpringPolyglotContextFactory.class);
     // The auto-configured executor owns this real context and must close it even on startup
     // failure.
-    python = Context.newBuilder("python").allowAllAccess(true).build();
+    python = Context.newBuilder("python").allowAllAccess(true).allowHostAccess(access).build();
     when(factory.create(SupportedLanguage.PYTHON)).thenReturn(python);
     return contextRunner
         .withConfiguration(AutoConfigurations.of(PolyglotPythonAutoConfiguration.class))

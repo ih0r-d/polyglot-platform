@@ -141,7 +141,8 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
    * Binds a Java interface to a guest-language implementation.
    *
    * <p>The returned proxy delegates each non-{@link Object} method to the language-specific
-   * executor implementation and converts the result using {@link Value#as(Class)}.
+   * executor implementation and converts the result using {@link Value#as(Class)}. Execution and
+   * conversion share the executor's lifecycle monitor so closing waits for both to finish.
    *
    * @param iface interface to bind
    * @param <T> interface type
@@ -178,20 +179,24 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
               }
               String methodName = method.getName();
               Object[] safeArgs = (args != null ? args : new Object[0]);
-              try {
-                Value result = evaluate(effectiveConvention, methodName, iface, safeArgs);
-                if (method.getReturnType() == void.class) {
-                  return null;
+              synchronized (contextMonitor) {
+                ensureOpen();
+                try {
+                  Value result = evaluate(effectiveConvention, methodName, iface, safeArgs);
+                  if (method.getReturnType() == void.class) {
+                    return null;
+                  }
+                  if (result == null || result.isNull()) {
+                    return null;
+                  }
+                  return result.as(method.getReturnType());
+                } catch (PolyglotException e) {
+                  if (e.isInterrupted()) {
+                    Thread.currentThread().interrupt();
+                  }
+                  throw new InvocationException(
+                      "Failed to invoke polyglot method: " + methodName, e);
                 }
-                if (result == null || result.isNull()) {
-                  return null;
-                }
-                return result.as(method.getReturnType());
-              } catch (PolyglotException e) {
-                if (e.isInterrupted()) {
-                  Thread.currentThread().interrupt();
-                }
-                throw new InvocationException("Failed to invoke polyglot method: " + methodName, e);
               }
             });
   }
