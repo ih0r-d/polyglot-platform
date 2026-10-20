@@ -25,6 +25,17 @@ benchmarks/run.sh ContextCreationBenchmark -p strategy=shared,independent -foe t
   -rf json -rff benchmarks/target/context-creation-repeat.json
 ```
 
+For a direct comparison of a top-level Python callable and the bound `BY_METHOD_NAME` path:
+
+```bash
+benchmarks/run.sh 'InvocationBenchmark.(directTopLevelValue|boundMethodNameClient)$' \
+  -p size=8 -bm avgt -tu us -prof gc -foe true \
+  -rf json -rff benchmarks/target/method-name-average.json
+benchmarks/run.sh 'InvocationBenchmark.(directTopLevelValue|boundMethodNameClient)$' \
+  -p size=8 -bm thrpt -tu s -prof gc -foe true \
+  -rf json -rff benchmarks/target/method-name-throughput.json
+```
+
 Reinstall the reactor artifacts after every runtime edit or revert: the standalone project resolves
 installed SNAPSHOT jars, and root `verify` alone does not refresh them. A stale jar invalidates a
 committed-baseline comparison even when the source tree is clean.
@@ -51,6 +62,10 @@ warmup as proof that guest compilation has converged.
 - `boundClient`: the same operation through `PyExecutor.bind` on an annotated interface. Spring's
   `PolyglotClientFactoryBean.getObject()` validates and returns this same proxy; Spring scanning,
   application startup and metrics infrastructure are not measured here.
+- `directTopLevelValue` and `boundMethodNameClient`: direct invocation versus Python's
+  `BY_METHOD_NAME` convention for the same top-level function. The bound path includes source
+  loading/evaluation when the contract has not already been loaded. These cases do not measure
+  Spring startup.
 - `javaTransfer`, `directTransfer`, `boundTransfer`: add one to every element, return a new Java
   `int[]`; input sizes 8 and 1024. Python iterates a host array and returns a guest list converted
   with `Value.as(int[].class)`. Both boundary directions and the Python loop are included; this is

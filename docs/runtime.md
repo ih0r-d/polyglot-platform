@@ -298,6 +298,17 @@ Important compatibility note:
 - Python invocation behavior under `DEFAULT` remains aligned with the historical export-based path.
 - Python validation under `DEFAULT` is now stricter: if the exported contract exists but required Java methods are missing or not executable, `validateBinding(...)` fails earlier than before.
 
+For Python `BY_METHOD_NAME`, a module source is evaluated after its first successful validation or
+invocation for that contract and executor, then reused. Mutable Python globals persist between its
+method calls. A failed module evaluation is retried. `clearSourceCache()` allows all method-name
+contract modules to be evaluated again; `invalidateContractCache(iface)` or
+`reloadContract(iface, Convention.BY_METHOD_NAME)` resets one contract's loaded marker. These
+operations do not roll back globals already present in the Python Context. Earlier versions
+re-evaluated the module on every bound call, so applications relying on repeated module-level side
+effects must move them into the function or explicitly invalidate/reload. This behavior does not
+change Python `DEFAULT` binding. `preloadScript()` remains separate and may evaluate the same source
+again when the contract is later validated or invoked.
+
 ## Spring Boot Starter
 
 `runtime/polyglot-spring-boot-starter` wraps the runtime adapter for Spring applications.

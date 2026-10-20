@@ -12,6 +12,7 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - Add opt-in Maven `validate-contracts` static symbol checks for explicitly selected Java/Python class-export bindings; dynamic or unsupported constructs fail with source diagnostics without executing Python.
 
 ### Fixed
+- Evaluate Python `BY_METHOD_NAME` contract modules once after a successful evaluation per executor, preserving mutable globals between calls; explicit cache invalidation or reload allows evaluation again. Applications relying on per-call module-level side effects must move them into the function or explicitly reload the contract.
 - Restore the thread interrupt flag for bound Python interruptions wrapped during execution, construction or result conversion, preserving existing exception causes and lifecycle locking.
 - Keep bound invocation result conversion under the executor lifecycle monitor so concurrent close waits for custom mappings and materialization to finish.
 - Align GraalVM/GraalPy dependencies and sample embedding plugins to 25.0.4.1.1, pin the exact local Oracle runtime, and document its additive upstream Revapi callback diagnostic.

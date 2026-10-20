@@ -176,3 +176,55 @@ Verification for this addition: full `./mvnw -B -ntp -Pquality,api-compat verify
 JDK and temporary settings/cache above passed (386 tests, no failures/errors/skips; all four
 Revapi modules compared against published `0.4.0`). Standalone benchmark package/formatting,
 strict `task docs:build`, `task docs:clean`, and `git diff --check` also passed.
+
+## Python `BY_METHOD_NAME` Module Evaluation Experiment
+
+Measured 2026-10-20 on the same Apple M4 Pro/macOS 26.6.2/Oracle GraalVM 25.0.4.1.1 host above.
+The committed baseline is `2c9c8f6811b4868e65f5d84e11f566c68dd20a0e`. Baseline and candidate used
+the same JMH `InvocationBenchmark` source, JMH 1.37, GraalPy 25.0.4.1.1 dependencies, one thread,
+two forks, five 1-second warmups and five 1-second measurements per fork, `-Xms512m -Xmx2g`, and
+the GC profiler. The standalone benchmark resolves SNAPSHOT jars from the temporary Maven
+repository. The baseline was rebuilt from the exact committed SHA, then the candidate was rebuilt
+from the working tree; `PyExecutor.class` in each installed jar was hash-checked against its build
+output. Average-time runs were repeated for both revisions under these settings. Baseline and final
+HashSet candidate throughput were also repeated. Candidate throughput had high between-fork
+variance, so its point estimate is less reliable than the average-time result. An earlier throughput
+run used a superseded candidate implementation and is excluded. JMH's errors below are 99.9%
+confidence interval half-widths.
+
+`boundMethodNameClient` calls a module-level Python function through the bound Java interface.
+`validateBinding` runs in setup, so module initialization is already done before timing; on the
+baseline, each timed method call nevertheless evaluates the cached `Source` again. The candidate
+reuses the loaded module until explicit cache clear/invalidation/reload. `directTopLevelValue` is a
+control that calls the same top-level function through a cached `Value`.
+
+| Operation | Baseline | Candidate | Change |
+| --- | ---: | ---: | ---: |
+| Bound method-name latency | 83.256 ± 31.969; repeat 87.381 ± 37.558 µs/op | 0.136 ± 0.027; repeat 0.115 ± 0.002 µs/op | 99.84% lower first-run mean |
+| Bound method-name throughput | 12,401 ± 5,261; repeat 12,344 ± 5,626 ops/s | 8,868,678 ± 142,009; repeat 7,832,924 ± 1,806,105 ops/s | orders-of-magnitude higher point estimates; candidate repeat is noisy |
+| Bound method-name JVM allocation | 9,052 ± 933; repeat 9,046 ± 1,091 B/op | 371.055 ± 11.170; repeat 371.045 ± 11.172 B/op | about 95.9% lower first-run mean |
+| Direct top-level `Value` latency | 15 ± 1 ns/op | 15 ± 1 ns/op | unchanged control |
+
+The raw runs are [baseline average](results/method-name-baseline-initial.json), its
+[repeat](results/method-name-baseline-average.json), [candidate average](results/method-name-candidate-average.json),
+and its [repeat](results/method-name-candidate-average-repeat.json); throughput runs are
+[baseline](results/method-name-baseline-throughput-initial.json), its
+[repeat](results/method-name-baseline-throughput.json), and the final candidate
+[runs](results/method-name-candidate-throughput.json) and
+[repeat](results/method-name-candidate-throughput-repeat.json). The candidate's remaining
+latency/allocations are consistent with the regular Java proxy dispatch path, not repeated module
+execution. This is a large, repeatable result for the method-name convention, not a speedup claim
+for the default class-export convention or for Python computation generally.
+
+Default class-export controls using the same benchmark fixture were also compared. Baseline
+`boundClient` was 127.908 ± 3.224 ns/op and 796.078 ± 0.130 B/op; candidate was
+131.145 ± 9.499 ns/op and 796.053 ± 0.075 B/op. Their latency intervals overlap, allocations are
+indistinguishable, and no default-path regression was established. Raw runs are in
+[baseline](results/default-control-baseline.json) and [candidate](results/default-control-candidate.json).
+
+One-shot Context startup/import probes and a short shared-versus-independent Context concurrency
+run were exploratory only. Their confidence intervals were too wide for actionable conclusions,
+so those samples and their ad-hoc harness were excluded from retained benchmark results. This
+change does not establish full JVM process startup, Spring `ApplicationContext` startup, Native
+Image, multi-Context shared-Engine contention, or production request performance; each needs a
+dedicated controlled benchmark before drawing conclusions.

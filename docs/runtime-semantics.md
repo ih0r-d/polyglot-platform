@@ -31,7 +31,9 @@ This remains the primary, documented contract model for the project.
 - Source cache entries are keyed by Java interface type.
 - Source cache does not track file versions, checksums, or live source mutation.
 - Script changes are not detected automatically after an interface has been resolved.
-- `clearSourceCache()` removes cached `Source` objects only.
+- `clearSourceCache()` removes cached `Source` objects. For Python `BY_METHOD_NAME`, it also clears
+  the executor's module-evaluated markers, so a later call re-evaluates those modules. It does not
+  invalidate default-convention Python instances.
 
 Implication:
 
@@ -71,6 +73,18 @@ Implication:
 - `reloadContracts(...)` performs the same operation for multiple contracts in one serialized
   operation.
 - `clearAllCaches()` is a coarse reset, not a source-version management feature.
+- Python `BY_METHOD_NAME` evaluates a contract module once per Java contract and executor after a
+  successful evaluation. Its module globals, including mutable state changed by calls, persist
+  between calls. A failed evaluation is retried on the next call. `clearSourceCache()` permits all
+  such modules to be evaluated again; `invalidateContractCache(iface)` or
+  `reloadContract(iface, Convention.BY_METHOD_NAME)` permits one contract to be evaluated again.
+  These operations do not roll back Python globals already created in the Context; re-evaluated
+  module code runs in the existing language context.
+
+Compatibility note: earlier versions re-evaluated the source on each `BY_METHOD_NAME` invocation.
+Applications that relied on module-level side effects repeating on each call must move that work
+into the Python function or explicitly invalidate/reload the contract. The default Python
+export-based convention is unchanged.
 
 ## Concurrency Model
 

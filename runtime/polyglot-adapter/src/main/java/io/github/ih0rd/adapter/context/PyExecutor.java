@@ -6,9 +6,11 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -52,6 +54,9 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
 
   /** Cache of resolved Python targets keyed by Java interface type. */
   private final Map<Class<?>, WeakReference<Value>> instanceCache = new ConcurrentHashMap<>();
+
+  /** Tracks method-name contracts whose module source has been evaluated in this context. */
+  private final Set<Class<?>> loadedMethodNameContracts = new HashSet<>();
 
   /**
    * Creates a Python executor from an existing GraalPy context.
@@ -314,9 +319,22 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
     if (iface == null) {
       throw new IllegalArgumentException("Interface type must not be null");
     }
-    ensureOpen();
-    instanceCache.remove(iface);
-    super.invalidateContractCache(iface);
+    withContextLock(
+        () -> {
+          loadedMethodNameContracts.remove(iface);
+          instanceCache.remove(iface);
+          super.invalidateContractCache(iface);
+        });
+  }
+
+  /** Clears cached Python sources and their per-context module-loaded state. */
+  @Override
+  public void clearSourceCache() {
+    withContextLock(
+        () -> {
+          loadedMethodNameContracts.clear();
+          super.clearSourceCache();
+        });
   }
 
   /**
@@ -402,8 +420,13 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   }
 
   private <T> void ensureModuleLoaded(Class<T> iface) {
+    if (loadedMethodNameContracts.contains(iface)) {
+      return;
+    }
+
     Source source = resolveSource(iface);
     context.eval(source);
+    loadedMethodNameContracts.add(iface);
   }
 
   private <T> Value invokeByMethodName(Class<T> iface, String methodName, Object... args) {
@@ -457,6 +480,7 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
         () -> {
           instanceCache.clear();
           sourceCache.clear();
+          loadedMethodNameContracts.clear();
         });
   }
 
@@ -464,12 +488,14 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   @Override
   protected void closeExecutorResources() {
     instanceCache.clear();
+    loadedMethodNameContracts.clear();
     super.closeExecutorResources();
   }
 
   private void reloadSingleUnchecked(Class<?> iface, Convention convention) {
     instanceCache.remove(iface);
     sourceCache.remove(iface);
+    loadedMethodNameContracts.remove(iface);
 
     switch (convention) {
       case DEFAULT, BY_INTERFACE_EXPORT -> validateInterfaceExportBinding(iface);

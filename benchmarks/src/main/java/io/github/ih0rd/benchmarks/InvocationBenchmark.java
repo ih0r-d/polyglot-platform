@@ -23,6 +23,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import io.github.ih0rd.adapter.context.PolyglotHelper;
 import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.adapter.spi.InMemoryScriptSource;
+import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.annotations.PolyglotClient;
 
@@ -43,6 +44,8 @@ public class InvocationBenchmark {
               return value + 1
           def transfer(self, values):
               return [value + 1 for value in values]
+      def increment(value):
+          return value + 1
       """;
 
   @PolyglotClient(languages = SupportedLanguage.PYTHON)
@@ -52,14 +55,21 @@ public class InvocationBenchmark {
     int[] transfer(int[] values);
   }
 
+  @PolyglotClient(languages = SupportedLanguage.PYTHON, convention = Convention.BY_METHOD_NAME)
+  public interface MethodNameBenchApi {
+    int increment(int value);
+  }
+
   @Param({"8", "1024"})
   public int size;
 
   private Context context;
   private PyExecutor executor;
   private BenchApi client;
+  private MethodNameBenchApi methodNameClient;
   private Value target;
   private Value increment;
+  private Value topLevelIncrement;
   private Value transfer;
   private int[] data;
   private int input;
@@ -68,16 +78,24 @@ public class InvocationBenchmark {
   public void setup() {
     context = PolyglotHelper.newContext(SupportedLanguage.PYTHON);
     executor =
-        new PyExecutor(context, new InMemoryScriptSource(Map.of("python/bench_api", SCRIPT)));
+        new PyExecutor(
+            context,
+            new InMemoryScriptSource(
+                Map.of("python/bench_api", SCRIPT, "python/method_name_bench_api", SCRIPT)));
     executor.validateBinding(BenchApi.class);
     client = executor.bind(BenchApi.class);
+    executor.validateBinding(MethodNameBenchApi.class, Convention.BY_METHOD_NAME);
+    methodNameClient = executor.bind(MethodNameBenchApi.class, Convention.BY_METHOD_NAME);
     target = context.eval("python", "BenchApi()");
     increment = target.getMember("increment");
+    topLevelIncrement = context.getBindings("python").getMember("increment");
     transfer = target.getMember("transfer");
     data = new int[size];
     for (int i = 0; i < size; i++) data[i] = i;
     if (client.increment(41) != 42
         || increment.execute(41).asInt() != 42
+        || methodNameClient.increment(41) != 42
+        || topLevelIncrement.execute(41).asInt() != 42
         || client.transfer(data)[size - 1] != size
         || transfer.execute((Object) data).as(int[].class)[size - 1] != size) {
       throw new IllegalStateException("Benchmark operations are not equivalent");
@@ -116,6 +134,16 @@ public class InvocationBenchmark {
   @Benchmark
   public int boundClient() {
     return client.increment(input++ & 1023);
+  }
+
+  @Benchmark
+  public int directTopLevelValue() {
+    return topLevelIncrement.execute(input++ & 1023).asInt();
+  }
+
+  @Benchmark
+  public int boundMethodNameClient() {
+    return methodNameClient.increment(input++ & 1023);
   }
 
   @Benchmark
