@@ -177,6 +177,9 @@ jobs:
           java-version: "21"
           cache: maven
 
+      - name: Test developer Java resolution
+        run: bash .dev/tests/common-test.sh
+
       - name: Spotless formatting check
         run: ./mvnw -B -ntp spotless:check
 

@@ -9,7 +9,7 @@ change before stronger support claims are made.
 The current `0.5.x` release-preparation line verifies the following:
 
 - Maven wrapper and CI workflows on Maven 3.9+
-- pinned local SDKMAN runtime: Oracle GraalVM `25.0.4.1.1-graal` (locally registered SDKMAN candidate)
+- pinned local runtime: Oracle GraalVM `25.0.4.1.1`, selected through `JAVA_HOME` or SDKMAN
 - repository minimum Java version: 21
 - root CI baseline workflow on Java 21
 - root CI runtime workflow on GraalVM JDK 25
@@ -32,9 +32,10 @@ verification lines:
 It now verifies the current Spring Boot 4.1.0 line through the starter tests and the maintained
 Spring sample.
 
-The repository root pins the expected local Java runtime in `.sdkmanrc`. For
-runtime work, maintained samples, and full test execution, contributors are expected to run
-`sdk env` before using the Maven wrapper.
+The repository root records the optional SDKMAN candidate in `.sdkmanrc`. For runtime work,
+maintained samples and full patch verification, select the pinned Oracle GraalVM through
+`JAVA_HOME` or `sdk env`; local alias registration is not required for `JAVA_HOME` users.
+See [Java resolution and checks](developer-tooling.md#pinned-oracle-graalvm).
 
 ## Current Verified Ranges And Caveats
 
@@ -160,7 +161,7 @@ adapter and Spring starter against published `0.4.0`; codegen is not yet covered
 - Repository modules compile against Java 21.
 - Runtime execution, starter verification, and maintained samples are currently exercised on
   GraalVM JDK 25.
-- Java 25 remains the pinned local SDKMAN runtime for full repository work because it matches the
+- Java 25 remains the pinned local runtime for full repository work because it matches the
   current verified GraalVM runtime line.
 
 ## When You Change the Baseline

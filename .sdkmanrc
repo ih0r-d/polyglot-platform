@@ -1,3 +1,5 @@
 # Enable auto-env through the sdkman_auto_env config
 # Add key=value pairs of SDKs to use below
+# Optional installed candidate; Task scripts prefer an explicit JAVA_HOME.
+# See docs/developer-tooling.md for setup without SDKMAN or local alias registration.
 java=25.0.4.1.1-graal

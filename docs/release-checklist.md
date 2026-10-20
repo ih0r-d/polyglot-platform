@@ -22,7 +22,7 @@ Use it together with [`release-process.md`](release-process.md) and
 
 It is expected to:
 
-- load the pinned SDKMAN Java environment automatically
+- respect an explicit `JAVA_HOME`, otherwise resolve an installed SDKMAN candidate or JDK on `PATH`
 - build docs with a local `.venv-docs/` environment when `mkdocs` is not already installed
 - verify the maintained release-path samples after local artifact installation
 

@@ -9,9 +9,8 @@
    git clone https://github.com/ih0r-d/polyglot-platform.git
    cd polyglot-platform
    ```
-2. Activate the pinned toolchain and run the canonical contributor setup:
+2. Select the pinned toolchain through `JAVA_HOME` or `sdk env` and run contributor setup:
    ```bash
-   sdk env
    task dev:setup
    ```
 3. Run the standard verification commands before opening a pull request:
@@ -37,12 +36,17 @@ For the full developer command reference, see
 - GraalVM runtime integrations: GraalVM 25.x
 - Developer automation scripts: `bash`
 
-The repository root includes [`.sdkmanrc`](.sdkmanrc). For full test execution and any runtime or
-sample work, use:
+The repository root includes an optional [`.sdkmanrc`](.sdkmanrc). For full test execution and any
+runtime or sample work, select Oracle GraalVM `25.0.4.1.1` using `JAVA_HOME`, or activate an
+installed SDKMAN candidate:
 
 ```bash
 sdk env
 ```
+
+An explicit `JAVA_HOME` takes priority in Task scripts; invalid selections fail without switching
+JDKs. SDKMAN and a locally registered alias are not required. See
+[setup options and validation](docs/developer-tooling.md#pinned-oracle-graalvm).
 
 If you change the supported matrix, update [`README.md`](README.md), [`docs/compatibility.md`](docs/compatibility.md), and CI workflows in the same change.
 
@@ -60,7 +64,6 @@ If you change the supported matrix, update [`README.md`](README.md), [`docs/comp
 Prefer the root Taskfile for contributor-facing commands:
 
 ```bash
-sdk env
 task dev:setup
 task verify
 task quality

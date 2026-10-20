@@ -7,7 +7,8 @@ verify the JDK `release` file, not a `latest` download selector.
 
 ## Build and run
 
-From the repository root, activate `sdk env`, then install the current reactor artifacts:
+From the repository root, select the pinned JDK through `JAVA_HOME` or `sdk env`
+([setup options](../docs/developer-tooling.md#pinned-oracle-graalvm)), then install current artifacts:
 
 ```bash
 ./mvnw -B -ntp -pl runtime/polyglot-adapter -am install -DskipTests
@@ -40,7 +41,9 @@ Reinstall the reactor artifacts after every runtime edit or revert: the standalo
 installed SNAPSHOT jars, and root `verify` alone does not refresh them. A stale jar invalidates a
 committed-baseline comparison even when the source tree is clean.
 
-`run.sh` forwards all arguments to JMH and uses `JAVA_HOME/bin/java` for the host and forks.
+`run.sh` uses the shared developer Java resolver, verifies the exact Oracle patch from the JDK
+`release` file, forwards all arguments to JMH, and uses the selected `JAVA_HOME/bin/java` for
+the host and forks. A mismatched runtime fails before JMH starts.
 Do not run Maven, tests or other benchmarks concurrently with measurement. Preserve JSON results,
 command lines, Git SHA, JVM version/options, OS, CPU and RAM with each report. Run on an idle
 machine using a consistent power mode. Results are local observations, not CI performance gates.

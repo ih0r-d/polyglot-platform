@@ -36,31 +36,87 @@ print_warn() {
 }
 
 setup_sdkman_env() {
-  cd_repo_root
+  local candidate sdkman_dir
 
-  if [ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
-    # SDKMAN scripts are not strict-nounset safe, so run both init and `sdk env` with nounset disabled.
-    # shellcheck disable=SC1090
-    set +u
-    source "$HOME/.sdkman/bin/sdkman-init.sh"
-    if command -v sdk >/dev/null 2>&1 && [ -f "$REPO_ROOT/.sdkmanrc" ]; then
-      sdk env
+  # Resolve installed candidates only: sourcing SDKMAN can switch JDKs or trigger network hooks.
+  sdkman_dir="${SDKMAN_DIR:-$HOME/.sdkman}"
+  if [ -f "$REPO_ROOT/.sdkmanrc" ]; then
+    candidate="$(sed -n 's/^java=//p' "$REPO_ROOT/.sdkmanrc" | tr -d '\r')"
+    if [ -n "$candidate" ] && [ -d "$sdkman_dir/candidates/java/$candidate" ]; then
+      JAVA_HOME="$sdkman_dir/candidates/java/$candidate"
     fi
-    set -u
   fi
 }
 
 setup_java_home() {
-  local java_bin
+  local java_bin link version_output version major links=0
 
-  setup_sdkman_env
-  if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then
-    export JAVA_HOME
-    return
+  if [ -z "${JAVA_HOME:-}" ]; then
+    setup_sdkman_env
+    if [ -z "${JAVA_HOME:-}" ]; then
+      java_bin="$(command -v java || true)"
+      # Follow Linux alternatives and SDK symlinks without GNU-only readlink -f.
+      while [ -n "$java_bin" ] && [ -L "$java_bin" ]; do
+        links=$((links + 1))
+        if [ "$links" -gt 40 ]; then
+          echo "Cannot resolve java on PATH: too many symbolic links. Set JAVA_HOME explicitly." >&2
+          return 1
+        fi
+        link="$(readlink "$java_bin")"
+        case "$link" in
+          /*) java_bin="$link" ;;
+          *) java_bin="$(dirname "$java_bin")/$link" ;;
+        esac
+      done
+      if [ -z "$java_bin" ] || [ "$java_bin" = /usr/bin/java ]; then
+        echo "No JDK found (the macOS /usr/bin/java launcher is not a JDK). Set JAVA_HOME to a JDK or install the .sdkmanrc candidate manually." >&2
+        return 1
+      fi
+      JAVA_HOME="$(cd "$(dirname "$java_bin")/.." && pwd -P)"
+    fi
   fi
-  java_bin="$(command -v java)"
+
+  if [ ! -x "$JAVA_HOME/bin/java" ] || [ ! -x "$JAVA_HOME/bin/javac" ]; then
+    echo "Invalid JAVA_HOME: $JAVA_HOME. Expected executable bin/java and bin/javac; the selected JDK will not be replaced." >&2
+    return 1
+  fi
+  if ! version_output="$("$JAVA_HOME/bin/java" -version 2>&1)"; then
+    printf 'Cannot run JAVA_HOME/bin/java: %s\n%s\n' "$JAVA_HOME" "$version_output" >&2
+    return 1
+  fi
+  version="$(printf '%s\n' "$version_output" | sed -n 's/.*version "\([0-9][^"]*\)".*/\1/p' | head -n 1)"
+  major="${version%%[.-]*}"
+  case "$major" in
+    ''|*[!0-9]*) echo "Cannot determine Java version from $JAVA_HOME/bin/java -version." >&2; return 1 ;;
+  esac
+  if [ "$major" -lt 21 ]; then
+    echo "Java 21 or newer is required; selected Java $version at $JAVA_HOME. Set JAVA_HOME explicitly to a compatible JDK." >&2
+    return 1
+  fi
   export JAVA_HOME
-  JAVA_HOME="$(cd "$(dirname "$java_bin")/.." && pwd -P)"
+  # Maven, sample plugins and JMH forks must all see the selected JDK.
+  case "$PATH" in
+    "$JAVA_HOME/bin":*) ;;
+    *) export PATH="$JAVA_HOME/bin:$PATH" ;;
+  esac
+}
+
+require_pinned_graalvm() {
+  local expected graal_version java_version implementor
+
+  setup_java_home || return 1
+  expected="$(sed -n 's:.*<graal.version>\([^<]*\)</graal.version>.*:\1:p' "$REPO_ROOT/pom.xml")"
+  if [ -z "$expected" ] || [ ! -r "$JAVA_HOME/release" ]; then
+    echo "Cannot verify the pinned Oracle GraalVM: missing graal.version or JDK release file." >&2
+    return 1
+  fi
+  graal_version="$(sed -n 's/^GRAALVM_VERSION="\([^"]*\)"/\1/p' "$JAVA_HOME/release")"
+  java_version="$(sed -n 's/^JAVA_VERSION="\([^"]*\)"/\1/p' "$JAVA_HOME/release")"
+  implementor="$(sed -n 's/^IMPLEMENTOR="\([^"]*\)"/\1/p' "$JAVA_HOME/release")"
+  if [ "$graal_version" != "$expected" ] || [ "$java_version" != "$expected" ] || [ "$implementor" != "Oracle Corporation" ]; then
+    echo "Benchmarks require Oracle GraalVM $expected (GRAALVM_VERSION and JAVA_VERSION in release). Selected: $JAVA_HOME ($implementor, Java $java_version, GraalVM ${graal_version:-absent})." >&2
+    return 1
+  fi
 }
 
 setup_maven_opts() {
@@ -80,7 +136,7 @@ cd_repo_root() {
 
 run_mvn() {
   cd_repo_root
-  setup_java_home
+  setup_java_home || return 1
   setup_maven_opts
   print_info "JDK: $("$JAVA_HOME/bin/java" -version 2>&1 | head -n 1)"
   print_info "Maven: ./mvnw -B -ntp $*"

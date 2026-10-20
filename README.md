@@ -64,9 +64,8 @@ Current contract boundaries:
 - JavaScript remains part of the published API surface, but only as an explicitly experimental path
 - internal starter types and runtime implementation classes are not supported extension points
 
-Register the exact Oracle JDK as described in
-[developer tooling](docs/developer-tooling.md#pinned-oracle-graalvm), then load the pinned SDKMAN
-environment:
+Select the exact Oracle JDK using `JAVA_HOME` or SDKMAN as described in
+[developer tooling](docs/developer-tooling.md#pinned-oracle-graalvm). For SDKMAN users:
 
 ```bash
 sdk env
@@ -214,10 +213,9 @@ Run the stricter local quality gate:
 
 ## Development
 
-Canonical contributor setup from the repository root:
+After selecting the JDK through `JAVA_HOME` or `sdk env`, run from the repository root:
 
 ```bash
-sdk env
 task dev:setup
 ```
 

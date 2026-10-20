@@ -36,6 +36,7 @@ tasks:
   quality:
     desc: Run the stricter local quality gate
     cmds:
+      - bash ./.dev/tests/common-test.sh
       - ./.dev/bin/quality.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
   format:
@@ -61,11 +62,7 @@ tasks:
   samples:
     desc: Install local artifacts and verify maintained samples
     cmds:
-      - ./mvnw -B -ntp -DskipTests install
-      - ./.dev/bin/validate-sample-versions.sh
-      - mvn -B -ntp -DskipTests verify -f samples/java-maven-example/pom.xml
-      - mvn -B -ntp -DskipTests verify -f samples/java-maven-codegen-example/pom.xml
-      - mvn -B -ntp -DskipTests verify -f samples/spring-boot-example/pom.xml
+      - ./.dev/bin/samples.sh
 
   version:
     desc: Show current project version

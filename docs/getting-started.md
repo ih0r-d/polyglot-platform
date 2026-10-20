@@ -83,11 +83,8 @@ Without the exported value and the naming convention, the runtime adapter would 
 If you are using the Spring Boot starter instead of the framework-neutral adapter shown here, stay
 on the repository's currently verified Spring Boot 4.1.0 line.
 
-When working from this repository checkout, activate the pinned SDKMAN environment first:
-
-```bash
-sdk env
-```
+When working from this repository checkout, select the pinned Oracle GraalVM through
+`JAVA_HOME` or `sdk env`; see [development setup](developer-tooling.md#pinned-oracle-graalvm).
 
 If you want aligned runtime dependency versions, import `polyglot-bom` first.
 

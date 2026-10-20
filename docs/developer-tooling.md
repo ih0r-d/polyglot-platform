@@ -13,10 +13,10 @@ Developer automation scripts require `bash`. Maven commands should be run throug
 
 ## First-Time Setup
 
-After cloning the repository, register the [pinned Oracle GraalVM](#pinned-oracle-graalvm):
+After cloning the repository, select the [pinned Oracle GraalVM](#pinned-oracle-graalvm)
+through `JAVA_HOME` or SDKMAN, then run:
 
 ```bash
-sdk env
 task dev:setup
 ```
 
@@ -32,8 +32,31 @@ task dev:hooks
 
 ## Pinned Oracle GraalVM
 
-The local SDKMAN candidate is `25.0.4.1.1-graal`. Register an exact Oracle GraalVM
-`25.0.4.1.1` installation under that name if it is not available in the SDKMAN catalog:
+SDKMAN is optional. To use an existing Oracle GraalVM `25.0.4.1.1` installation directly:
+
+```bash
+export JAVA_HOME=/absolute/path/to/graalvm/Contents/Home
+export PATH="$JAVA_HOME/bin:$PATH"
+task verify
+task quality -- -Papi-compat
+task samples
+```
+
+`Contents/Home` applies to macOS; use the extracted JDK root on Linux. Task scripts and
+`benchmarks/run.sh` resolve Java in this order:
+
+1. A nonempty `JAVA_HOME`, which must contain executable `bin/java` and `bin/javac`.
+2. The already installed `.sdkmanrc` candidate under `${SDKMAN_DIR:-$HOME/.sdkman}`.
+3. A JDK on `PATH`, following symbolic links, including Linux alternatives.
+
+An invalid or incompatible explicit `JAVA_HOME` fails with a diagnostic; it is never replaced.
+The selected JDK is placed first in the child process's `PATH` so Maven, plugins and forks agree.
+The macOS `/usr/bin/java` launcher is not a JDK discovery fallback. If the SDKMAN candidate is
+missing, an existing JDK on `PATH` can still be used. No SDKMAN initialization, automatic JDK
+installation, network lookup or `sdk env` is performed by these scripts.
+
+SDKMAN users can continue to run `sdk env` themselves. The optional local candidate is
+`25.0.4.1.1-graal`; registering an existing JDK is only necessary when using that alias:
 
 ```bash
 sdk install java 25.0.4.1.1-graal /absolute/path/to/graalvm/Contents/Home
@@ -41,12 +64,24 @@ sdk env
 java -version
 ```
 
-`Contents/Home` applies to macOS; use the extracted JDK root on Linux. Verify both
+Verify both
 `GRAALVM_VERSION="25.0.4.1.1"` and `JAVA_VERSION="25.0.4.1.1"` in the JDK `release` file.
 For macOS AArch64, the exact archive is
 [Oracle GDS GraalVM 25.0.4.1.1](https://gds.oracle.com/download/graal/25/archive/graalvm-jdk-25.0.4.1.1_macos-aarch64_bin.tar.gz),
 with SHA-256 `e14dbe0dac6451c170c8b9403b04993bc8ae22e24f8b6c2a5b15e1803824e97c`.
 Do not infer the patch version from `25/latest` or a short SDKMAN alias.
+
+Java resolution checks that the selected executable runs and reports Java 21 or newer; Maven
+retains its enforcer checks. This preserves the Java 21 baseline and CI's separate GraalVM 25
+runtime lane rather than treating every build as an exact Oracle patch certification. Maintained
+samples compile for Java 25. Use the exact Oracle runtime above for full patch verification;
+`benchmarks/run.sh` additionally checks the Oracle implementor and both release-file versions
+against `graal.version` in the root POM, failing on mismatches. Direct `./mvnw` invocations use
+Maven Wrapper's own Java selection, so export the same `JAVA_HOME` there too.
+
+See official [SDKMAN usage](https://sdkman.io/usage/),
+[Maven configuration](https://maven.apache.org/configure.html) and
+[GraalVM embedding requirements](https://www.graalvm.org/jdk25/reference-manual/embed-languages/).
 
 ## Contributor Commands
 
@@ -80,7 +115,7 @@ The goal is disabled by default and does not execute Python modules or business 
 
 ## Java API Compatibility
 
-Run the opt-in API gate after activating the pinned GraalVM (`sdk env`):
+Run the opt-in API gate after selecting the pinned GraalVM (`JAVA_HOME` or `sdk env`):
 
 ```bash
 ./mvnw -B -ntp -Papi-compat -pl runtime/polyglot-spring-boot-starter -am clean verify

@@ -66,6 +66,6 @@ next snapshot version before it is published to Maven Central.
 
 When building samples from this repository checkout:
 
-1. run `sdk env`
+1. select the pinned GraalVM through `JAVA_HOME` or `sdk env` ([setup](developer-tooling.md#pinned-oracle-graalvm))
 2. run `./mvnw -DskipTests install` from the repository root
 3. build the sample module you want to inspect
