@@ -45,6 +45,45 @@ For Python, context creation uses `GraalPyResources.contextBuilder(...)` with a 
 > user-supplied scripts. See
 > [`runtime-semantics.md`](runtime-semantics.md#security-contract) for the full security contract.
 
+### Prepared GraalPy Runtime Resources
+
+GraalVM 25.0.4.1.1 supports preparing runtime resources before application launch with
+[`Engine.copyResources`](https://docs.oracle.com/en/graalvm/jdk/25/sdk/org/graalvm/polyglot/Engine.html).
+Run this in a separate build or installation JVM with the same GraalPy dependencies as the
+application (`Engine` is from `org.graalvm.polyglot`, `Path` from `java.nio.file`; the call can
+throw `IOException`):
+
+```java
+if (!Engine.copyResources(Path.of("graalpy-resources"), "python")) {
+    throw new IllegalStateException("No Python runtime resources were copied");
+}
+```
+
+Deploy the generated directory with the application, then select it at JVM launch:
+
+```bash
+java --enable-native-access=ALL-UNNAMED \
+  -Dpolyglot.engine.resourcePath=./graalpy-resources -jar application.jar
+```
+
+The same command works for Spring Boot applications using this starter. Set this JVM system
+property before the first Engine is initialized; it is process-wide. No new starter property or
+Context customizer is needed. A relative path resolves against the process working directory.
+
+The generated layout contains the Python standard library and required native/runtime resources.
+Include any additional GraalVM languages/tools used by the application in preparation as well.
+Application VFS `src` and `venv` resources remain separately configured by `GraalPyResources`.
+Preparing runtime files avoids their first-use unpacking; Python initialization, application
+imports and binding validation still execute normally. An existing default resource cache already
+reuses extracted files, so measure process-to-first-response latency before adopting this setup.
+
+Use a complete bundle built for the same artifact versions, OS and architecture. Regenerate it
+when those change. Prepare a separate immutable bundle and deploy it atomically: `copyResources`
+replaces component directories and must not target a live application's bundle. The deployed
+directory can be read-only; missing or damaged files can cause native-library or Python import
+errors. Context shutdown leaves the prepared directory intact. This setup preserves the starter's
+fail-fast configuration and Context/Engine ownership.
+
 ### Opt-In Shared Python Engine
 
 The existing APIs support a caller-owned `org.graalvm.polyglot.Engine`; no new factory or global
