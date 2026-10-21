@@ -1,5 +1,6 @@
 package io.github.ih0rd.examples.aot;
 
+import io.github.ih0rd.adapter.context.ContextOwnership;
 import io.github.ih0rd.adapter.context.PolyglotHelper;
 import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.adapter.spi.ClasspathScriptSource;
@@ -16,7 +17,8 @@ public final class Main {
         ClasspathScriptSource scriptSource = new ClasspathScriptSource();
 
         try (var context = PolyglotHelper.newContext(SupportedLanguage.PYTHON);
-             var pyExecutor = PyExecutor.createWithContext(context, scriptSource)) {
+             var pyExecutor =
+                 PyExecutor.createWithContext(context, scriptSource, ContextOwnership.BORROWED)) {
             context.getBindings("python").putMember("pricing_rules", rules);
 
             QuoteApi quoteApi = pyExecutor.bind(QuoteApi.class);
