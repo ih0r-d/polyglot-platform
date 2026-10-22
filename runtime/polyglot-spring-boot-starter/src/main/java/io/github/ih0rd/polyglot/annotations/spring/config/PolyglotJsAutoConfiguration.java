@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.core.io.ResourceLoader;
 
 import io.github.ih0rd.adapter.context.JsExecutor;
@@ -27,6 +28,7 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
 @ExperimentalApi
 @AutoConfiguration
 @ConditionalOnClass(JsExecutor.class)
+@Conditional(PolyglotCoreEnabledCondition.class)
 @ConditionalOnProperty(prefix = "polyglot.js", name = "enabled", havingValue = "true")
 public class PolyglotJsAutoConfiguration {
 

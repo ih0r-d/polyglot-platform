@@ -1,8 +1,11 @@
 package io.github.ih0rd.polyglot.annotations.spring.properties;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 import io.github.ih0rd.polyglot.annotations.ExperimentalApi;
 
@@ -45,12 +48,20 @@ public record PolyglotProperties(
    * @param logLevel log level used for the startup summary
    */
   public record CoreProperties(
-      boolean enabled, boolean failFast, boolean logMetadataOnStartup, String logLevel) {
+      @DefaultValue("true") boolean enabled,
+      @DefaultValue("true") boolean failFast,
+      @DefaultValue("true") boolean logMetadataOnStartup,
+      @DefaultValue("DEBUG") String logLevel) {
 
     /** Creates normalized core properties with a fallback startup log level. */
     public CoreProperties {
       if (logLevel == null || logLevel.isBlank()) {
         logLevel = "debug";
+      } else if (!Set.of("TRACE", "DEBUG", "INFO", "WARN", "ERROR")
+          .contains(logLevel.trim().toUpperCase(Locale.ROOT))) {
+        throw new IllegalArgumentException(
+            "Invalid value for 'polyglot.core.log-level': '%s'. Supported values: TRACE, DEBUG, INFO, WARN, ERROR."
+                .formatted(logLevel));
       }
     }
 
@@ -80,10 +91,10 @@ public record PolyglotProperties(
    *     evaluation and repeated script side effects remain possible
    */
   public record PythonProperties(
-      boolean enabled,
-      String resourcesPath,
-      boolean safeDefaults,
-      boolean warmupOnStartup,
+      @DefaultValue("false") boolean enabled,
+      @DefaultValue("classpath:python") String resourcesPath,
+      @DefaultValue("true") boolean safeDefaults,
+      @DefaultValue("false") boolean warmupOnStartup,
       List<String> preloadScripts) {
 
     /** Creates normalized Python properties with immutable preload scripts. */
@@ -118,7 +129,10 @@ public record PolyglotProperties(
    */
   @ExperimentalApi
   public record JsProperties(
-      boolean enabled, String resourcesPath, boolean warmupOnStartup, List<String> preloadScripts) {
+      @DefaultValue("false") boolean enabled,
+      @DefaultValue("classpath:js") String resourcesPath,
+      @DefaultValue("false") boolean warmupOnStartup,
+      List<String> preloadScripts) {
 
     /** Creates normalized JavaScript properties with immutable preload scripts. */
     public JsProperties {
@@ -144,7 +158,8 @@ public record PolyglotProperties(
    * @param info info contributor settings
    * @param health health indicator settings
    */
-  public record ActuatorProperties(boolean enabled, InfoProperties info, HealthProperties health) {
+  public record ActuatorProperties(
+      @DefaultValue("true") boolean enabled, InfoProperties info, HealthProperties health) {
 
     /** Creates normalized actuator properties with nested defaults. */
     public ActuatorProperties {
@@ -168,7 +183,7 @@ public record PolyglotProperties(
      *
      * @param enabled enables polyglot section in /actuator/info
      */
-    public record InfoProperties(boolean enabled) {}
+    public record InfoProperties(@DefaultValue("true") boolean enabled) {}
 
     /**
      * Actuator health indicator settings.
@@ -177,7 +192,7 @@ public record PolyglotProperties(
      *
      * @param enabled enables polyglot health contributor
      */
-    public record HealthProperties(boolean enabled) {}
+    public record HealthProperties(@DefaultValue("true") boolean enabled) {}
   }
 
   /**
@@ -187,7 +202,7 @@ public record PolyglotProperties(
    *
    * @param enabled enables polyglot meters if Micrometer is present
    */
-  public record MetricsProperties(boolean enabled) {
+  public record MetricsProperties(@DefaultValue("true") boolean enabled) {
 
     /**
      * Returns the default metrics settings.

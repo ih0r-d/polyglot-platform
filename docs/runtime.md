@@ -419,6 +419,10 @@ Operational properties:
 
 Starter behavior:
 
+- Unspecified values in a partially configured property group retain the documented defaults. For
+  example, setting only `polyglot.python.enabled=true` keeps `classpath:python`, recommended Python
+  defaults, and the enabled core/fail-fast settings. `polyglot.core.enabled=false` disables the
+  starter's language auto-configurations as well as its core lifecycle and facade.
 - `polyglot.core.fail-fast=true` eagerly instantiates discovered `@PolyglotClient` beans during
   startup so invalid bindings fail before the application begins serving requests. Binding checks
   resolve the script and export without calling bound business methods; evaluating the Python module

@@ -155,16 +155,24 @@ public interface GreetingService {
 }
 ```
 
-Minimal Spring Boot configuration:
+Place the matching Python module at `src/main/resources/python/greeting_service.py`:
+
+```python
+import polyglot
+
+def hello(name):
+    return f"Hello, {name}!"
+
+polyglot.export_value("GreetingService", {"hello": hello})
+```
+
+Enable the Python executor. The starter defaults the resource location to `classpath:python`,
+keeps core startup and fail-fast validation enabled, and validates discovered clients during startup:
 
 ```yaml
 polyglot:
-  core:
-    fail-fast: true
   python:
     enabled: true
-    resources-path: classpath:python
-    warmup-on-startup: true
 ```
 
 With `polyglot.core.fail-fast=true` (the default), the starter eagerly creates discovered client

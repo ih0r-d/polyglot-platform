@@ -50,6 +50,52 @@ class LanguageAutoConfigurationTest {
   }
 
   @Test
+  void partialPythonConfigurationUsesDocumentedDefaultsInApplicationContext() {
+    SpringPolyglotContextFactory contextFactory = mock(SpringPolyglotContextFactory.class);
+    when(contextFactory.create(SupportedLanguage.PYTHON)).thenReturn(mock(Context.class));
+
+    new ApplicationContextRunner()
+        .withConfiguration(
+            AutoConfigurations.of(
+                PolyglotAutoConfiguration.class, PolyglotPythonAutoConfiguration.class))
+        .withPropertyValues("polyglot.python.enabled=true", "polyglot.core.fail-fast=false")
+        .withBean(SpringPolyglotContextFactory.class, () -> contextFactory)
+        .run(
+            context -> {
+              assertThat(context).hasNotFailed();
+              assertThat(context).hasSingleBean(PyExecutor.class);
+              PolyglotProperties properties = context.getBean(PolyglotProperties.class);
+              assertThat(properties.core().enabled()).isTrue();
+              assertThat(properties.core().failFast()).isFalse();
+              assertThat(properties.core().logMetadataOnStartup()).isTrue();
+              assertThat(properties.python().resourcesPath()).isEqualTo("classpath:python");
+              assertThat(properties.python().safeDefaults()).isTrue();
+            });
+  }
+
+  @Test
+  void disabledCoreSkipsLanguageExecutorsEvenWhenLanguagesAreEnabled() {
+    new ApplicationContextRunner()
+        .withConfiguration(
+            AutoConfigurations.of(
+                PolyglotAutoConfiguration.class,
+                PolyglotPythonAutoConfiguration.class,
+                PolyglotJsAutoConfiguration.class))
+        .withPropertyValues(
+            "polyglot.core.enabled=false",
+            "polyglot.python.enabled=true",
+            "polyglot.js.enabled=true")
+        .run(
+            context -> {
+              assertThat(context).hasNotFailed();
+              assertThat(context).doesNotHaveBean(PyExecutor.class);
+              assertThat(context).doesNotHaveBean(JsExecutor.class);
+              assertThat(context).doesNotHaveBean("pyScriptSource");
+              assertThat(context).doesNotHaveBean("jsScriptSource");
+            });
+  }
+
+  @Test
   void jsAutoConfigurationCreatesScriptSourceAndExecutor() {
     PolyglotJsAutoConfiguration configuration = new PolyglotJsAutoConfiguration();
     PolyglotProperties properties =

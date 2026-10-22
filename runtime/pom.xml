@@ -79,6 +79,22 @@
                                 <revapi.differences>
                                     <differences>
                                         <item>
+                                            <code>java\.annotation\.added</code>
+                                            <regex>true</regex>
+                                            <new>class io\.github\.ih0rd\.polyglot\.annotations\.spring\.config\.Polyglot(?:Js|Python)AutoConfiguration</new>
+                                            <annotationType>org\.springframework\.context\.annotation\.Conditional</annotationType>
+                                            <criticality>documented</criticality>
+                                            <justification>Adds one global core-enabled condition to the Python and experimental JavaScript auto-configurations while retaining their existing public annotations, methods and language-specific conditions. This makes the documented polyglot.core.enabled=false switch apply consistently. No other annotation changes are downgraded.</justification>
+                                        </item>
+                                        <item>
+                                            <code>java\.annotation\.added</code>
+                                            <regex>true</regex>
+                                            <new>parameter void io\.github\.ih0rd\.polyglot\.annotations\.spring\.properties\.PolyglotProperties\.(?:CoreProperties|PythonProperties|JsProperties|MetricsProperties|ActuatorProperties(?:\.(?:InfoProperties|HealthProperties))?)::&lt;init&gt;.*</new>
+                                            <annotationType>org\.springframework\.boot\.context\.properties\.bind\.DefaultValue</annotationType>
+                                            <criticality>documented</criticality>
+                                            <justification>Adds only Spring Boot binding-default metadata to existing PolyglotProperties constructor parameters. Constructor descriptors and accessors are unchanged; partial property groups now retain the defaults already declared by the public properties model. Other annotations and property types remain checked.</justification>
+                                        </item>
+                                        <item>
                                             <code>java.class.externalClassExposedInAPI</code>
                                             <new>enum io.github.ih0rd.adapter.context.ContextOwnership</new>
                                             <newArchive>io.github.ih0r-d:polyglot-adapter:jar:${project.version}</newArchive>

@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.core.io.ResourceLoader;
 
 import io.github.ih0rd.adapter.context.PyExecutor;
@@ -23,6 +24,7 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  */
 @AutoConfiguration
 @ConditionalOnClass(PyExecutor.class)
+@Conditional(PolyglotCoreEnabledCondition.class)
 @ConditionalOnProperty(prefix = "polyglot.python", name = "enabled", havingValue = "true")
 public class PolyglotPythonAutoConfiguration {
 
