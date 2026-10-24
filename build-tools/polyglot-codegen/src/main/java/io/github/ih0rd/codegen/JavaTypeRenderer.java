@@ -1,5 +1,6 @@
 package io.github.ih0rd.codegen;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,24 +13,38 @@ import io.github.ih0rd.polyglot.model.types.PolyMap;
 import io.github.ih0rd.polyglot.model.types.PolyPrimitive;
 import io.github.ih0rd.polyglot.model.types.PolyType;
 
-/** Maps portable contract types to JavaParser AST type nodes. */
+/** Maps portable contract types to Java source types. */
 public final class JavaTypeRenderer {
 
-  /** Creates a fresh renderer. */
+  private final Set<String> imports = new HashSet<>();
+
+  /** Creates a fresh renderer with an empty import collection. */
   public JavaTypeRenderer() {
-    // The renderer is stateless; import collection is explicit for the generated AST.
+    // The import set starts empty and is populated by the legacy string-rendering API.
   }
 
   /**
-   * Renders a portable type as a JavaParser AST type.
+   * Renders a portable type as Java source text and tracks its imports.
    *
    * @param type portable contract type
-   * @return Java type representation
+   * @return Java source type
    */
-  public Type render(PolyType type) {
+  public String render(PolyType type) {
+    Set<Class<?>> renderedImports = new HashSet<>();
+    collectImports(type, renderedImports);
+    renderedImports.forEach(importType -> imports.add(importType.getName()));
+    return renderAst(type).toString();
+  }
 
-    if (type instanceof PolyPrimitive p) {
-      return switch (p) {
+  /**
+   * Renders a portable type as a JavaParser AST type for source generation.
+   *
+   * @param type portable contract type
+   * @return JavaParser type node
+   */
+  Type renderAst(PolyType type) {
+    if (type instanceof PolyPrimitive primitive) {
+      return switch (primitive) {
         case INT -> classType(Integer.class);
         case FLOAT -> classType(Double.class);
         case STRING -> classType(String.class);
@@ -38,11 +53,12 @@ public final class JavaTypeRenderer {
     }
 
     if (type instanceof PolyList list) {
-      return classType(List.class).setTypeArguments(render(list.elementType()));
+      return classType(List.class).setTypeArguments(renderAst(list.elementType()));
     }
 
     if (type instanceof PolyMap map) {
-      return classType(Map.class).setTypeArguments(render(map.keyType()), render(map.valueType()));
+      return classType(Map.class)
+          .setTypeArguments(renderAst(map.keyType()), renderAst(map.valueType()));
     }
 
     return classType(Object.class);
@@ -65,6 +81,20 @@ public final class JavaTypeRenderer {
       collectImports(map.keyType(), imports);
       collectImports(map.valueType(), imports);
     }
+  }
+
+  /**
+   * Returns imports collected by calls to {@link #render(PolyType)}.
+   *
+   * @return immutable copy of imports collected during rendering
+   */
+  public Set<String> getImports() {
+    return Set.copyOf(imports);
+  }
+
+  /** Clears imports collected by calls to {@link #render(PolyType)}. */
+  public void reset() {
+    imports.clear();
   }
 
   private static ClassOrInterfaceType classType(Class<?> type) {

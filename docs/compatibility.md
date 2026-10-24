@@ -113,8 +113,9 @@ documented behavior and configuration contracts still require separate review.
 
 The generated-source fix preserves the tested `v0.4.0` LF layout for empty interfaces, multiple
 methods and nested generics. It is not proof of byte compatibility for every historical input.
-Current output uses LF; legacy CRLF files can still drift. The `JavaTypeRenderer` Java API break is
-separate and unresolved; see the pending decisions in [public API](public-api.md).
+Current output uses LF; legacy CRLF files can still drift. The `JavaTypeRenderer` signatures from
+`v0.4.0` are retained; whether direct helper usage is a supported contract remains a maintainer
+classification decision in [public API](public-api.md).
 
 These guarantees do not cover GraalVM implementation internals, arbitrary serialized model or
 metadata values, unsupported runtime capabilities or experimental JavaScript behavior. Supported

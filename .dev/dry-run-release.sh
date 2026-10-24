@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/common.sh"
+
+ROOT_DIR="$REPO_ROOT"
 LOCAL_REPO="$ROOT_DIR/target/local-repo"
 LOG_FILE=""
+PROJECT_VERSION="$(awk '/<artifactId>polyglot-aggregator<\/artifactId>/{found=1;next} found && /<version>/{gsub(/.*<version>|<\/version>.*/, ""); print; exit}' "$ROOT_DIR/pom.xml")"
 
 usage() {
   cat <<'EOF'
@@ -45,15 +50,17 @@ fi
 
 cd "$ROOT_DIR"
 
-if [ -f "$ROOT_DIR/.sdkmanrc" ] && [ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
-  echo "==> Applying SDKMAN environment"
-  export ZSH_VERSION=""
-  # shellcheck disable=SC1090
-  set +u
-  source "$HOME/.sdkman/bin/sdkman-init.sh"
-  sdk env install
-  set -u
-fi
+case "$PROJECT_VERSION" in
+  *-SNAPSHOT) ;;
+  *)
+    echo "ERROR: Local release dry-run requires a -SNAPSHOT project version; got '$PROJECT_VERSION'." >&2
+    exit 1
+    ;;
+esac
+
+setup_java_home
+setup_maven_opts
+echo "==> Using JDK: $("$JAVA_HOME/bin/java" -version 2>&1 | head -n 1)"
 
 echo "==> Cleaning previous dry-run artifacts"
 rm -rf "$LOCAL_REPO"
@@ -111,8 +118,9 @@ fi
 
 echo
 echo "==> Running local deploy dry-run"
-./mvnw -B -ntp -Prelease -DskipTests -Dgpg.skip=true -DskipPublishing=true \
-  -DaltDeploymentRepository=dryrun::file:"$LOCAL_REPO" \
+./mvnw -B -ntp -Prelease -DskipTests -Dgpg.skip=true \
+  -DcentralBaseUrl="file://$LOCAL_REPO" \
+  -DcentralSnapshotsUrl="file://$LOCAL_REPO" \
   clean deploy
 
 echo

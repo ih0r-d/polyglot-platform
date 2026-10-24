@@ -161,11 +161,11 @@ public final class JavaInterfaceGenerator {
   private MethodDeclaration renderMethod(ContractMethod method) {
     MethodDeclaration methodDeclaration = new MethodDeclaration();
     methodDeclaration.setName(new SimpleName(method.name()));
-    methodDeclaration.setType(renderer.render(method.returnType()));
+    methodDeclaration.setType(renderer.renderAst(method.returnType()));
     methodDeclaration.removeBody();
 
     for (ContractParam param : method.params()) {
-      methodDeclaration.addParameter(renderer.render(param.type()), param.name());
+      methodDeclaration.addParameter(renderer.renderAst(param.type()), param.name());
     }
 
     return methodDeclaration;

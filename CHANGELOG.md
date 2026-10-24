@@ -12,6 +12,8 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - Add opt-in Maven `validate-contracts` static symbol checks for explicitly selected Java/Python class-export bindings; dynamic or unsupported constructs fail with source diagnostics without executing Python.
 
 ### Fixed
+- Restore the `JavaTypeRenderer` string rendering API from v0.4.0 while keeping JavaParser AST
+  rendering internal to source generation.
 - Preserve documented defaults for unspecified fields when binding partial Spring Boot property groups, and honor `polyglot.core.enabled=false` across language auto-configurations.
 - Reject unsupported `polyglot.core.log-level` values during property binding instead of silently logging at DEBUG.
 - Evaluate Python `BY_METHOD_NAME` contract modules once after a successful evaluation per executor, preserving mutable globals between calls; explicit cache invalidation or reload allows evaluation again. Applications relying on per-call module-level side effects must move them into the function or explicitly reload the contract.
