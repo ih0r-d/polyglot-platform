@@ -18,6 +18,8 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - Add opt-in Maven `validate-contracts` static symbol checks for explicitly selected Java/Python class-export bindings; dynamic or unsupported constructs fail with source diagnostics without executing Python.
 
 ### Fixed
+- Isolate the macOS Java-launcher shell test from Linux alternatives symlinks, avoiding accidental
+  selection of a host JDK 17 in the Java 21 CI job.
 - Restore the `JavaTypeRenderer` string rendering API from v0.4.0 while keeping JavaParser AST
   rendering internal to source generation.
 - Preserve documented defaults for unspecified fields when binding partial Spring Boot property groups, and honor `polyglot.core.enabled=false` across language auto-configurations.

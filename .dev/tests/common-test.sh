@@ -134,6 +134,13 @@ done
   unset JAVA_HOME
   export SDKMAN_DIR="$TEST_DIR/no-sdkman"
   command() { if [ "$*" = "-v java" ]; then printf '/usr/bin/java\n'; else builtin command "$@"; fi; }
+  # Model the regular macOS launcher, not the host's Linux alternatives symlink.
+  function [ {
+    if [[ $# -eq 3 && "$1" == -L && "$2" == /usr/bin/java ]]; then
+      return 1
+    fi
+    builtin [ "$@"
+  }
   expect_failure "macOS /usr/bin/java launcher" setup_java_home
 )
 
