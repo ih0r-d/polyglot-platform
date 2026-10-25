@@ -143,7 +143,7 @@ utilities are also checked conservatively, without promoting their support level
 `SpringPolyglotContextFactory` remains checked pending maintainer classification. Other public Spring
 wiring types also remain checked; there is no broad Spring package or annotation-based exclusion.
 
-Four narrowly scoped diagnostic rules use `documented` criticality rather than fail:
+Narrowly scoped diagnostic rules use `documented` criticality rather than fail:
 
 - `java.class.externalClassExposedInAPI` for the additive `ContextOwnership` enum, exposed from the
   separately checked adapter through new overloads; the rule requires the current adapter archive
@@ -158,6 +158,10 @@ Four narrowly scoped diagnostic rules use `documented` criticality rather than f
   exactly `spring-core:7.0.8`. These upstream overload ambiguities already exist in the baseline;
   they are not new project incompatibilities. They also reproduce when comparing published starter
   `0.4.0` with itself. Other difference codes remain blocking.
+- Exact Spring metadata additions for binding defaults, the global core switch and optional
+  observability wiring. The observability rules name only the Actuator/metrics classes and the
+  info-contributor method, with exact annotation values or ordering attributes. Changes to public
+  descriptors, annotation removals or other values remain blocking.
 
 The overload rules require both archive versions to match exactly; the callback rule pins its
 new archive. An upgrade stops matching these rules; any remaining diagnostics then fail the gate and require review. Do not widen the

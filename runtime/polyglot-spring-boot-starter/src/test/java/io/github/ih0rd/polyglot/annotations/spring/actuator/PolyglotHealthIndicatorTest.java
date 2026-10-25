@@ -10,6 +10,7 @@ import org.mockito.MockitoAnnotations;
 
 import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors;
+import io.github.ih0rd.polyglot.annotations.spring.config.PolyglotActuatorAutoConfiguration;
 import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 
 class PolyglotHealthIndicatorTest {
@@ -51,6 +52,15 @@ class PolyglotHealthIndicatorTest {
 
     assertEquals("DOWN", indicator.health().getStatus().getCode());
     assertEquals("No polyglot executors available", indicator.health().getDetails().get("reason"));
+  }
+
+  @Test
+  void directAutoConfigurationRetainsReleasedHealthFactory() {
+    var indicator =
+        new PolyglotActuatorAutoConfiguration()
+            .polyglotHealthIndicator(new PolyglotExecutors(pyExecutor, null), defaults());
+
+    assertEquals("UP", indicator.health().getStatus().getCode());
   }
 
   private static PolyglotProperties defaults() {

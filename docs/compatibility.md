@@ -156,6 +156,13 @@ release-review requirements. The opt-in `api-compat` Revapi gate checks the two 
 adapter and Spring starter against published `0.4.0`; codegen is not yet covered. See
 [the verification command](developer-tooling.md#java-api-compatibility).
 
+The observability update retains the released public health-factory method and constructor
+descriptors. Exact Revapi metadata rules document property registration, core/registry ordering,
+and the info contributor's missing-core condition. They do not exclude Spring classes or method
+signatures. Auto-configured health now uses startup snapshots without initializing guest runtimes
+on a request; lazy configurations without startup checks report `UNKNOWN`. Direct construction
+of the legacy indicator retains its released behavior. See [metrics and health](runtime.md#optional-metrics-and-health).
+
 ## Current Java Support Story
 
 - The repository minimum Java baseline is 21.

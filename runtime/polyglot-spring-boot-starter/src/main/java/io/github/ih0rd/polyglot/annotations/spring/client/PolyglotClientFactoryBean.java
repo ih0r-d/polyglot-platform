@@ -1,10 +1,14 @@
 package io.github.ih0rd.polyglot.annotations.spring.client;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
+
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.FactoryBean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.util.Assert;
 
 import io.github.ih0rd.adapter.context.AbstractPolyglotExecutor;
@@ -16,6 +20,7 @@ import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.MissingPoly
 import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotClientBindingException;
 import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotClientClassNotFoundException;
 import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotClientResolutionException;
+import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotInvocationObserver;
 
 /**
  * {@link FactoryBean} that creates a Spring-managed polyglot client.
@@ -68,7 +73,9 @@ public final class PolyglotClientFactoryBean<T> implements FactoryBean<T>, BeanF
 
     try {
       executor.validateBinding(clientType, convention);
-      return executor.bind(clientType, convention);
+      T client = executor.bind(clientType, convention);
+      PolyglotInvocationObserver observer = invocationObserver();
+      return observer == null ? client : observe(client, language, observer);
     } catch (RuntimeException ex) {
       throw new PolyglotClientBindingException(clientType.getName(), language.id(), ex);
     }
@@ -140,5 +147,35 @@ public final class PolyglotClientFactoryBean<T> implements FactoryBean<T>, BeanF
   private PolyglotExecutors executors() {
     Assert.state(beanFactory != null, "BeanFactory not initialized");
     return beanFactory.getBean(PolyglotExecutors.class);
+  }
+
+  private PolyglotInvocationObserver invocationObserver() {
+    Assert.state(beanFactory != null, "BeanFactory not initialized");
+    ObjectProvider<PolyglotInvocationObserver> observerProvider =
+        beanFactory.getBeanProvider(PolyglotInvocationObserver.class);
+    return observerProvider.getIfAvailable();
+  }
+
+  @SuppressWarnings("unchecked")
+  private T observe(T client, SupportedLanguage language, PolyglotInvocationObserver observer) {
+    InvocationHandler target = Proxy.getInvocationHandler(client);
+    return (T)
+        Proxy.newProxyInstance(
+            clientType.getClassLoader(),
+            new Class<?>[] {clientType},
+            (proxy, method, args) -> {
+              if (method.getDeclaringClass() == Object.class) {
+                return target.invoke(client, method, args);
+              }
+              long startedAt = observer.start();
+              boolean failed = true;
+              try {
+                Object result = target.invoke(client, method, args);
+                failed = false;
+                return result;
+              } finally {
+                observer.recordInvocation(language, failed, startedAt);
+              }
+            });
   }
 }

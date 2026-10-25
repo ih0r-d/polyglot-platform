@@ -7,7 +7,7 @@ import io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors;
 import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 
 /**
- * Simple actuator health indicator for the runtime adapter.
+ * Executor-presence health indicator retained for direct construction.
  *
  * <p>Status mapping:
  *
@@ -16,6 +16,9 @@ import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties
  *   <li>{@code UP}: at least one executor is available
  *   <li>{@code DOWN}: core enabled but no executors are available
  * </ul>
+ *
+ * <p>The auto-configured health contributor uses a lifecycle snapshot instead. Direct instances
+ * retain the released executor-presence behavior, which can resolve lazy executor providers.
  */
 public final class PolyglotHealthIndicator implements HealthIndicator {
 

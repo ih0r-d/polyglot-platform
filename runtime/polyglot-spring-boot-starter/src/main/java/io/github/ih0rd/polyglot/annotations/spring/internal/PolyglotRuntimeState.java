@@ -1,7 +1,6 @@
 package io.github.ih0rd.polyglot.annotations.spring.internal;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import io.github.ih0rd.adapter.context.JsExecutor;
 import io.github.ih0rd.adapter.context.PyExecutor;
@@ -9,8 +8,15 @@ import io.github.ih0rd.adapter.context.PyExecutor;
 /** Internal runtime state exposed to actuator and Micrometer integrations. */
 public final class PolyglotRuntimeState {
 
-  private final AtomicLong startupDurationMs = new AtomicLong(-1);
-  private final AtomicInteger availableExecutors = new AtomicInteger();
+  /** Lifecycle-derived state used by the optional Actuator health contributor. */
+  public enum HealthState {
+    UNKNOWN,
+    UP,
+    DOWN
+  }
+
+  private final AtomicReference<Snapshot> snapshot =
+      new AtomicReference<>(new Snapshot(-1, 0, false, false, HealthState.UNKNOWN));
 
   /** Creates an empty runtime state snapshot. */
   public PolyglotRuntimeState() {
@@ -25,7 +31,14 @@ public final class PolyglotRuntimeState {
    * @param startupMs measured startup duration in milliseconds
    */
   public void recordStartup(PyExecutor pyExecutor, JsExecutor jsExecutor, long startupMs) {
-    startupDurationMs.set(startupMs);
+    recordStartup(pyExecutor, jsExecutor, startupMs, true);
+  }
+
+  /**
+   * Records whether startup actually exercised a guest runtime, rather than just creating beans.
+   */
+  public void recordStartup(
+      PyExecutor pyExecutor, JsExecutor jsExecutor, long startupMs, boolean initialized) {
     int count = 0;
     if (pyExecutor != null) {
       count++;
@@ -33,13 +46,24 @@ public final class PolyglotRuntimeState {
     if (jsExecutor != null) {
       count++;
     }
-    availableExecutors.set(count);
+    HealthState healthState = HealthState.UNKNOWN;
+    if (count == 0) {
+      healthState = HealthState.DOWN;
+    } else if (initialized) {
+      healthState = HealthState.UP;
+    }
+    snapshot.set(
+        new Snapshot(startupMs, count, pyExecutor != null, jsExecutor != null, healthState));
+  }
+
+  /** Records a non-fatal startup failure so the health contributor can report it as DOWN. */
+  public void recordStartupFailure() {
+    snapshot.set(new Snapshot(-1, 0, false, false, HealthState.DOWN));
   }
 
   /** Resets startup state to the initial "not recorded yet" values. */
   public void clearStartup() {
-    startupDurationMs.set(-1);
-    availableExecutors.set(0);
+    snapshot.set(new Snapshot(-1, 0, false, false, HealthState.UNKNOWN));
   }
 
   /**
@@ -48,7 +72,7 @@ public final class PolyglotRuntimeState {
    * @return startup duration in milliseconds, or a negative value if startup was not recorded
    */
   public long startupDurationMs() {
-    return startupDurationMs.get();
+    return snapshot.get().startupDurationMs();
   }
 
   /**
@@ -57,6 +81,24 @@ public final class PolyglotRuntimeState {
    * @return number of available executors
    */
   public int availableExecutors() {
-    return availableExecutors.get();
+    return snapshot.get().availableExecutors();
   }
+
+  /** Returns the latest lifecycle-derived health state without resolving an executor bean. */
+  public HealthState healthState() {
+    return snapshot.get().healthState();
+  }
+
+  /** Returns one consistent lifecycle snapshot for health reads concurrent with shutdown. */
+  public Snapshot snapshot() {
+    return snapshot.get();
+  }
+
+  /** Immutable lifecycle state; no executor or Context is retained. */
+  public record Snapshot(
+      long startupDurationMs,
+      int availableExecutors,
+      boolean pythonAvailable,
+      boolean jsAvailable,
+      HealthState healthState) {}
 }

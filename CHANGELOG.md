@@ -5,6 +5,10 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Added
+- Record duration and success/failure for Spring-managed polyglot client calls with optional
+  Micrometer timers, and make Actuator health reflect completed starter lifecycle state without
+  resolving executors or executing Python during health requests. Configurations without startup
+  guest checks report UNKNOWN; failed startup and shutdown snapshots are tracked explicitly.
 - Add Java/Python data-transfer benchmark controls and real conversion-contract tests, documenting pinned-runtime buffer limitations without changing production conversions.
 - Document and integration-test opt-in caller-managed Python Engine sharing through existing APIs, including Spring shutdown ordering; add repeated Context creation JMH comparisons without changing runtime defaults.
 - Add opt-in annotation-based source discovery to Maven `validate-contracts`, reusing existing Python checks while preserving explicit contract lists and disabled defaults.

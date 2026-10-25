@@ -74,6 +74,7 @@ class PolyglotStartupLifecycleTest {
     assertFalse(lifecycle.isRunning());
     assertEquals(-1, runtimeState.startupDurationMs());
     assertEquals(0, runtimeState.availableExecutors());
+    assertEquals(PolyglotRuntimeState.HealthState.UNKNOWN, runtimeState.healthState());
   }
 
   @Test
@@ -85,7 +86,9 @@ class PolyglotStartupLifecycleTest {
         new PolyglotStartupLifecycle(
             enabledProperties(true, true, false), beanFactory, runtimeState, pyExecutor, null);
 
-    assertThrows(IllegalStateException.class, lifecycle::start);
+    PolyglotStartupException exception =
+        assertThrows(PolyglotStartupException.class, lifecycle::start);
+    assertEquals("boom", exception.getCause().getMessage());
   }
 
   @Test
@@ -111,6 +114,7 @@ class PolyglotStartupLifecycleTest {
     assertFalse(lifecycle.isRunning());
     assertEquals(-1, runtimeState.startupDurationMs());
     assertEquals(0, runtimeState.availableExecutors());
+    assertEquals(PolyglotRuntimeState.HealthState.DOWN, runtimeState.healthState());
   }
 
   @Test

@@ -81,6 +81,40 @@
                                         <item>
                                             <code>java\.annotation\.added</code>
                                             <regex>true</regex>
+                                            <new>class io\.github\.ih0rd\.polyglot\.annotations\.spring\.config\.Polyglot(?:Actuator|Metrics)AutoConfiguration</new>
+                                            <annotation>@org\.springframework\.boot\.context\.properties\.EnableConfigurationProperties\(\{io\.github\.ih0rd\.polyglot\.annotations\.spring\.properties\.PolyglotProperties\.class\}\)</annotation>
+                                            <criticality>documented</criticality>
+                                            <justification>Registers the existing properties model when optional observability is used without the core auto-configuration. This exact annotation adds no properties or defaults; all Java signatures remain checked.</justification>
+                                        </item>
+                                        <item>
+                                            <code>java.annotation.added</code>
+                                            <new>method org.springframework.boot.actuate.info.InfoContributor io.github.ih0rd.polyglot.annotations.spring.config.PolyglotActuatorAutoConfiguration::polyglotInfoContributor(io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors, io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties)</new>
+                                            <annotation>@org.springframework.boot.autoconfigure.condition.ConditionalOnBean({io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors.class})</annotation>
+                                            <criticality>documented</criticality>
+                                            <justification>Only the info contributor backs off when the global core switch removes its executor facade. Its released descriptor and behavior with an enabled core are preserved. No other conditions are downgraded.</justification>
+                                        </item>
+                                        <item>
+                                            <code>java\.annotation\.attributeAdded</code>
+                                            <regex>true</regex>
+                                            <new>class io\.github\.ih0rd\.polyglot\.annotations\.spring\.config\.Polyglot(?:Actuator|Metrics)AutoConfiguration</new>
+                                            <annotationType>org\.springframework\.boot\.autoconfigure\.AutoConfiguration</annotationType>
+                                            <attribute>after</attribute>
+                                            <value>\{io\.github\.ih0rd\.polyglot\.annotations\.spring\.config\.PolyglotAutoConfiguration\.class\}</value>
+                                            <criticality>documented</criticality>
+                                            <justification>Orders the two optional integrations after their existing core beans. Only adding this exact ordering target is documented; changed values, removals and other attributes remain checked.</justification>
+                                        </item>
+                                        <item>
+                                            <code>java.annotation.attributeAdded</code>
+                                            <new>class io.github.ih0rd.polyglot.annotations.spring.config.PolyglotMetricsAutoConfiguration</new>
+                                            <annotationType>org.springframework.boot.autoconfigure.AutoConfiguration</annotationType>
+                                            <attribute>afterName</attribute>
+                                            <value>{"org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration"}</value>
+                                            <criticality>documented</criticality>
+                                            <justification>Waits for Boot's registry definitions before testing for a registry. This exact optional ordering string preserves operation without Actuator; no other annotation or signature differences are downgraded.</justification>
+                                        </item>
+                                        <item>
+                                            <code>java\.annotation\.added</code>
+                                            <regex>true</regex>
                                             <new>class io\.github\.ih0rd\.polyglot\.annotations\.spring\.config\.Polyglot(?:Js|Python)AutoConfiguration</new>
                                             <annotationType>org\.springframework\.context\.annotation\.Conditional</annotationType>
                                             <criticality>documented</criticality>

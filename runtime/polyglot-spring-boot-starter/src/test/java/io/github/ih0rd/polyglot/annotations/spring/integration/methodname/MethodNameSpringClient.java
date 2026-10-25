@@ -8,4 +8,6 @@ import io.github.ih0rd.polyglot.annotations.PolyglotClient;
 public interface MethodNameSpringClient {
 
   int callCount();
+
+  int failNow();
 }

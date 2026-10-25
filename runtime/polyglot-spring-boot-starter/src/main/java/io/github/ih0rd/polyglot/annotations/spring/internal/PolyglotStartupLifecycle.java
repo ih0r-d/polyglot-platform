@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -43,7 +44,7 @@ import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties
  *   <li>Uses {@link SmartLifecycle} for deterministic startup ordering
  * </ul>
  */
-public final class PolyglotStartupLifecycle implements SmartLifecycle {
+public final class PolyglotStartupLifecycle implements SmartLifecycle, DisposableBean {
 
   private static final String METADATA_AVAILABLE = "available";
   private static final String METADATA_EXECUTOR_TYPE = "executorType";
@@ -123,80 +124,85 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
     JsExecutor jsLanguageExecutor = jsExecutor.getIfAvailable();
 
     try {
-      warmupPython(pythonExecutor);
-      preloadPython(pythonExecutor);
-      warmupJs(jsLanguageExecutor);
-      preloadJs(jsLanguageExecutor);
-      eagerValidateClients();
+      boolean initialized = warmupPython(pythonExecutor);
+      initialized |= preloadPython(pythonExecutor);
+      initialized |= warmupJs(jsLanguageExecutor);
+      initialized |= preloadJs(jsLanguageExecutor);
+      initialized |= eagerValidateClients();
       long startupMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
-      runtimeState.recordStartup(pythonExecutor, jsLanguageExecutor, startupMs);
+      runtimeState.recordStartup(pythonExecutor, jsLanguageExecutor, startupMs, initialized);
 
       if (properties.core().logMetadataOnStartup()) {
         logStartupSummary(startupMs, pythonExecutor, jsLanguageExecutor);
       }
       running = true;
 
-    } catch (Exception ex) {
+    } catch (RuntimeException ex) {
       running = false;
-      runtimeState.clearStartup();
+      runtimeState.recordStartupFailure();
       if (properties.core().failFast()) {
-        throw new IllegalStateException("Polyglot startup initialization failed", ex);
+        throw new PolyglotStartupException(ex);
       }
       log.warn("Polyglot startup initialization failed (failFast=false)", ex);
     }
   }
 
-  private void warmupPython(PyExecutor pyExecutor) {
+  private boolean warmupPython(PyExecutor pyExecutor) {
     if (pyExecutor == null
         || !properties.python().enabled()
         || !properties.python().warmupOnStartup()) {
-      return;
+      return false;
     }
 
     log.debug("[Polyglot][PYTHON] Warmup started");
     pyExecutor.evaluate(PolyglotWarmupConstants.NOOP_EXPRESSION);
+    return true;
   }
 
-  private void preloadPython(PyExecutor pyExecutor) {
+  private boolean preloadPython(PyExecutor pyExecutor) {
     if (pyExecutor == null
         || !properties.python().enabled()
         || properties.python().preloadScripts().isEmpty()) {
-      return;
+      return false;
     }
 
     for (String scriptName : properties.python().preloadScripts()) {
       log.debug("[Polyglot][PYTHON] Preloading {}", scriptName);
       pyExecutor.preloadScript(scriptName);
     }
+    return true;
   }
 
-  private void warmupJs(JsExecutor jsExecutor) {
+  private boolean warmupJs(JsExecutor jsExecutor) {
     if (jsExecutor == null || !properties.js().enabled() || !properties.js().warmupOnStartup()) {
-      return;
+      return false;
     }
 
     log.debug("[Polyglot][JS] Warmup started");
     jsExecutor.evaluate(PolyglotWarmupConstants.NOOP_EXPRESSION);
+    return true;
   }
 
-  private void preloadJs(JsExecutor jsExecutor) {
+  private boolean preloadJs(JsExecutor jsExecutor) {
     if (jsExecutor == null
         || !properties.js().enabled()
         || properties.js().preloadScripts().isEmpty()) {
-      return;
+      return false;
     }
 
     for (String scriptName : properties.js().preloadScripts()) {
       log.debug("[Polyglot][JS] Preloading {}", scriptName);
       jsExecutor.preloadScript(scriptName);
     }
+    return true;
   }
 
-  private void eagerValidateClients() {
+  private boolean eagerValidateClients() {
     if (!properties.core().failFast()) {
-      return;
+      return false;
     }
 
+    boolean validated = false;
     for (String beanName : beanFactory.getBeanDefinitionNames()) {
       BeanDefinition definition = beanFactory.getBeanDefinition(beanName);
       if (!PolyglotClientFactoryBean.class.getName().equals(definition.getBeanClassName())) {
@@ -205,7 +211,9 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
 
       log.debug("[Polyglot][CLIENT] Eagerly validating {}", beanName);
       beanFactory.getBean(beanName);
+      validated = true;
     }
+    return validated;
   }
 
   private void logStartupSummary(long startupMs, PyExecutor pyExecutor, JsExecutor jsExecutor) {
@@ -332,5 +340,13 @@ public final class PolyglotStartupLifecycle implements SmartLifecycle {
   public void stop() {
     running = false;
     runtimeState.clearStartup();
+  }
+
+  /**
+   * Clears failed startup snapshots too, since non-running lifecycles are not stopped by Spring.
+   */
+  @Override
+  public void destroy() {
+    stop();
   }
 }

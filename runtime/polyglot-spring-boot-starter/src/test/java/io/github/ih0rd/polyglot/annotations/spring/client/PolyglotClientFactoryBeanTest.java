@@ -1,10 +1,17 @@
 package io.github.ih0rd.polyglot.annotations.spring.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.lang.reflect.Proxy;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.ObjectProvider;
 
 import io.github.ih0rd.adapter.context.JsExecutor;
 import io.github.ih0rd.adapter.context.PyExecutor;
@@ -23,6 +31,9 @@ import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.MissingPoly
 import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotClientBindingException;
 import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotClientClassNotFoundException;
 import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotClientResolutionException;
+import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotInvocationMetrics;
+import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotInvocationObserver;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 class PolyglotClientFactoryBeanTest {
 
@@ -31,6 +42,11 @@ class PolyglotClientFactoryBeanTest {
 
   @PolyglotClient(languages = SupportedLanguage.PYTHON)
   interface PythonApi {}
+
+  @PolyglotClient(languages = SupportedLanguage.PYTHON)
+  interface ObservedApi {
+    String call() throws IOException;
+  }
 
   @PolyglotClient(languages = SupportedLanguage.PYTHON, convention = Convention.BY_METHOD_NAME)
   interface MethodConventionApi {}
@@ -46,6 +62,7 @@ class PolyglotClientFactoryBeanTest {
   @Mock private MethodConventionApi methodConventionProxy;
   @Mock private AutoApi autoProxy;
   @Mock private BeanFactory beanFactory;
+  @Mock private ObjectProvider<PolyglotInvocationObserver> invocationObserver;
 
   private AutoCloseable mocks;
 
@@ -146,8 +163,84 @@ class PolyglotClientFactoryBeanTest {
     assertEquals(PythonApi.class, factory.getObjectType());
   }
 
+  @Test
+  void metricsPreserveNullCheckedExceptionsErrorsAndObjectMethods() throws IOException {
+    var registry = new SimpleMeterRegistry();
+    var failure = new AtomicReference<Throwable>();
+    try {
+      ObservedApi client = observedClient(registry, failure);
+      assertNull(client.call());
+      assertEquals("ObservedApi", client.toString());
+      IOException checked = new IOException("expected checked failure");
+      failure.set(checked);
+      assertSame(checked, assertThrows(IOException.class, client::call));
+      AssertionError error = new AssertionError("expected error");
+      failure.set(error);
+      assertSame(error, assertThrows(AssertionError.class, client::call));
+      assertEquals(
+          1,
+          registry
+              .get("polyglot.client.invocations")
+              .tags("language", "python", "outcome", "success")
+              .timer()
+              .count());
+      assertEquals(
+          2,
+          registry
+              .get("polyglot.client.invocations")
+              .tags("language", "python", "outcome", "failure")
+              .timer()
+              .count());
+    } finally {
+      registry.close();
+    }
+  }
+
+  @Test
+  void metricsPreserveInterruptStatusOnFailure() {
+    var registry = new SimpleMeterRegistry();
+    var failure = new AtomicReference<Throwable>(new InterruptedIOException("expected interrupt"));
+    try {
+      ObservedApi client = observedClient(registry, failure);
+      assertSame(failure.get(), assertThrows(InterruptedIOException.class, client::call));
+      assertTrue(Thread.currentThread().isInterrupted());
+    } finally {
+      Thread.interrupted();
+      registry.close();
+    }
+  }
+
+  private ObservedApi observedClient(
+      SimpleMeterRegistry registry, AtomicReference<Throwable> failure) {
+    ObservedApi target =
+        (ObservedApi)
+            Proxy.newProxyInstance(
+                getClass().getClassLoader(),
+                new Class<?>[] {ObservedApi.class},
+                (proxy, method, args) -> {
+                  if (method.getDeclaringClass() == Object.class) {
+                    return "ObservedApi";
+                  }
+                  Throwable cause = failure.get();
+                  if (cause instanceof InterruptedIOException) {
+                    Thread.currentThread().interrupt();
+                  }
+                  if (cause != null) {
+                    throw cause;
+                  }
+                  return null;
+                });
+    when(pyExecutor.bind(ObservedApi.class, Convention.DEFAULT)).thenReturn(target);
+    var factory = factory(ObservedApi.class, new PolyglotExecutors(pyExecutor, null));
+    when(invocationObserver.getIfAvailable()).thenReturn(new PolyglotInvocationMetrics(registry));
+    return factory.getObject();
+  }
+
   private <T> PolyglotClientFactoryBean<T> factory(Class<T> type, PolyglotExecutors executors) {
     when(beanFactory.getBean(PolyglotExecutors.class)).thenReturn(executors);
+    when(beanFactory.getBeanProvider(PolyglotInvocationObserver.class))
+        .thenReturn(invocationObserver);
+    when(invocationObserver.getIfAvailable()).thenReturn(null);
     PolyglotClientFactoryBean<T> factory = new PolyglotClientFactoryBean<>(type.getName());
     factory.setBeanFactory(beanFactory);
     return factory;

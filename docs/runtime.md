@@ -363,7 +363,7 @@ again when the contract is later validated or invoked.
 - `PolyglotClientRegistrar`
 - `PolyglotClientFactoryBean`
 - actuator contributors
-- Micrometer meter binder
+- Micrometer executor gauges and Spring-managed client invocation timers
 - startup warmup lifecycle
 
 ### How Users Interact With the Runtime Adapter in Spring
@@ -416,6 +416,58 @@ Operational properties:
 - `polyglot.actuator.enabled`
 - `polyglot.actuator.info.enabled`
 - `polyglot.actuator.health.enabled`
+
+### Optional Metrics and Health
+
+The starter's Actuator and Micrometer dependencies are optional. Add Spring Boot Actuator to the
+application to enable the health/info integration and Micrometer registry integration; add a
+registry/exporter appropriate for the deployment to publish metrics externally. For example:
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+
+Expose the standard endpoints using Spring Boot configuration, for example:
+
+```properties
+management.endpoints.web.exposure.include=health,info,metrics
+```
+
+`polyglot.metrics.enabled` defaults to `true` and can disable Polyglot meters. When a Micrometer
+`MeterRegistry` is present, `polyglot.client.invocations` is a Timer for calls made through
+Spring-managed `@PolyglotClient` interfaces. Its only tags are `language` (`python` or experimental
+`js`) and `outcome` (`success` or `failure`). The Timer count and total time provide call counts and
+duration without a separate counter. Method names, client names, arguments, script contents and
+results are never tags. Direct calls through `PolyglotExecutors` or a manually bound executor are
+not timed by this Spring integration.
+
+The observer caches four thread-safe timers (two languages and two outcomes) per registry;
+unused combinations have zero counts. Repeated client registration does not create extra meters.
+Timing includes executor lock waiting, guest execution and result conversion, but excludes binding
+and startup validation. `Object` methods are excluded. Standard Boot meter filters such as
+`management.metrics.enable.polyglot.client.invocations=false` also apply.
+
+Existing executor/cache/startup gauges remain available. Metrics setup does not construct a GraalVM
+Context. When no `MeterRegistry` is present, Spring clients are not wrapped for invocation timing.
+
+The `polyglot` health indicator reports lifecycle state, not Python application correctness:
+
+- `UNKNOWN` before startup, when core support is disabled, after shutdown, or when no startup
+  warmup, preload or client validation ran;
+- `UP` when startup completed with an executor and at least one configured guest initialization
+  check succeeded;
+- `DOWN` when lifecycle startup failed with `fail-fast=false`, or completed with no executor.
+
+It reads the recorded startup state and does not resolve executor beans or execute Python during a
+health request. With fail-fast and warmup disabled, health stays `UNKNOWN` even after a later
+client call: this contributor records startup readiness, not live guest liveness. `UP` does not
+validate every script or business method, and failures after startup do not change this snapshot.
+Spring Boot endpoint exposure and health group configuration remain controlled by the application;
+protect exposed operational endpoints using the application's security policy. Direct construction
+of the legacy `PolyglotHealthIndicator` retains its executor-presence check for compatibility.
 
 Starter behavior:
 
@@ -513,7 +565,7 @@ configuration continues to create independent Engines and use the existing lifec
 
 If actuator is present, the starter can expose:
 
-- a health indicator that reports whether at least one executor is available
+- a health indicator based on recorded startup initialization and shutdown state
 - an info contributor with configuration and executor availability
 
 If Micrometer is present, the starter registers gauges for:
@@ -523,6 +575,9 @@ If Micrometer is present, the starter registers gauges for:
 - Python instance cache size
 - count of Python bound interfaces
 - count of JavaScript loaded interfaces
+
+Spring-managed client calls also expose bounded invocation timers; see
+[optional metrics and health](#optional-metrics-and-health) for states, timing boundaries and flags.
 
 ## Current Runtime Limits
 

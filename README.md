@@ -13,7 +13,8 @@ It provides:
 
 - runtime execution APIs for embedded polyglot calls
 - Java ↔ Python interface binding through `PyExecutor` and `ScriptSource`
-- Spring Boot auto-configuration for declarative clients, startup validation, metrics, and actuator
+- Spring Boot auto-configuration for declarative clients, startup validation, optional invocation
+  metrics, and Actuator health/info integration
 - Python-to-Java interface generation and opt-in build-time module, symbol, and positional-arity
   validation, including discovery of explicitly annotated `@PolyglotClient` interfaces
 - opt-in Revapi checks for supported Java APIs and a standalone JMH performance baseline

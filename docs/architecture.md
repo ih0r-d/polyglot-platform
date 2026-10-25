@@ -70,7 +70,7 @@ The runtime layer is the actual GraalVM polyglot integration layer. It adapts Ja
 - one `ScriptSource` bean per enabled language
 - `@EnablePolyglotClients` scanning
 - `PolyglotClientFactoryBean`
-- optional actuator health/info and Micrometer metrics integration
+- optional Actuator health/info, executor gauges, and bounded-cardinality client invocation timers
 - startup warmup, optional script preload, and fail-fast client validation
 
 Current fail-fast validation in the Spring starter works by eagerly instantiating discovered client
@@ -219,6 +219,9 @@ The starter handles:
 - executor beans
 - contract scanning and binding
 - operational surfaces such as health, info, metrics, and startup logging
+
+The starter records client invocation timers at the Spring-managed interface boundary. It does not
+add Spring or Micrometer dependencies to the framework-neutral adapter.
 
 ## Architectural Evolution From Git History
 
