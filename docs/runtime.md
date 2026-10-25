@@ -500,6 +500,64 @@ Spring Boot endpoint exposure and health group configuration remain controlled b
 protect exposed operational endpoints using the application's security policy. Direct construction
 of the legacy `PolyglotHealthIndicator` retains its executor-presence check for compatibility.
 
+#### Run the HTTP observability demo
+
+The existing [Spring Boot sample](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/spring-boot-example) already includes Actuator
+and real Python clients. With JDK 25 selected (the sample's compilation level), run from the
+repository root:
+
+```bash
+./mvnw -B -ntp -pl runtime/polyglot-spring-boot-starter -am install -DskipTests
+PIP_CONSTRAINT="$PWD/samples/spring-boot-example/graalpy.lock" \
+  ./mvnw -f samples/spring-boot-example/pom.xml spring-boot:run \
+  -Dspring-boot.run.profiles=observability
+```
+
+The constraint file preserves the sample's locked Python package versions while its existing
+`generate-resources` execution refreshes the lock. The opt-in `observability` profile binds to
+`127.0.0.1` and exposes only `health`, `info` and `metrics`; it does not change the base sample's
+configuration or add an exporter.
+
+In another terminal, send two successful requests and one deliberately invalid forecast request:
+
+```bash
+curl -fsS http://127.0.0.1:8080/actuator/health
+curl -fsS http://127.0.0.1:8080/actuator/info
+curl -fsS 'http://127.0.0.1:8080/stats/random?n=3'
+curl -fsS 'http://127.0.0.1:8080/stats/data?n=3'
+curl -i -X POST 'http://127.0.0.1:8080/forecast?steps=0&seasonPeriod=4' \
+  -H 'Content-Type: application/json' -d '[1,2,3,4]'
+curl -fsS 'http://127.0.0.1:8080/actuator/metrics/polyglot.client.invocations?tag=language:python&tag=outcome:success'
+curl -fsS 'http://127.0.0.1:8080/actuator/metrics/polyglot.client.invocations?tag=language:python&tag=outcome:failure'
+curl -fsS http://127.0.0.1:8080/actuator/metrics/polyglot.client.invocations
+```
+
+On a fresh application these requests produce success `COUNT=2`, failure `COUNT=1` and aggregate
+`COUNT=3`. The invalid forecast raises Python `ValueError` and returns the existing HTTP 500;
+the sample logs the exception. `TOTAL_TIME` and `MAX` are seconds, vary per run, and include
+invocation/conversion rather than HTTP processing. `TOTAL_TIME / COUNT` is the recorded mean;
+`MAX` is a Micrometer time-window maximum. The aggregate response exposes only the `language`
+and `outcome` tags, with at most four combinations regardless of how many clients exist.
+
+`/actuator/info` reports `python.available=true` and `executors.availableCount=1`. Startup health
+remains `UP` after the business failure: it does not probe every invocation. This sample uses Gson,
+so health statuses appear as objects with `code`, and each component has a `health` wrapper.
+Do not expose operational endpoints publicly without application security. The
+[Actuator metrics endpoint](https://docs.spring.io/spring-boot/4.1/api/rest/actuator/metrics.html)
+is diagnostic, not a production metrics backend.
+
+Restart with `-Dspring-boot.run.arguments=--polyglot.metrics.enabled=false` to disable the invocation
+Timer; its metric endpoint then returns 404, while Python calls, health and info still work.
+The sample's HTTP integration tests verify both modes and executor shutdown:
+
+```bash
+PIP_CONSTRAINT="$PWD/samples/spring-boot-example/graalpy.lock" \
+  ./mvnw -B -ntp -f samples/spring-boot-example/pom.xml test
+```
+
+Each test class uses a fresh JVM because the sample's NumPy native extension cannot be loaded
+into a second default GraalPy Context in the same process.
+
 Starter behavior:
 
 - Unspecified values in a partially configured property group retain the documented defaults. For
