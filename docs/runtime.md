@@ -417,6 +417,37 @@ Operational properties:
 - `polyglot.actuator.info.enabled`
 - `polyglot.actuator.health.enabled`
 
+### Configuration Metadata and Completion
+
+The starter JAR contains `META-INF/spring-configuration-metadata.json` for all 17 `polyglot.*`
+properties. Spring Boot's existing configuration processor generates names, types, descriptions
+and scalar defaults from `PolyglotProperties`. Additional metadata supplies the empty-list defaults
+for preload scripts and the supported startup log levels: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`.
+JavaScript properties are explicitly described as experimental.
+
+Spring-aware editors and language servers can use this standard metadata for property completion,
+documentation and value suggestions in `application.properties` and `application.yml`. A consumer
+only needs the starter dependency; it does not need the configuration processor to read the
+starter's packaged metadata. Completion UI depends on the editor's Spring support. No
+polyglot-specific IDE plugin is required, and metadata does not change runtime binding or defaults.
+Arbitrary resource locations and logical script names are not enumerated or discovered by metadata.
+
+For contributors, keep record-component descriptions in plain-text class-level `@param` Javadoc.
+Use `META-INF/additional-spring-configuration-metadata.json` only for values the processor cannot
+infer and for hints, rather than copying generated properties. See Spring Boot's
+[metadata generation](https://docs.spring.io/spring-boot/specification/configuration-metadata/annotation-processor.html)
+and [manual hints](https://docs.spring.io/spring-boot/specification/configuration-metadata/manual-hints.html).
+After changing metadata inputs, rebuild from clean sources:
+
+```bash
+./mvnw -B -ntp -pl runtime/polyglot-spring-boot-starter -am clean verify
+jar tf runtime/polyglot-spring-boot-starter/target/polyglot-spring-boot-starter-0.5.0-SNAPSHOT.jar
+```
+
+The generated metadata is the consumer-facing file inside that JAR; editing only `target/` output
+will not update future builds. The starter's metadata tests verify property coverage, types,
+descriptions, defaults and that every suggested log level binds successfully.
+
 ### Optional Metrics and Health
 
 The starter's Actuator and Micrometer dependencies are optional. Add Spring Boot Actuator to the

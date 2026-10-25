@@ -42,10 +42,13 @@ public record PolyglotProperties(
    *
    * <p>Prefix: {@code polyglot.core.*}
    *
-   * @param enabled enables the polyglot starter globally
-   * @param failFast fails application startup on critical configuration errors
-   * @param logMetadataOnStartup logs a single startup summary for the starter
-   * @param logLevel log level used for the startup summary
+   * @param enabled Enables core services and language auto-configurations. Disabling this prevents
+   *     creation of Python and experimental JavaScript executors.
+   * @param failFast Eagerly validates discovered @PolyglotClient beans and fails startup on warmup,
+   *     preload or client-binding errors. Validation may execute module initialization code.
+   * @param logMetadataOnStartup Logs one starter summary after warmup, preload and fail-fast
+   *     validation complete.
+   * @param logLevel Log level for the startup summary: TRACE, DEBUG, INFO, WARN or ERROR.
    */
   public record CoreProperties(
       @DefaultValue("true") boolean enabled,
@@ -80,15 +83,16 @@ public record PolyglotProperties(
    *
    * <p>Prefix: {@code polyglot.python.*}
    *
-   * @param enabled enables Python executor bean
-   * @param resourcesPath base script location expressed as a Spring Resource location (e.g. {@code
-   *     classpath:/python/}, {@code file:./python/})
-   * @param safeDefaults applies the starter's recommended GraalPy defaults; when disabled, the
-   *     starter creates a more minimal Python context and expects callers to customize it
-   * @param warmupOnStartup performs lightweight warmup during application startup
-   * @param preloadScripts optional list of logical script names to evaluate during startup after
-   *     warmup; this does not populate interface caches or prebind Java contracts, so repeated
-   *     evaluation and repeated script side effects remain possible
+   * @param enabled Enables the Python executor when core support is enabled.
+   * @param resourcesPath Base directory for Python scripts, expressed as a Spring Resource
+   *     location, for example classpath:/python/ or file:./python/.
+   * @param safeDefaults Applies the starter's recommended GraalPy defaults. Disabling this creates
+   *     a more minimal context that can be configured through PolyglotContextCustomizer beans.
+   * @param warmupOnStartup Evaluates a no-op Python expression during startup to initialize the
+   *     guest runtime. This is independent of fail-fast client validation.
+   * @param preloadScripts Logical Python script names without .py to evaluate after startup warmup.
+   *     Names are resolved through ScriptSource. This executes module-level code without prebinding
+   *     contracts or populating interface caches; later binding may evaluate it again.
    */
   public record PythonProperties(
       @DefaultValue("false") boolean enabled,
@@ -119,13 +123,15 @@ public record PolyglotProperties(
    *
    * <p>This configuration group controls the repository's experimental JavaScript support path.
    *
-   * @param enabled enables JavaScript executor bean
-   * @param resourcesPath base script location expressed as a Spring Resource location (e.g. {@code
-   *     classpath:/js/}, {@code file:./js/})
-   * @param warmupOnStartup performs lightweight warmup during application startup
-   * @param preloadScripts optional list of logical script names to evaluate during startup after
-   *     warmup; this does not populate interface caches or prebind Java contracts, so repeated
-   *     evaluation and repeated script side effects remain possible
+   * @param enabled Enables the experimental JavaScript executor when core support is enabled.
+   * @param resourcesPath Base directory for experimental JavaScript scripts, expressed as a Spring
+   *     Resource location, for example classpath:/js/ or file:./js/.
+   * @param warmupOnStartup Evaluates a no-op expression to initialize the experimental JavaScript
+   *     runtime during startup. This is independent of fail-fast client validation.
+   * @param preloadScripts Logical experimental JavaScript script names without .js to evaluate
+   *     after startup warmup. Names are resolved through ScriptSource. This executes script code
+   *     without prebinding contracts or populating interface caches; later binding may evaluate it
+   *     again.
    */
   @ExperimentalApi
   public record JsProperties(
@@ -154,7 +160,8 @@ public record PolyglotProperties(
    *
    * <p>Prefix: {@code polyglot.actuator.*}
    *
-   * @param enabled enables all starter actuator integrations
+   * @param enabled Enables the starter's optional Actuator health and info integrations when
+   *     Actuator is present.
    * @param info info contributor settings
    * @param health health indicator settings
    */
@@ -181,7 +188,8 @@ public record PolyglotProperties(
      *
      * <p>Prefix: {@code polyglot.actuator.info.*}
      *
-     * @param enabled enables polyglot section in /actuator/info
+     * @param enabled Contributes configuration and executor metadata to Actuator info when core
+     *     support and the starter's Actuator integration are enabled.
      */
     public record InfoProperties(@DefaultValue("true") boolean enabled) {}
 
@@ -190,7 +198,8 @@ public record PolyglotProperties(
      *
      * <p>Prefix: {@code polyglot.actuator.health.*}
      *
-     * @param enabled enables polyglot health contributor
+     * @param enabled Contributes recorded startup and shutdown state to Actuator health without
+     *     executing guest code on health requests. This does not check business-method liveness.
      */
     public record HealthProperties(@DefaultValue("true") boolean enabled) {}
   }
@@ -200,7 +209,8 @@ public record PolyglotProperties(
    *
    * <p>Prefix: {@code polyglot.metrics.*}
    *
-   * @param enabled enables polyglot meters if Micrometer is present
+   * @param enabled Registers executor and startup gauges when Micrometer is present, and bounded
+   *     Spring-managed client invocation timers when a MeterRegistry is available.
    */
   public record MetricsProperties(@DefaultValue("true") boolean enabled) {
 

@@ -5,6 +5,8 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Added
+- Improve Spring Boot configuration metadata with plain-text property descriptions, empty preload
+  list defaults and supported log-level hints, preserving runtime binding and existing defaults.
 - Record duration and success/failure for Spring-managed polyglot client calls with optional
   Micrometer timers, and make Actuator health reflect completed starter lifecycle state without
   resolving executors or executing Python during health requests. Configurations without startup
