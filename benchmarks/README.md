@@ -11,7 +11,7 @@ From the repository root, select the pinned JDK through `JAVA_HOME` or `sdk env`
 ([setup options](../docs/developer-tooling.md#pinned-oracle-graalvm)), then install current artifacts:
 
 ```bash
-./mvnw -B -ntp -pl runtime/polyglot-adapter -am install -DskipTests
+./mvnw -B -ntp -pl runtime/polyglot-spring-boot-starter -am install -DskipTests
 ./mvnw -B -ntp -f benchmarks/pom.xml package dependency:build-classpath \
   -Dmdep.outputFile=target/classpath.txt
 benchmarks/run.sh InvocationBenchmark -bm avgt -prof gc -foe true \
@@ -63,8 +63,8 @@ warmup as proof that guest compilation has converged.
 - `directGenericConversion`: cached callable with `Value.as(int.class)`, including boxed result handling.
 - `directMemberLookup`: resolve the bound method on each call, then the same generic conversion.
 - `boundClient`: the same operation through `PyExecutor.bind` on an annotated interface. Spring's
-  `PolyglotClientFactoryBean.getObject()` validates and returns this same proxy; Spring scanning,
-  application startup and metrics infrastructure are not measured here.
+  `PolyglotClientFactoryBean` returns this core proxy when invocation metrics are inactive and wraps
+  it when a metrics observer is available. This case does not measure Spring or its metrics wrapper.
 - `directTopLevelValue` and `boundMethodNameClient`: direct invocation versus Python's
   `BY_METHOD_NAME` convention for the same top-level function. The bound path includes source
   loading/evaluation when the contract has not already been loaded. These cases do not measure
@@ -101,6 +101,51 @@ The GC profiler reports JVM allocation estimates (bytes/op), not Python retained
 memory. Startup and steady-state scores use different modes/units and must not be combined into
 one average. Throughput is measured in a separate run, not computed from latency. Scalar scores
 are repeated for each size parameter; `size` only affects transfer operations.
+
+## Spring client observability overhead
+
+`SpringObservabilityBenchmark.invoke` measures a warm `BY_METHOD_NAME` call through the actual
+Spring `PolyglotClientFactoryBean`, including its optional Micrometer wrapper. Both parameter arms
+use the same Python function, bound interface, Context/Spring configuration and `SimpleMeterRegistry`;
+only `polyglot.metrics.enabled` differs. Setup checks the Python return value and exactly four
+invocation Timers when enabled, zero when disabled. Binding, startup validation, Context construction,
+HTTP handling and registry construction are outside timing. The return value is consumed by JMH.
+This measures the successful-call path, not exception or exporter overhead.
+
+After building the current starter and benchmark as above, use the pinned Oracle GraalVM:
+
+```bash
+benchmarks/run.sh SpringObservabilityBenchmark -p metricsEnabled=false,true \
+  -bm avgt -tu ns -prof gc -foe true \
+  -rf json -rff benchmarks/target/observability-average.json
+benchmarks/run.sh SpringObservabilityBenchmark -p metricsEnabled=true,false \
+  -bm avgt -tu ns -prof gc -foe true \
+  -rf json -rff benchmarks/target/observability-average-repeat.json
+benchmarks/run.sh SpringObservabilityBenchmark -p metricsEnabled=true,false \
+  -bm thrpt -tu s -prof gc -foe true \
+  -rf json -rff benchmarks/target/observability-throughput.json
+benchmarks/run.sh SpringObservabilityBenchmark -p metricsEnabled=false,true \
+  -bm thrpt -tu s -prof gc -foe true \
+  -rf json -rff benchmarks/target/observability-throughput-repeat.json
+```
+
+Defaults are two forks per arm, five one-second warmup and five one-second measurement iterations,
+one thread, `-Xms512m -Xmx2g`. Check confidence intervals and raw fork variation; a lower mean alone
+does not establish an improvement. Allocation numbers are JVM bytes/op, not guest/native heap.
+See [recorded results](BASELINE.md#spring-observability-diagnostic) for environment limitations.
+If the pinned runtime is unavailable, the runner deliberately refuses to start. A separately labeled
+HotSpot/interpreter diagnostic can invoke JMH directly with the same classpath and parameters:
+
+```bash
+"$JAVA_HOME/bin/java" -cp "benchmarks/target/classes:$(cat benchmarks/target/classpath.txt)" \
+  org.openjdk.jmh.Main SpringObservabilityBenchmark -jvm "$JAVA_HOME/bin/java" \
+  -p metricsEnabled=false,true -bm avgt -tu ns -prof gc -foe true \
+  -rf json -rff benchmarks/target/observability-hotspot-average.json
+```
+
+Such results are not a substitute for Oracle GraalVM validation and must not be compared to the
+historical compiled-GraalPy nanosecond baseline. The HTTP demo and its enabled/disabled tests are
+documented in the [runtime guide](../docs/runtime.md#run-the-http-observability-demo).
 
 ## Data Transfer Investigation
 

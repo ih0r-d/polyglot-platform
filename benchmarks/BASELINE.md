@@ -228,3 +228,44 @@ so those samples and their ad-hoc harness were excluded from retained benchmark 
 change does not establish full JVM process startup, Spring `ApplicationContext` startup, Native
 Image, multi-Context shared-Engine contention, or production request performance; each needs a
 dedicated controlled benchmark before drawing conclusions.
+
+## Spring observability diagnostic
+
+These measurements use Oracle **HotSpot 25**, not the required Oracle GraalVM 25.0.4.1.1.
+The pinned installation was incomplete (missing `lib/jvm.cfg`); the benchmark runner correctly
+rejected the available JDK. An explicit Engine probe reported `Interpreted`, `Development Build`,
+and Python 3.12.8. GraalPy Maven artifacts remain 25.0.4.1.1. These are fallback diagnostics,
+not validation of instrumentation overhead on the supported compiled-GraalPy runtime.
+
+Runtime source revision: `9b148c13ba66c4fe60c2f1ba3e7ee3e8cbe5f92e`, with the new benchmark fixture
+and its isolated POM dependencies. Current reactor artifacts were installed before measuring;
+the same jars/classpath and benchmark bytecode served both parameter arms. Environment, artifact
+SHA-256 hashes and exact commands are in
+[environment JSON](results/observability-hotspot25-environment.json). Hardware: Apple M4 Pro,
+24 GiB RAM, macOS 26.6.2 ARM64; Oracle HotSpot `25+37-LTS-3491`, Spring Boot 4.1.0, JMH 1.37.
+
+Each arm used one thread, two forks, five one-second warmup and five one-second measurement
+iterations, `-Xms512m -Xmx2g`, and the GC profiler. Runs were sequential; the repeat reversed the
+enabled/disabled order. Values below are mean ± JMH 99.9% confidence interval half-width (10
+measurements per arm), with independent throughput runs. Setup verifies the actual Spring-bound
+Python result and meter count; no Context construction, binding, HTTP or exporter work is timed.
+
+| Measurement | Metrics disabled | Metrics enabled | Difference of means |
+| --- | --- | --- | --- |
+| Latency | 529.933 ± 7.344 ns/op | 563.912 ± 24.240 ns/op | +33.979 ns/op, +6.4% |
+| Latency, reverse order | 521.395 ± 12.546 ns/op | 583.438 ± 11.200 ns/op | +62.043 ns/op, +11.9% |
+| Throughput | 1,903,382 ± 18,860 ops/s | 1,778,828 ± 29,967 ops/s | −6.5% |
+| Throughput, reverse order | 1,873,154 ± 60,287 ops/s | 1,740,042 ± 13,638 ops/s | −7.1% |
+| Allocation, latency run | 986.155 ± 25.500 B/op | 970.163 ± 0.408 B/op | intervals overlap |
+| Allocation, latency repeat | 970.152 ± 0.375 B/op | 970.168 ± 0.422 B/op | no resolved difference |
+
+Raw results: [latency](results/observability-hotspot25-average.json),
+[reverse latency](results/observability-hotspot25-average-repeat.json),
+[throughput](results/observability-hotspot25-throughput.json),
+[reverse throughput](results/observability-hotspot25-throughput-repeat.json).
+The repeat supports a modest successful-call timing cost in this interpreter workload, with
+variability in its magnitude. JVM allocation intervals overlap; this does not measure guest/native
+allocation. These short runs do not establish guest compilation convergence or real HTTP overhead.
+Do not extrapolate the percentages to the historical Oracle GraalVM invocation baseline or to
+production applications. Repeat the same fixture on the pinned Oracle GraalVM before making a
+supported-runtime overhead claim. No production instrumentation was changed by this experiment.

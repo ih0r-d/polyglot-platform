@@ -7,6 +7,8 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ### Added
 - Demonstrate Spring Python client metrics and Actuator health/info through an opt-in local HTTP
   sample profile, with real enabled/disabled endpoint tests and executor shutdown verification.
+- Add a warm Spring client invocation JMH comparison with metrics enabled/disabled, preserving raw
+  results and documenting the HotSpot interpreter fallback and pinned GraalVM verification limit.
 - Improve Spring Boot configuration metadata with plain-text property descriptions, empty preload
   list defaults and supported log-level hints, preserving runtime binding and existing defaults.
 - Record duration and success/failure for Spring-managed polyglot client calls with optional

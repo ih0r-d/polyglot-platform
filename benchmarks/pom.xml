@@ -17,6 +17,20 @@
       <artifactId>polyglot-adapter</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <!-- Isolated benchmark dependencies for the real Spring client instrumentation path. -->
+    <dependency>
+      <groupId>io.github.ih0r-d</groupId>
+      <artifactId>polyglot-spring-boot-starter</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.graalvm.python</groupId>
       <artifactId>python-embedding</artifactId>

@@ -556,7 +556,9 @@ PIP_CONSTRAINT="$PWD/samples/spring-boot-example/graalpy.lock" \
 ```
 
 Each test class uses a fresh JVM because the sample's NumPy native extension cannot be loaded
-into a second default GraalPy Context in the same process.
+into a second default GraalPy Context in the same process. See the
+[observability benchmark](https://github.com/ih0r-d/polyglot-platform/blob/main/benchmarks/README.md#spring-client-observability-overhead) for warm
+invocation measurement boundaries and runtime requirements.
 
 Starter behavior:
 
