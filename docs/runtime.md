@@ -507,14 +507,23 @@ and real Python clients. With JDK 25 selected (the sample's compilation level), 
 repository root:
 
 ```bash
+./samples/spring-boot-example/demo.sh demo
+```
+
+The CLI builds/starts a local NumPy telemetry analytics service, verifies DEFAULT and BY_METHOD_NAME
+bindings, sends controlled success/error traffic, and displays actual metrics and health/info.
+It also supports `stop`, `status`, `smoke`, `traffic`, `metrics`, `health` and `logs`; see the
+[sample guide](https://github.com/ih0r-d/polyglot-platform/blob/main/samples/spring-boot-example/README.md).
+Existing stats, library and forecast endpoints remain available. For manual Maven startup:
+
+```bash
 ./mvnw -B -ntp -pl runtime/polyglot-spring-boot-starter -am install -DskipTests
-PIP_CONSTRAINT="$PWD/samples/spring-boot-example/graalpy.lock" \
-  ./mvnw -f samples/spring-boot-example/pom.xml spring-boot:run \
+./mvnw -f samples/spring-boot-example/pom.xml spring-boot:run \
   -Dspring-boot.run.profiles=observability
 ```
 
-The constraint file preserves the sample's locked Python package versions while its existing
-`generate-resources` execution refreshes the lock. The opt-in `observability` profile binds to
+The sample consumes its committed `graalpy.lock`; package re-locking is an explicit Maven goal,
+not an ordinary build/test step. The opt-in `observability` profile binds to
 `127.0.0.1` and exposes only `health`, `info` and `metrics`; it does not change the base sample's
 configuration or add an exporter.
 
@@ -551,8 +560,7 @@ Timer; its metric endpoint then returns 404, while Python calls, health and info
 The sample's HTTP integration tests verify both modes and executor shutdown:
 
 ```bash
-PIP_CONSTRAINT="$PWD/samples/spring-boot-example/graalpy.lock" \
-  ./mvnw -B -ntp -f samples/spring-boot-example/pom.xml test
+./mvnw -B -ntp -f samples/spring-boot-example/pom.xml test
 ```
 
 Each test class uses a fresh JVM because the sample's NumPy native extension cannot be loaded

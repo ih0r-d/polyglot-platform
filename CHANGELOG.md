@@ -5,6 +5,10 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Added
+- Add a local Spring Boot telemetry analytics showcase with real NumPy statistics, rolling means,
+  anomaly/quality scoring, typed results, safe error responses, and a managed Bash CLI that verifies
+  real Micrometer/Actuator output and concurrent traffic. Preserve legacy sample endpoints and
+  consume the committed Python lock without regenerating it during ordinary builds.
 - Demonstrate Spring Python client metrics and Actuator health/info through an opt-in local HTTP
   sample profile, with real enabled/disabled endpoint tests and executor shutdown verification.
 - Add a warm Spring client invocation JMH comparison with metrics enabled/disabled, preserving raw

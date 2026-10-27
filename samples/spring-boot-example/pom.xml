@@ -89,6 +89,8 @@
                 <configuration>
                     <!-- NumPy native modules require a fresh JVM for each default GraalPy Context. -->
                     <reuseForks>false</reuseForks>
+                    <!-- Fail with diagnostics rather than hang forever in native-extension shutdown. -->
+                    <forkedProcessTimeoutInSeconds>180</forkedProcessTimeoutInSeconds>
                 </configuration>
             </plugin>
             <plugin>
@@ -113,13 +115,6 @@
               </packages>
             </configuration>
             <executions>
-              <execution>
-                <id>lock-python-packages</id>
-                <phase>generate-resources</phase>
-                <goals>
-                  <goal>lock-packages</goal>
-                </goals>
-              </execution>
               <execution>
                 <id>generate-python-resources</id>
                 <phase>generate-resources</phase>

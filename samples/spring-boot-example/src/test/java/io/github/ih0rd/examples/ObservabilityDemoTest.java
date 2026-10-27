@@ -109,6 +109,17 @@ class ObservabilityDemoTest {
       } else {
         get(http, base, METRIC, 404);
       }
+      HttpResponse<String> analytics =
+          http.send(
+              request(base, "/analytics/summary")
+                  .header("Content-Type", "application/json")
+                  .POST(HttpRequest.BodyPublishers.ofString("{\"samples\":[1,2,3]}"))
+                  .build(),
+              HttpResponse.BodyHandlers.ofString());
+      assertThat(analytics.statusCode()).isEqualTo(200);
+      assertThat(
+              JsonParser.parseString(analytics.body()).getAsJsonObject().get("mean").getAsDouble())
+          .isEqualTo(2);
       assertThat(executor.isClosed()).isFalse();
     }
     assertThat(executor.isClosed()).isTrue();
