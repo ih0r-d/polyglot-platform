@@ -3,6 +3,14 @@ package io.github.ih0rd.examples;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.gson.JsonParser;
+import io.github.ih0rd.adapter.context.PyExecutor;
+import io.github.ih0rd.adapter.exceptions.InvocationException;
+import io.github.ih0rd.examples.contracts.AnalyticsApi;
+import io.github.ih0rd.examples.contracts.RiskApi;
+import io.github.ih0rd.examples.dto.AnalyticsSummary;
+import io.github.ih0rd.examples.dto.RiskAssessment;
+import io.github.ih0rd.examples.dto.RollingResult;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -12,23 +20,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
-
-import com.google.gson.JsonParser;
-
-import io.github.ih0rd.adapter.context.PyExecutor;
-import io.github.ih0rd.adapter.exceptions.InvocationException;
-import io.github.ih0rd.examples.contracts.AnalyticsApi;
-import io.github.ih0rd.examples.contracts.RiskApi;
-import io.github.ih0rd.examples.dto.AnalyticsSummary;
-import io.github.ih0rd.examples.dto.RiskAssessment;
-import io.github.ih0rd.examples.dto.RollingResult;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AnalyticsHttpTest {
@@ -43,7 +40,7 @@ class AnalyticsHttpTest {
     application =
         new SpringApplicationBuilder(PolyglotSpringbootExampleApplication.class)
             .run(
-                "--spring.profiles.active=observability",
+                "--spring.profiles.active=observability,console",
                 "--server.port=0",
                 "--spring.main.banner-mode=off",
                 "--logging.level.root=WARN");
@@ -62,6 +59,23 @@ class AnalyticsHttpTest {
       assertThat(executor.isClosed()).isTrue();
       // All result containers are ordinary detached Java values, safe after shutdown too.
       assertThat(detached.mean()).isEqualTo(3.0);
+    }
+  }
+
+  @Test
+  void servesConsoleAndJavaScriptThroughTheRealHttpServer() throws Exception {
+    try (HttpClient http = HttpClient.newHttpClient()) {
+      for (String path :
+          List.of(
+              "/polyglot-console/", "/polyglot-console/app.js", "/polyglot-console/console.css")) {
+        var response =
+            http.send(
+                HttpRequest.newBuilder(URI.create(base + path)).GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertThat(response.statusCode()).as(path).isEqualTo(200);
+        assertThat(response.headers().firstValue("Content-Security-Policy")).isPresent();
+        assertThat(response.body()).isNotBlank();
+      }
     }
   }
 

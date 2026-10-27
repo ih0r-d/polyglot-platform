@@ -9,6 +9,7 @@ cleanup() { "$CLI" stop; }
 trap cleanup EXIT
 "$CLI" demo --port "$PORT" --requests 6 --errors 2 --concurrency 3 --size 100
 "$CLI" status --port "$PORT"
+"$CLI" console --port "$PORT"
 "$CLI" smoke --port "$PORT"
 "$CLI" traffic --port "$PORT" --requests 2 --errors 0 --concurrency 2 --size 100000
 "$CLI" restart --port "$PORT" --metrics false

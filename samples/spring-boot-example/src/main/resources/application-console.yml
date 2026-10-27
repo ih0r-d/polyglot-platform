@@ -1,0 +1,11 @@
+# Explicit local-development profile. Never enable behind a public reverse proxy.
+server:
+  address: 127.0.0.1
+showcase:
+  console:
+    enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

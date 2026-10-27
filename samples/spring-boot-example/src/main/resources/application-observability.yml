@@ -1,6 +1,10 @@
 server:
   address: 127.0.0.1
+  port: 8545
 
+showcase:
+  console:
+    enabled: true
 management:
   endpoint:
     health:

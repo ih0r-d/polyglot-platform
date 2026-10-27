@@ -74,6 +74,63 @@ equivalent to the program argument. These options follow the standard
 Stop an existing shell-managed demo with `./samples/spring-boot-example/demo.sh stop`
 before starting the IDE application on the same port. The script does not own or stop IDE processes.
 
+## Experimental Polyglot Console
+
+The sample includes a minimal, read-only console at
+[http://localhost:8080/polyglot-console/](http://localhost:8080/polyglot-console/).
+It reads **only** same-origin Actuator health, info and metrics endpoints using GET requests.
+It never calls analytics endpoints, executes Python or changes configuration.
+
+```bash
+./samples/spring-boot-example/demo.sh demo
+./samples/spring-boot-example/demo.sh console
+./samples/spring-boot-example/demo.sh traffic --requests 20 --errors 3 --concurrency 4
+```
+
+The CLI explicitly enables `observability,console`. For Maven or IDEA, use both profiles:
+
+```bash
+./mvnw -f samples/spring-boot-example/pom.xml spring-boot:run \
+  -Dspring-boot.run.profiles=observability,console
+```
+
+Console assets require `showcase.console.enabled=true` and a loopback server address.
+The `console` profile supplies these local-development settings; the flag also works with
+an existing local configuration, without that profile. Set `--showcase.console.enabled=false` to disable assets.
+Open the HTTP URL, not the HTML file: `file://` provides a static preview, without live metrics.
+If port 8080 is occupied, select another port consistently in the CLI and browser.
+
+The overview reports **Python** cumulative counts, success rate and mean latency. The table
+keeps each observed language/outcome scope separate. Means use matching COUNT and TOTAL_TIME;
+MAX is Micrometer's time-window maximum. Charts contain at most 120 session-local polling
+intervals: throughput is the count delta divided by elapsed time, and interval latency uses
+the matching total-time/count deltas. Idle intervals have no latency point. Meter resets or
+application restarts clear history. Missing/disabled metrics remain unavailable, not zero.
+Polling pauses in hidden tabs. No history is persisted or recovered from Actuator.
+
+Health remains a startup snapshot. Runtime gauges and allowlisted boolean configuration
+come from Actuator; absent JVM metadata is not inferred from the configured dependency version.
+The console hides paths and arbitrary info fields, but does not secure Actuator itself.
+
+**Local development only:** enabling the console requires an explicit loopback server address;
+requests from non-loopback peers and unrecognized host names are rejected. Assets use a strict
+same-origin CSP, with no CDN or frontend dependencies. No security filters are bypassed. Do not
+place this unauthenticated sample behind a public proxy or expose its Actuator endpoints remotely.
+Local processes remain trusted; loopback checks are not a replacement for authentication.
+
+Assets, Actuator adapter, snapshot calculations, polling and rendering are separate under
+`src/main/resources/polyglot-console/`; serving is isolated in `console/ConsoleConfiguration`.
+They can be extracted into an optional module after a separate API/security decision. This sample
+adds no library API, instrumentation, management endpoint or dependency. Business analytics and
+traffic generation remain outside the console.
+
+Optional developer tests use Node.js 22+ (not required to run the console):
+
+```bash
+node --test samples/spring-boot-example/tests/console-test.js
+./mvnw -f samples/spring-boot-example/pom.xml -Dtest=ConsoleConfigurationTest test
+```
+
 ## Business operations and numerical contracts
 
 Input is a JSON object: `{"samples":[10,10,10,10,100]}`. Values are synthetic readings in arbitrary

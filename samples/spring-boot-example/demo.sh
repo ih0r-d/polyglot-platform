@@ -25,7 +25,7 @@ usage() {
   cat <<'HELP'
 Embedded Python Analytics Showcase
 Usage: ./demo.sh COMMAND [options]
-Commands: help start stop restart status smoke traffic metrics health logs demo
+Commands: help start stop restart status smoke traffic metrics health console logs demo
 Options: --port N --host 127.0.0.1|localhost --requests N --errors N
          --concurrency N (1..16) --size N (1..100000) --metrics true|false
          --timeout N (startup seconds, default 120) --help
@@ -48,7 +48,7 @@ fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 COMMAND=${1:-help}
 if [ "$COMMAND" = help ] || [ "$COMMAND" = --help ] || [ "$COMMAND" = -h ]; then usage; exit 0; fi
 shift
-case "$COMMAND" in start|stop|restart|status|smoke|traffic|metrics|health|logs|demo) ;; *) usage >&2; fail "Unknown command: $COMMAND" ;; esac
+case "$COMMAND" in start|stop|restart|status|smoke|traffic|metrics|health|console|logs|demo) ;; *) usage >&2; fail "Unknown command: $COMMAND" ;; esac
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --help|-h) usage; exit 0 ;;
@@ -158,7 +158,7 @@ start() {
   directory=$(mktemp -d "$STATE/run.XXXXXXXX")
   TOKEN=${directory##*/}
   nohup "$JAVA" --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow \
-    "-Dshowcase.owner=$TOKEN" -jar "$JAR" --spring.profiles.active=observability \
+    "-Dshowcase.owner=$TOKEN" -jar "$JAR" --spring.profiles.active=observability,console \
     "--server.address=$HOST" "--server.port=$PORT" "--polyglot.metrics.enabled=$METRICS" \
     > "$directory/app.log" 2>&1 < /dev/null &
   PID=$!
@@ -176,6 +176,7 @@ start() {
   done
   printf 'Ready: %s (PID %s)\nLog: %s/app.log\n' "$BASE" "$PID" "$directory"
   printf 'Actuator: %s/actuator\nInvocation metrics: %s/actuator/metrics/polyglot.client.invocations\n' "$BASE" "$BASE"
+  printf 'Experimental console: %s/polyglot-console/\n' "$BASE"
 }
 # These readers inspect known numeric fields in this sample's JSON, not arbitrary JSON documents.
 http() {
@@ -289,6 +290,10 @@ metrics() {
   done < <(printf '%s\n' "$names" | tr ',' '\n' | sed -nE 's/.*"(polyglot\.[a-z.]+)".*/\1/p')
   if [ "$(counts)" = disabled ]; then printf 'Invocation metrics are disabled or filtered.\n'; fi
 }
+console() {
+  http /polyglot-console/index.html 200 >/dev/null
+  printf 'Open in your browser: %s/polyglot-console/\nRead-only Actuator snapshots; generate real traffic with ./demo.sh traffic.\n' "$BASE"
+}
 case "$COMMAND" in start|stop|restart|demo)
   mkdir "$STATE/lock" 2>/dev/null || fail "Another management command holds $STATE/lock; if interrupted, inspect processes before removing the empty lock"
   trap 'rmdir "$STATE/lock" 2>/dev/null || true' EXIT
@@ -306,11 +311,11 @@ case "$COMMAND" in
       printf '\n'
     else fail "No verified managed sample is running"; fi ;;
   logs) read_state; [[ "$TOKEN" =~ ^run\.[a-zA-Z0-9]+$ ]] || fail "No managed log path"; tail -n 60 "$STATE/$TOKEN/app.log" ;;
-  demo|smoke|traffic|metrics|health)
+  demo|smoke|traffic|metrics|health|console)
     if [ "$COMMAND" = demo ]; then start; fi
     command -v curl >/dev/null || fail "curl is required"
     case "$COMMAND" in
-      demo) smoke; traffic; metrics; health ;;
-      smoke) smoke ;; traffic) traffic ;; metrics) metrics ;; health) health ;;
+      demo) smoke; traffic; metrics; health; console ;;
+      smoke) smoke ;; traffic) traffic ;; metrics) metrics ;; health) health ;; console) console ;;
     esac ;;
 esac

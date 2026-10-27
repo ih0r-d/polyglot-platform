@@ -14,6 +14,7 @@ expect_failure() {
   [[ "$result" == *"$expected"* ]] || { echo "Missing '$expected' in: $result" >&2; exit 1; }
 }
 bash "$CLI" help | grep -q 'Embedded Python Analytics'
+bash "$CLI" help | grep -q 'console'
 sh "$CLI" help | grep -q 'Embedded Python Analytics'
 POSIXLY_CORRECT=1 sh "$CLI" help | grep -q 'Embedded Python Analytics'
 bash "$CLI" start --help | grep -q 'Prerequisites'
