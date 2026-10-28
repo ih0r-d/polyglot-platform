@@ -5,6 +5,9 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Added
+- Show allowlisted standard JVM metrics in the experimental console: runtime identity, process
+  uptime, used/committed heap and live platform threads. Preserve missing readings, avoid new
+  instrumentation, and clarify runtime availability and startup-hook labels.
 - Honor existing language-enable settings in console snapshots and log the local console URL
   after embedded application startup, including the actual port and configured paths.
 - Add the optional experimental `polyglot-spring-boot-console` artifact (Java 25), with disabled-by-default

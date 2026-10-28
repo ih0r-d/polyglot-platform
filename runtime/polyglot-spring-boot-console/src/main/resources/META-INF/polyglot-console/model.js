@@ -16,8 +16,8 @@ function runtimeLabel(name, language) {
   const labels = {
     'polyglot.executor.configured.count': 'Configured executors',
     'polyglot.executor.available.count': 'Available executors',
-    'polyglot.startup.duration': 'Recorded initialization (ms)',
-    'polyglot.executor.enabled': 'executor available (1/0)',
+    'polyglot.startup.duration': 'Startup hook (ms)',
+    'polyglot.executor.enabled': 'executor available',
     'polyglot.executor.source.cache.size': 'source cache',
     'polyglot.python.bound.interfaces.count': 'DEFAULT bound interfaces',
     'polyglot.python.instance.cache.size': 'DEFAULT instance cache',
@@ -37,8 +37,10 @@ export function snapshotModel(snapshot) {
     scopes, totals: pythonTotals(scopes), health: snapshot.health, pythonHealth: snapshot.health,
     pythonAvailable: snapshot.pythonAvailable ?? null,
     startTime: snapshot.instanceId,
-    runtime: readings.map(item => [runtimeLabel(item.name, item.language), item.value ?? null]),
-    configuration: (snapshot.configuration ?? []).map(item => [item.name, String(item.value)]),
+    runtime: readings.map(item => [runtimeLabel(item.name, item.language),
+      item.unit === 'boolean' ? ({ 0: 'No', 1: 'Yes' }[item.value] ?? null) : (item.value ?? null)]),
+    configuration: (snapshot.configuration ?? []).map(item => [item.name, item.value ? 'Enabled' : 'Disabled']),
+    jvm: snapshot.jvm ?? {},
   };
 }
 

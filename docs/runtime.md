@@ -733,8 +733,8 @@ no SecurityFilterChain, permit-all rule, CSRF exception or credentials are suppl
 expose it through a public proxy. Loopback access is not authentication, and trusted proxy/
 forwarded-header configuration remains the application's responsibility.
 
-Only known polyglot meter names and language/outcome scopes, lifecycle status, context identity
-and allowlisted booleans are returned. Missing metrics remain unavailable. Means use matching
+Only known polyglot/JVM meter names, allowed scopes, lifecycle status, context identity,
+JVM identity tags and allowlisted booleans are returned. Missing metrics remain unavailable. Means use matching
 COUNT/TOTAL_TIME; MAX is time-window dependent. Charts retain at most 120 browser-session
 intervals, clear on observed counter decreases/context restarts, and pause in hidden tabs.
 They do not recover history or estimate percentiles. Health reports recorded startup state,
@@ -758,6 +758,21 @@ Console metric allowlist (the collector does not register any meters):
 | `polyglot.python.instance.cache.size` | Python DEFAULT bindings |
 | `polyglot.python.bound.interfaces.count` | Python DEFAULT bindings |
 | `polyglot.js.loaded.interfaces.count` | Existing experimental JS bindings |
+| `jvm.info` | Only `version`, `vendor`, `runtime` identity tags |
+| `process.uptime` | JVM uptime, seconds |
+| `jvm.memory.used`, `jvm.memory.committed` | Sum of distinct heap pools, bytes; non-heap excluded |
+| `jvm.threads.live` | Live platform threads |
+
+The JVM panel reads the existing [Micrometer JVM binders](https://docs.micrometer.io/micrometer/reference/reference/jvm.html).
+It never registers additional meters or infers the JVM distribution from GraalPy dependencies.
+Heap is displayed in MiB/GiB and excludes native memory; committed heap is not maximum heap.
+Missing, invalid or ambiguous meters stay unavailable, including incomplete heap totals when a
+reported pool cannot be read. Disabled JVM instrumentation is respected. Paths, launch arguments,
+environment variables and arbitrary meter tags are never returned.
+
+`Startup hook (ms)` is the starter's recorded lifecycle-hook duration, rounded down to milliseconds,
+not full application or GraalPy startup. Eager client creation may initialize Python before this
+hook, so zero is a valid observation and does not mean that Python startup was free.
 
 A regression test registers the real runtime binder and compares every gauge name/language
 scope with the console snapshot. This prevents silently losing newly added runtime metrics.

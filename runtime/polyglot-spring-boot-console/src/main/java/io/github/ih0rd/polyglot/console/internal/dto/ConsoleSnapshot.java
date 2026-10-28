@@ -14,6 +14,7 @@ import org.jspecify.annotations.*;
  * @param invocations matching language/outcome Timer measurements
  * @param runtime allowlisted gauge measurements
  * @param configuration allowlisted boolean configuration
+ * @param jvm allowlisted standard JVM meter readings
  */
 public record ConsoleSnapshot(
     String instanceId,
@@ -22,7 +23,8 @@ public record ConsoleSnapshot(
     @Nullable Boolean pythonAvailable,
     List<InvocationSnapshot> invocations,
     List<RuntimeMetricSnapshot> runtime,
-    List<ConsoleSettingSnapshot> configuration) {
+    List<ConsoleSettingSnapshot> configuration,
+    JvmSnapshot jvm) {
   /**
    * Copies snapshot containers to prevent mutable state escaping the collector.
    *
@@ -33,6 +35,7 @@ public record ConsoleSnapshot(
    * @param invocations timer snapshots
    * @param runtime gauge snapshots
    * @param configuration safe boolean settings
+   * @param jvm standard JVM meter readings
    */
   public ConsoleSnapshot {
     invocations = List.copyOf(invocations);

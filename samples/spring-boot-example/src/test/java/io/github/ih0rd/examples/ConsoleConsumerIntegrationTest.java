@@ -46,6 +46,10 @@ class ConsoleConsumerIntegrationTest {
       var snapshot = JsonParser.parseString(after).getAsJsonObject();
       assertThat(snapshot.get("health").getAsString()).isEqualTo("UP");
       assertThat(snapshot.get("refreshIntervalMillis").getAsInt()).isEqualTo(7000);
+      var jvm = snapshot.getAsJsonObject("jvm");
+      assertThat(jvm.get("javaVersion").getAsString()).isEqualTo(System.getProperty("java.runtime.version"));
+      assertThat(jvm.get("uptimeSeconds").getAsDouble()).isPositive();
+      assertThat(jvm.get("heapCommittedBytes").getAsDouble()).isPositive();
       assertThat(after).doesNotContain("resourcesPath", "classpath:", "stackTrace");
     }
   }

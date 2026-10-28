@@ -146,6 +146,19 @@ test('rendering handles real snapshot models, missing values and chart gaps with
     assert.equal(nodes.get('total').textContent, '10');
     assert.equal(nodes.get('scopes').children.length, 3);
     assert.equal(nodes.get('mean').textContent, '10 ms');
+    assert.equal(nodes.get('jvm-values').children[1].textContent, 'Unavailable');
+    model.jvm = { javaVersion: '25-test', runtime: '<script>unsafe</script>', vendor: 'Test vendor',
+      uptimeSeconds: 120, heapUsedBytes: 1048576, heapCommittedBytes: 2097152, liveThreads: 42 };
+    model.runtime = [['Python executor available', 'Yes']];
+    model.pythonAvailable = false;
+    renderSnapshot(model, [], null);
+    assert.equal(nodes.get('jvm-values').children[1].textContent, '25-test');
+    assert.equal(nodes.get('jvm-values').children[3].textContent, '<script>unsafe</script>');
+    assert.equal(nodes.get('jvm-values').children[7].textContent, '2 min');
+    assert.equal(nodes.get('jvm-values').children[9].textContent, '1 MiB');
+    assert.equal(nodes.get('jvm-values').children[13].textContent, '42');
+    assert.equal(nodes.get('runtime-values').children[1].textContent, 'No');
+    assert.equal(nodes.get('runtime-values').children[3].textContent, 'Yes');
     assert.equal(format(null), '—');
     renderSnapshot(model, [{ time: 1, rate: 3, meanMs: 2 }, { time: 2, rate: 0, meanMs: null }], { rate: 0, meanMs: null });
     assert.equal(nodes.get('interval-mean').textContent, '—');
@@ -192,14 +205,35 @@ test('default browser fetch retains its Window receiver', async () => {
 test('runtime view retains every supplied gauge and its language scope, including unavailable values', () => {
   const source = snapshot();
   source.runtime = [
-    { name: 'polyglot.executor.enabled', language: 'python', value: 1 },
+    { name: 'polyglot.executor.enabled', language: 'python', unit: 'boolean', value: 1 },
     { name: 'polyglot.executor.source.cache.size', language: 'js', value: 2 },
     { name: 'polyglot.js.loaded.interfaces.count', language: 'js', value: null },
   ];
   const model = snapshotModel(source);
   assert.deepEqual(model.runtime, [
-    ['Python executor available (1/0)', 1], ['JavaScript source cache', 2], ['JavaScript loaded interfaces', null],
+    ['Python executor available', 'Yes'], ['JavaScript source cache', 2], ['JavaScript loaded interfaces', null],
   ]);
+  source.runtime[0].value = 0;
+  assert.equal(snapshotModel(source).runtime[0][1], 'No');
+  source.runtime[0].value = null;
+  assert.equal(snapshotModel(source).runtime[0][1], null);
+  source.configuration = [{name: 'Fail-fast', value: true}, {name: 'JavaScript enabled', value: false}];
+  assert.deepEqual(snapshotModel(source).configuration, [['Fail-fast', 'Enabled'], ['JavaScript enabled', 'Disabled']]);
+});
+
+test('JVM units distinguish unknown readings, zero values and binary memory sizes', async () => {
+  const { formatUptime, formatMemory } = await import('../../main/resources/META-INF/polyglot-console/view.js');
+  for (const value of [null, undefined, -1, Number.NaN, Infinity]) {
+    assert.equal(formatUptime(value), 'Unavailable');
+    assert.equal(formatMemory(value), 'Unavailable');
+  }
+  assert.equal(formatUptime(0), '0 s');
+  assert.equal(formatUptime(30), '30 s');
+  assert.equal(formatUptime(90), '1.5 min');
+  assert.equal(formatUptime(5400), '1.5 h');
+  assert.equal(formatMemory(0), '0 MiB');
+  assert.equal(formatMemory(1048576), '1 MiB');
+  assert.equal(formatMemory(1073741824), '1 GiB');
 });
 
 test('dashboard initializes its controls and preserves polling, pause and hidden-tab behavior', async () => {

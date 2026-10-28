@@ -8,6 +8,22 @@ export const format = value => {
 const byId = id => document.getElementById(id);
 const text = (id, value) => { byId(id).textContent = value; };
 
+export function formatUptime(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return 'Unavailable';
+  if (seconds >= 3600) return `${format(seconds / 3600)} h`;
+  return seconds >= 60 ? `${format(seconds / 60)} min` : `${format(seconds)} s`;
+}
+
+export function formatMemory(bytes) {
+  if (!Number.isFinite(bytes) || bytes < 0) return 'Unavailable';
+  return bytes >= 1024 ** 3 ? `${format(bytes / 1024 ** 3)} GiB` : `${format(bytes / 1024 ** 2)} MiB`;
+}
+
+function availability(value) {
+  if (value == null) return 'Unavailable';
+  return value ? 'Yes' : 'No';
+}
+
 function rows(id, items) {
   const target = byId(id);
   target.replaceChildren();
@@ -78,10 +94,18 @@ export function renderSnapshot(model, history, latest) {
   health('health', model.health);
   health('python-state', model.pythonHealth);
   rows('runtime-values', [
-    ['Python available', model.pythonAvailable === null ? 'Unavailable' : String(model.pythonAvailable)],
-    ...model.runtime.map(([name, value]) => [name, value === null ? 'Unavailable' : format(value)]),
+    ['Python available at startup', availability(model.pythonAvailable)],
+    ...model.runtime.map(([name, value]) => [name, typeof value === 'number' ? format(value) : value]),
   ]);
   rows('configuration', model.configuration);
+  const jvm = model.jvm;
+  rows('jvm-values', [
+    ['Java', jvm.javaVersion], ['Runtime', jvm.runtime], ['Vendor', jvm.vendor],
+    ['Uptime', formatUptime(jvm.uptimeSeconds)],
+    ['Heap used', formatMemory(jvm.heapUsedBytes)],
+    ['Heap committed', formatMemory(jvm.heapCommittedBytes)],
+    ['Live platform threads', Number.isFinite(jvm.liveThreads) ? format(jvm.liveThreads) : 'Unavailable'],
+  ]);
   const table = byId('scopes');
   table.replaceChildren();
   for (const scope of model.scopes) table.append(invocationRow(scope, model.scopes));

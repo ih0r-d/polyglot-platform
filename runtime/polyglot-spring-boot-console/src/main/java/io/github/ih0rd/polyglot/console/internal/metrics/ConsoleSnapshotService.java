@@ -63,7 +63,8 @@ public final class ConsoleSnapshotService {
         available instanceof Boolean value ? value : null,
         invocations(registry, languages),
         runtime(registry, languages),
-        configuration(configured));
+        configuration(configured),
+        ConsoleJvmMetrics.snapshot(registry));
   }
 
   private static List<SupportedLanguage> enabledLanguages(@Nullable PolyglotProperties configured) {
