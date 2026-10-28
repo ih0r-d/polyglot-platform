@@ -76,10 +76,8 @@ before starting the IDE application on the same port. The script does not own or
 
 ## Experimental Polyglot Console
 
-The sample includes a minimal, read-only console at
-[http://localhost:8080/polyglot-console/](http://localhost:8080/polyglot-console/).
-It reads **only** same-origin Actuator health, info and metrics endpoints using GET requests.
-It never calls analytics endpoints, executes Python or changes configuration.
+The sample consumes `polyglot-spring-boot-console` as a dependency JAR; it contains no copied
+console UI or MVC wiring. With JDK 25 selected, run from the repository root:
 
 ```bash
 ./samples/spring-boot-example/demo.sh demo
@@ -87,48 +85,61 @@ It never calls analytics endpoints, executes Python or changes configuration.
 ./samples/spring-boot-example/demo.sh traffic --requests 20 --errors 3 --concurrency 4
 ```
 
-The CLI explicitly enables `observability,console`. For Maven or IDEA, use both profiles:
+Open `/polyglot-console/` on the application's current port (the CLI defaults to 8080).
+For Maven or IDEA, enable the local development profiles:
 
 ```bash
+./mvnw -pl runtime/polyglot-spring-boot-console -am install -DskipTests
 ./mvnw -f samples/spring-boot-example/pom.xml spring-boot:run \
   -Dspring-boot.run.profiles=observability,console
 ```
 
-Console assets require `showcase.console.enabled=true` and a loopback server address.
-The `console` profile supplies these local-development settings; the flag also works with
-an existing local configuration, without that profile. Set `--showcase.console.enabled=false` to disable assets.
-Open the HTTP URL, not the HTML file: `file://` provides a static preview, without live metrics.
-If port 8080 is occupied, select another port consistently in the CLI and browser.
+The new module requires **Java 25**. The existing framework-neutral library retains its Java 21
+baseline. `polyglot.console.enabled` defaults to `false`; the sample development profiles enable it.
+`polyglot.console.path` defaults to `/polyglot-console` and `refresh-interval` to `5s` (allowed 1s–1m).
+For a custom path, use `./demo.sh restart --console-path /ops/console`, then use the same option
+for `./demo.sh console --console-path /ops/console`. The `DEMO_CONSOLE_PATH` environment variable
+is equivalent. In Maven, use `-Dspring-boot.run.arguments="--polyglot.console.path=/ops/console"`.
 
-The overview reports **Python** cumulative counts, success rate and mean latency. The table
-keeps each observed language/outcome scope separate. Means use matching COUNT and TOTAL_TIME;
-MAX is Micrometer's time-window maximum. Charts contain at most 120 session-local polling
-intervals: throughput is the count delta divided by elapsed time, and interval latency uses
-the matching total-time/count deltas. Idle intervals have no latency point. Meter resets or
-application restarts clear history. Missing/disabled metrics remain unavailable, not zero.
-Polling pauses in hidden tabs. No history is persisted or recovered from Actuator.
+The browser makes **one read-only GET** to the console's own `<console-path>/data` per refresh.
+The module reads Spring-managed Micrometer timers/gauges and the polyglot lifecycle HealthIndicator
+in-process. **Actuator HTTP exposure is unnecessary.** The sample still exposes health/info/metrics
+for its existing CLI; these are independent of the console. Business analytics and traffic generation
+remain outside the console.
 
-Health remains a startup snapshot. Runtime gauges and allowlisted boolean configuration
-come from Actuator; absent JVM metadata is not inferred from the configured dependency version.
-The console hides paths and arbitrary info fields, but does not secure Actuator itself.
+Language-specific rows follow `polyglot.python.enabled` / `polyglot.js.enabled` and the global
+`polyglot.core.enabled` switch. The sample disables JS, so its preregistered zero-count Timers
+are not displayed. Enabled languages still show genuine zero counts. Startup logs an INFO
+`Polyglot Console available at ...` URL after the embedded application is ready, including its
+actual port, context path and custom console path.
 
-**Local development only:** enabling the console requires an explicit loopback server address;
-requests from non-loopback peers and unrecognized host names are rejected. Assets use a strict
-same-origin CSP, with no CDN or frontend dependencies. No security filters are bypassed. Do not
-place this unauthenticated sample behind a public proxy or expose its Actuator endpoints remotely.
-Local processes remain trusted; loopback checks are not a replacement for authentication.
+Counts and Python means are cumulative. Table rows keep language/outcome scopes separate;
+MAX is a time-window maximum. Charts contain at most 120 session-local intervals: throughput is
+COUNT delta / elapsed time, and interval latency is matching TOTAL_TIME delta / COUNT delta.
+Idle intervals have no latency point. Observed counter decreases and application-context identity
+changes clear history. Missing/disabled metrics remain unavailable, not zero. Hidden tabs pause
+polling. No historical data, percentiles or persistence are supplied by this developer tool.
 
-Assets, Actuator adapter, snapshot calculations, polling and rendering are separate under
-`src/main/resources/polyglot-console/`; serving is isolated in `console/ConsoleConfiguration`.
-They can be extracted into an optional module after a separate API/security decision. This sample
-adds no library API, instrumentation, management endpoint or dependency. Business analytics and
-traffic generation remain outside the console.
+**Security:** disabled by default and restricted to loopback peers/local host names even when
+explicitly enabled. Assets and data pass through the application's existing SecurityFilterChain;
+there is no permit-all rule, authentication implementation, CSRF change or custom credential.
+Applications with security must authorize their intended developers for the configured console
+path and its descendants. Do not publicly proxy this sample, trust forwarded headers from
+untrusted proxies, or treat loopback checks as authentication. No paths, arbitrary properties,
+health details, exception messages or user data are returned by the console DTO.
 
-Optional developer tests use Node.js 22+ (not required to run the console):
+Open the HTTP URL, not the HTML file. HTTP 404 means the console is disabled, the path differs,
+or the new dependency has not been built/reloaded. HTTP 401/403 can mean application authorization
+or the local-only restriction. A reverse proxy/remote deployment is outside this experimental
+console's supported scope. An empty dashboard can mean metrics are disabled, no calls have run,
+or a unique/primary MeterRegistry is unavailable. Health is recorded startup state, not a probe
+of Python business functions.
+
+Developer checks (Node.js 22.7+ is only needed for JS tests, not console execution):
 
 ```bash
-node --test samples/spring-boot-example/tests/console-test.js
-./mvnw -f samples/spring-boot-example/pom.xml -Dtest=ConsoleConfigurationTest test
+node --test runtime/polyglot-spring-boot-console/src/test/js/console-test.js
+./mvnw -pl runtime/polyglot-spring-boot-console -am verify
 ```
 
 ## Business operations and numerical contracts

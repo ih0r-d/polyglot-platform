@@ -25,6 +25,8 @@ expect_failure 'requests must be' traffic --requests -1
 expect_failure 'Total requests/errors' traffic --requests 10000 --errors 1
 expect_failure 'concurrency must be' traffic --concurrency 17
 expect_failure 'size must be' smoke --size 0
+expect_failure 'Invalid console path' start --console-path /../console
+expect_failure 'Reserved console path' start --console-path /actuator
 expect_failure 'metrics must be' start --metrics invalid
 expect_failure 'loopback' start --host example.org
 bash "$CLI" stop | grep -q 'No managed sample'

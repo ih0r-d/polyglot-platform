@@ -18,6 +18,7 @@ ERRORS=${DEMO_ERRORS:-2}
 CONCURRENCY=${DEMO_CONCURRENCY:-1}
 SIZE=${DEMO_SIZE:-1000}
 METRICS=${DEMO_METRICS:-true}
+CONSOLE_PATH=${DEMO_CONSOLE_PATH:-/polyglot-console}
 TIMEOUT=${DEMO_TIMEOUT:-120}
 PID= TOKEN= RUN_PORT= STARTED=
 
@@ -28,7 +29,7 @@ Usage: ./demo.sh COMMAND [options]
 Commands: help start stop restart status smoke traffic metrics health console logs demo
 Options: --port N --host 127.0.0.1|localhost --requests N --errors N
          --concurrency N (1..16) --size N (1..100000) --metrics true|false
-         --timeout N (startup seconds, default 120) --help
+         --timeout N (startup seconds, default 120) --console-path /polyglot-console --help
 Environment: DEMO_HOST, DEMO_PORT, DEMO_REQUESTS, DEMO_ERRORS, DEMO_CONCURRENCY,
              DEMO_SIZE, DEMO_METRICS, DEMO_TIMEOUT. NO_COLOR is respected (plain output).
 Prerequisites: JDK 25+ selected via JAVA_HOME/installed SDKMAN/PATH, Bash, curl.
@@ -52,11 +53,11 @@ case "$COMMAND" in start|stop|restart|status|smoke|traffic|metrics|health|consol
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --help|-h) usage; exit 0 ;;
-    --port|--host|--requests|--errors|--concurrency|--size|--metrics|--timeout)
+    --port|--host|--requests|--errors|--concurrency|--size|--metrics|--timeout|--console-path)
       [ "$#" -ge 2 ] || fail "Missing value for $1"
       case "$1" in
         --port) PORT=$2 ;; --host) HOST=$2 ;; --requests) REQUESTS=$2 ;; --errors) ERRORS=$2 ;;
-        --concurrency) CONCURRENCY=$2 ;; --size) SIZE=$2 ;; --metrics) METRICS=$2 ;; --timeout) TIMEOUT=$2 ;;
+        --concurrency) CONCURRENCY=$2 ;; --size) SIZE=$2 ;; --metrics) METRICS=$2 ;; --console-path) CONSOLE_PATH=$2 ;; --timeout) TIMEOUT=$2 ;;
       esac
       shift 2 ;;
     *) fail "Unknown option: $1" ;;
@@ -78,6 +79,8 @@ case "$HOST" in 127.0.0.1|localhost) ;; *) fail "The demo binds to loopback; hos
 case "$METRICS" in true|false) ;; *) fail "metrics must be true or false" ;; esac
 PORT=$((10#$PORT)); REQUESTS=$((10#$REQUESTS)); ERRORS=$((10#$ERRORS))
 CONCURRENCY=$((10#$CONCURRENCY)); SIZE=$((10#$SIZE)); TIMEOUT=$((10#$TIMEOUT))
+[[ "$CONSOLE_PATH" =~ ^(/[a-zA-Z0-9_-]+)+$ ]] || fail "Invalid console path"
+case "$CONSOLE_PATH" in /actuator*|/error*) fail "Reserved console path" ;; esac
 BASE="http://$HOST:$PORT"
 [ ! -L "$STATE" ] || fail "Refusing symlink state directory: $STATE"
 mkdir -p "$STATE"
@@ -119,7 +122,7 @@ build() {
       [ -n "$(find "$SAMPLE_DIR/src" "$SAMPLE_DIR/pom.xml" "$SAMPLE_DIR/graalpy.lock" -type f -newer "$JAR" -print -quit)" ]; then
     printf '=== Building current library and locked Python application ===\n'
     if ! (cd "$REPOSITORY" &&
-        ./mvnw -B -ntp -pl runtime/polyglot-spring-boot-starter -am install -DskipTests &&
+        ./mvnw -B -ntp -pl runtime/polyglot-spring-boot-console -am install -DskipTests &&
         ./mvnw -B -ntp -f "$SAMPLE_DIR/pom.xml" package -DskipTests) > "$STATE/build.log" 2>&1; then
       tail -n 40 "$STATE/build.log" >&2
       fail "Build failed; full diagnostics: $STATE/build.log"
@@ -159,7 +162,7 @@ start() {
   TOKEN=${directory##*/}
   nohup "$JAVA" --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow \
     "-Dshowcase.owner=$TOKEN" -jar "$JAR" --spring.profiles.active=observability,console \
-    "--server.address=$HOST" "--server.port=$PORT" "--polyglot.metrics.enabled=$METRICS" \
+    "--server.address=$HOST" "--server.port=$PORT" "--polyglot.metrics.enabled=$METRICS" "--polyglot.console.path=$CONSOLE_PATH" \
     > "$directory/app.log" 2>&1 < /dev/null &
   PID=$!
   STARTED=$(ps -p "$PID" -o lstart= | sed 's/^ *//')
@@ -176,7 +179,7 @@ start() {
   done
   printf 'Ready: %s (PID %s)\nLog: %s/app.log\n' "$BASE" "$PID" "$directory"
   printf 'Actuator: %s/actuator\nInvocation metrics: %s/actuator/metrics/polyglot.client.invocations\n' "$BASE" "$BASE"
-  printf 'Experimental console: %s/polyglot-console/\n' "$BASE"
+  printf 'Experimental console: %s%s/\n' "$BASE" "$CONSOLE_PATH"
 }
 # These readers inspect known numeric fields in this sample's JSON, not arbitrary JSON documents.
 http() {
@@ -291,8 +294,8 @@ metrics() {
   if [ "$(counts)" = disabled ]; then printf 'Invocation metrics are disabled or filtered.\n'; fi
 }
 console() {
-  http /polyglot-console/index.html 200 >/dev/null
-  printf 'Open in your browser: %s/polyglot-console/\nRead-only Actuator snapshots; generate real traffic with ./demo.sh traffic.\n' "$BASE"
+  http "$CONSOLE_PATH/" 200 >/dev/null
+  printf 'Open in your browser: %s%s/\nRead-only console data; generate real traffic with ./demo.sh traffic.\n' "$BASE" "$CONSOLE_PATH"
 }
 case "$COMMAND" in start|stop|restart|demo)
   mkdir "$STATE/lock" 2>/dev/null || fail "Another management command holds $STATE/lock; if interrupted, inspect processes before removing the empty lock"

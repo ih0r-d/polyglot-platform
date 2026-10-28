@@ -67,7 +67,7 @@ class AnalyticsHttpTest {
     try (HttpClient http = HttpClient.newHttpClient()) {
       for (String path :
           List.of(
-              "/polyglot-console/", "/polyglot-console/app.js", "/polyglot-console/console.css")) {
+              "/polyglot-console/", "/polyglot-console/assets/app.js", "/polyglot-console/assets/console.css", "/polyglot-console/data")) {
         var response =
             http.send(
                 HttpRequest.newBuilder(URI.create(base + path)).GET().build(),
