@@ -134,6 +134,12 @@
       </dependency>
 
       <dependency>
+        <groupId>io.github.ih0r-d</groupId>
+        <artifactId>polyglot-spring-boot-console</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
         <groupId>org.graalvm.sdk</groupId>
         <artifactId>graal-sdk</artifactId>
         <version>${graal.version}</version>

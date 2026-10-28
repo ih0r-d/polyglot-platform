@@ -22,6 +22,7 @@
         <module>polyglot-bom</module>
         <module>polyglot-adapter</module>
         <module>polyglot-spring-boot-starter</module>
+        <module>polyglot-spring-boot-console</module>
     </modules>
 
     <properties>

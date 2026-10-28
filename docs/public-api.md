@@ -144,3 +144,12 @@ If a change modifies one of the public surfaces above, it should update:
 1. documentation
 2. tests
 3. changelog or release notes when user-visible behavior changes
+
+### Experimental console module
+
+`polyglot-spring-boot-console` is an optional Java 25 artifact. Its three `polyglot.console.*`
+properties are experimental configuration. `autoconfigure.ConsoleAutoConfiguration` is framework wiring;
+controllers, DTOs, data collection, asset paths and browser API are internal, without public
+Java/SPI compatibility guarantees. This module does not extend the supported API of the regular
+starter. It has no 0.4.0 artifact, so its Maven Revapi execution is explicitly skipped; the four
+existing compatibility checks remain active and unchanged.

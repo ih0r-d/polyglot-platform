@@ -692,3 +692,90 @@ Spring-managed client calls also expose bounded invocation timers; see
 - Source caching is keyed by Java interface. Python target instances are cached per interface using
   weak references. Changing a script after startup does not trigger automatic reload; clear caches
   or recreate the executor if you need to pick up changed sources.
+
+## Optional experimental console (Java 25)
+
+Add the separate console artifact to a Spring Boot 4.1 servlet MVC application:
+
+```xml
+<dependency>
+  <groupId>io.github.ih0r-d</groupId>
+  <artifactId>polyglot-spring-boot-console</artifactId>
+  <version>0.5.0-SNAPSHOT</version>
+</dependency>
+```
+
+It includes the existing starter and Actuator integration, while the regular
+`polyglot-spring-boot-starter` has no console dependency. The console alone requires Java 25;
+existing API/runtime modules keep their Java 21 compilation baseline. WebFlux and Native Image
+console support are unverified. MVC must already be available in the consuming application.
+
+```yaml
+polyglot:
+  console:
+    enabled: true             # default false
+    path: /polyglot-console   # absolute non-root path; letters/digits/_/- segments
+    refresh-interval: 5s      # 1s to 1m
+```
+
+Open this path on the application's own port. Custom servlet context paths are respected.
+All assets come from the dependency JAR. The private console `/data` endpoint reads existing
+Micrometer snapshots and the polyglot HealthIndicator in-process: it makes no Actuator HTTP
+requests and requires no `management.endpoints.web.exposure` changes. It does not instrument
+calls, execute Python, initialize contexts or expose arbitrary Actuator responses. Configuration
+metadata for the three properties is packaged in the JAR.
+
+The console is an experimental local developer tool, not persistent production monitoring.
+It restricts both UI and data to loopback peers/local host names and adds same-origin CSP and
+no-store headers. Existing Spring Security filters still control every request. Applications
+must authorize their intended developers for the configured console path and all descendants;
+no SecurityFilterChain, permit-all rule, CSRF exception or credentials are supplied. Do not
+expose it through a public proxy. Loopback access is not authentication, and trusted proxy/
+forwarded-header configuration remains the application's responsibility.
+
+Only known polyglot meter names and language/outcome scopes, lifecycle status, context identity
+and allowlisted booleans are returned. Missing metrics remain unavailable. Means use matching
+COUNT/TOTAL_TIME; MAX is time-window dependent. Charts retain at most 120 browser-session
+intervals, clear on observed counter decreases/context restarts, and pause in hidden tabs.
+They do not recover history or estimate percentiles. Health reports recorded startup state,
+not business-method liveness.
+
+The [Spring Boot sample](https://github.com/ih0r-d/polyglot-platform/blob/main/samples/spring-boot-example/README.md)
+consumes this artifact and demonstrates real NumPy traffic. Its CLI still uses exposed Actuator
+endpoints independently; the console integration test closes those HTTP endpoints and verifies
+real client calls through a custom console path and servlet context path.
+
+Console metric allowlist (the collector does not register any meters):
+
+| Metric | Scope |
+| --- | --- |
+| `polyglot.client.invocations` | Python/JS × success/failure; count, total seconds, window max seconds |
+| `polyglot.executor.configured.count` | Global |
+| `polyglot.executor.available.count` | Global |
+| `polyglot.startup.duration` | Global, milliseconds |
+| `polyglot.executor.enabled` | Per language, actual 0/1 gauge |
+| `polyglot.executor.source.cache.size` | Per language |
+| `polyglot.python.instance.cache.size` | Python DEFAULT bindings |
+| `polyglot.python.bound.interfaces.count` | Python DEFAULT bindings |
+| `polyglot.js.loaded.interfaces.count` | Existing experimental JS bindings |
+
+A regression test registers the real runtime binder and compares every gauge name/language
+scope with the console snapshot. This prevents silently losing newly added runtime metrics.
+Java code is organized into `autoconfigure`, `properties`, `internal/dto`, `internal/metrics`
+and `internal/web`; each DTO has its own file. The current web adapter is explicitly Servlet MVC
+only. A reactive application does not activate it; WebFlux needs a separately implemented/tested
+adapter that can reuse the collector, DTOs and assets. No reactive support is implied by having
+Spring WebFlux on the classpath.
+
+Language-specific console rows honor the existing `polyglot.core.enabled`,
+`polyglot.python.enabled` and `polyglot.js.enabled` settings. A preregistered zero-count Timer
+does not imply that its language is enabled. Disabled languages are omitted from invocation
+and runtime-gauge rows; enabled languages retain their real zero counts. No console-specific
+language flags are required. If effective polyglot configuration is unavailable, only global
+gauges are advertised.
+
+After an enabled embedded application reaches `ApplicationReadyEvent`, the console logs an
+INFO URL using its actual bound port, servlet context path and configured console path.
+The link uses localhost because console access is local-only. Application authorization still
+applies. No startup URL is announced for a disabled console, a different application context,
+a failed startup or a context without an embedded server.

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <title>Polyglot Console</title>
+  <link rel="stylesheet" href="./assets/console.css">
+  <script defer src="./assets/bootstrap.js"></script>
+</head>
+<body>
+  <main>
+    <header class="topbar">
+      <div class="brand">
+        <svg class="icon brand-logo" aria-hidden="true"><use href="./assets/icons.svg#cube"/></svg>
+        <div>
+          <div class="brand-title"><h1>Polyglot Console</h1><span class="experimental">Experimental</span></div>
+          <p>Java ↔ Python runtime observability</p>
+        </div>
+      </div>
+      <div class="live-status">
+        <div class="connection-status"><span>Runtime</span><span id="health" class="status">UNKNOWN</span><span id="connection" class="connection-state" role="status" aria-live="polite">Connecting…</span></div>
+        <div class="snapshot-time" id="freshness">Waiting for the first snapshot</div>
+      </div>
+      <div class="controls">
+        <label for="refresh" class="visually-hidden">Refresh interval</label>
+        <select id="refresh">
+          <option value="2000">2 seconds</option><option value="5000" selected>5 seconds</option>
+          <option value="10000">10 seconds</option><option value="30000">30 seconds</option>
+        </select>
+        <button id="pause" type="button">Pause</button>
+        <a class="data-link" href="./data" target="_blank" rel="noopener noreferrer"
+           title="Allowlisted Actuator and Micrometer snapshot">Console Data ↗</a>
+      </div>
+    </header>
+
+    <div id="notice" class="notice" role="status" hidden></div>
+
+    <section class="stats" aria-label="Cumulative Python invocation metrics">
+      <article class="stat">
+        <span class="stat-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#layers"/></svg></span>
+        <div><h2>Python invocations</h2><strong id="total">—</strong><small>Cumulative</small></div>
+      </article>
+      <article class="stat">
+        <span class="stat-icon green"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#shield"/></svg></span>
+        <div><h2>Success rate</h2><strong id="success-rate">—</strong><small><span id="success-count">—</span> successful calls</small></div>
+      </article>
+      <article class="stat">
+        <span class="stat-icon red"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#alert"/></svg></span>
+        <div><h2>Failed calls</h2><strong id="failure-count">—</strong><small>Cumulative</small></div>
+      </article>
+      <article class="stat">
+        <span class="stat-icon purple"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#clock"/></svg></span>
+        <div><h2>Mean latency</h2><strong id="mean">—</strong><small>Cumulative mean</small></div>
+      </article>
+    </section>
+
+    <section class="charts" aria-label="Session-local invocation charts">
+      <article class="panel chart-panel">
+        <div class="chart-heading">
+          <div class="panel-title"><span class="panel-icon purple"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#activity"/></svg></span><div><h2>Invocation throughput</h2><p>Java → Python calls per second · session history</p></div></div>
+          <div class="chart-reading"><strong id="rate" class="chart-value green-text">—</strong><span class="chart-legend green-dot">Calls / second</span></div>
+        </div>
+        <canvas id="throughput-chart" width="700" height="230" aria-label="Session-local Python throughput, calls per second">Python invocation throughput, with local time on the horizontal axis.</canvas>
+      </article>
+      <article class="panel chart-panel">
+        <div class="chart-heading">
+          <div class="panel-title"><span class="panel-icon purple"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#clock"/></svg></span><div><h2>Interval mean latency</h2><p>Mean execution time per polling interval</p></div></div>
+          <div class="chart-reading"><strong id="interval-mean" class="chart-value purple-text">—</strong><span class="chart-legend purple-dot">Mean latency (ms)</span></div>
+        </div>
+        <canvas id="latency-chart" width="700" height="230" aria-label="Session-local mean latency, milliseconds; idle intervals have no point">Python invocation latency, with local time on the horizontal axis.</canvas>
+      </article>
+    </section>
+
+    <section class="panel breakdown" aria-labelledby="breakdown-title">
+      <div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#table"/></svg></span><div><h2 id="breakdown-title">Invocations by language and outcome</h2><p>Micrometer Timer: <code>polyglot.client.invocations</code></p></div></div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th scope="col">Language</th><th scope="col">Outcome</th><th scope="col">Count</th>
+            <th scope="col">Total time (s)</th><th scope="col">Mean (ms)</th><th scope="col">Window max (ms)</th>
+            <th scope="col">Share within language</th>
+          </tr></thead>
+          <tbody id="scopes"><tr><td colspan="7">Waiting for metrics.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="runtime-grid" aria-label="Runtime diagnostics">
+      <article class="panel">
+        <div class="panel-heading"><div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#activity"/></svg></span><h2>Runtime status</h2></div><span id="python-state" class="status">UNKNOWN</span></div>
+        <dl id="runtime-values" class="values"></dl>
+      </article>
+      <article class="panel">
+        <div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#settings"/></svg></span><h2>Effective configuration</h2></div>
+        <dl id="configuration" class="values"></dl>
+      </article>
+      <article class="panel jvm-panel">
+        <div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#server"/></svg></span><h2>JVM information</h2></div>
+        <p class="unavailable">JVM details are not available from the current console API.</p>
+        <div class="info-note"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#info"/></svg><p>Session-local charts<span>History is collected only while this page is connected.</span></p></div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

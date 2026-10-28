@@ -85,6 +85,12 @@ See official [SDKMAN usage](https://sdkman.io/usage/),
 
 ## Contributor Commands
 
+The full reactor now requires **JDK 25** because the optional experimental console compiles
+with release 25. Set `JAVA_HOME` explicitly before the commands below. Existing API/runtime
+modules retain release 21; CI's Java 21 job excludes only `runtime/polyglot-spring-boot-console`.
+The separate console has no 0.4.0 artifact and explicitly skips Revapi; the four existing
+compatibility baselines remain checked.
+
 Common contributor commands:
 
 ```bash
@@ -225,7 +231,7 @@ runs so they do not appear as skipped jobs.
 flowchart TD
     DG["Stage 0: Dependency & Vulnerability Gate<br/>Dependency Review: PR only<br/>OSV Scanner: Maven CycloneDX SBOM<br/>artifact: osv-sbom-reports"]
 
-    J21["Stage 1: Baseline / Java 21<br/>./mvnw clean test<br/>artifact: maven-test-reports-java21"]
+    J21["Stage 1: Baseline / Java 21<br/>Existing modules only (console excluded)<br/>artifact: maven-test-reports-java21"]
     G25["Stage 1: Runtime / GraalVM 25<br/>./mvnw clean test<br/>artifact: maven-test-reports-graalvm25"]
 
     API["API Compatibility / Revapi<br/>GraalVM 25, api-compat<br/>tests and JaCoCo skipped"]

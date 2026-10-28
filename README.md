@@ -19,6 +19,11 @@ It provides:
   validation, including discovery of explicitly annotated `@PolyglotClient` interfaces
 - opt-in Revapi checks for supported Java APIs and a standalone JMH performance baseline
 
+The optional experimental `polyglot-spring-boot-console` artifact adds a local, read-only
+runtime dashboard for **Java 25 / Spring Boot 4.1 MVC** applications. It is disabled by default
+and reads existing Micrometer/Actuator services in-process, without exposing Actuator over HTTP.
+See [console setup and security](docs/runtime.md#optional-experimental-console-java-25).
+
 ## Runtime Positioning
 
 - Python is the primary and more mature runtime path.

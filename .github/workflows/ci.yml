@@ -181,10 +181,11 @@ jobs:
         run: bash .dev/tests/common-test.sh
 
       - name: Spotless formatting check
-        run: ./mvnw -B -ntp spotless:check
+        run: ./mvnw -B -ntp -pl '!runtime/polyglot-spring-boot-console' spotless:check
 
       - name: Build project and run tests on Java 21
-        run: ./mvnw -B -ntp clean test
+        # The optional console requires Java 25; existing library modules retain Java 21 coverage.
+        run: ./mvnw -B -ntp -pl '!runtime/polyglot-spring-boot-console' clean test
 
       - name: Upload Maven test reports
         if: always()
@@ -214,7 +215,10 @@ jobs:
           cache: maven
 
       - name: Run runtime verification on GraalVM 25
-        run: ./mvnw -B -ntp -pl runtime/polyglot-adapter,runtime/polyglot-spring-boot-starter -am clean test
+        run: ./mvnw -B -ntp -pl runtime/polyglot-spring-boot-console -am clean test
+
+      - name: Test console JavaScript calculations and polling
+        run: node --test runtime/polyglot-spring-boot-console/src/test/js/console-test.js
 
       - name: Upload Maven test reports
         if: always()

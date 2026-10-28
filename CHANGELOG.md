@@ -5,6 +5,12 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Added
+- Honor existing language-enable settings in console snapshots and log the local console URL
+  after embedded application startup, including the actual port and configured paths.
+- Add the optional experimental `polyglot-spring-boot-console` artifact (Java 25), with disabled-by-default
+  local diagnostics, configurable path/refresh interval, private allowlisted data snapshots from
+  Spring-managed Micrometer/Actuator, packaged vanilla UI, and a sample consuming the dependency.
+  Existing starter dependencies and runtime behavior remain unchanged.
 - Add a local Spring Boot telemetry analytics showcase with real NumPy statistics, rolling means,
   anomaly/quality scoring, typed results, safe error responses, and a managed Bash CLI that verifies
   real Micrometer/Actuator output and concurrent traffic. Preserve legacy sample endpoints and

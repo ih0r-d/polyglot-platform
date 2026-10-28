@@ -79,6 +79,7 @@ api/polyglot-model/.flattened-pom.xml
 runtime/polyglot-bom/.flattened-pom.xml
 runtime/polyglot-adapter/.flattened-pom.xml
 runtime/polyglot-spring-boot-starter/.flattened-pom.xml
+runtime/polyglot-spring-boot-console/.flattened-pom.xml
 build-tools/polyglot-codegen/.flattened-pom.xml
 build-tools/polyglot-codegen-maven-plugin/.flattened-pom.xml
 "
