@@ -20,18 +20,22 @@ SIZE=${DEMO_SIZE:-1000}
 METRICS=${DEMO_METRICS:-true}
 CONSOLE_PATH=${DEMO_CONSOLE_PATH:-/polyglot-console}
 TIMEOUT=${DEMO_TIMEOUT:-120}
+DURATION=${DEMO_DURATION:-120}
+INTERVAL=${DEMO_INTERVAL:-2}
 PID= TOKEN= RUN_PORT= STARTED=
 
 usage() {
   cat <<'HELP'
 Embedded Python Analytics Showcase
 Usage: ./demo.sh COMMAND [options]
-Commands: help start stop restart status smoke traffic metrics health console logs demo
+Commands: help start stop restart status smoke traffic load metrics health console logs demo
 Options: --port N --host 127.0.0.1|localhost --requests N --errors N
          --concurrency N (1..16) --size N (1..100000) --metrics true|false
          --timeout N (startup seconds, default 120) --console-path /polyglot-console --help
+         --duration N (load seconds, default 120) --interval N (pause seconds, default 2)
 Environment: DEMO_HOST, DEMO_PORT, DEMO_REQUESTS, DEMO_ERRORS, DEMO_CONCURRENCY,
-             DEMO_SIZE, DEMO_METRICS, DEMO_TIMEOUT. NO_COLOR is respected (plain output).
+             DEMO_SIZE, DEMO_METRICS, DEMO_TIMEOUT, DEMO_CONSOLE_PATH, DEMO_DURATION,
+             DEMO_INTERVAL. NO_COLOR is respected (plain output).
 Prerequisites: JDK 25+ selected via JAVA_HOME/installed SDKMAN/PATH, Bash, curl.
 First start builds current library/sample with the root Maven Wrapper; Maven/Python
 package downloads need network access once, then use the local caches and graalpy.lock.
@@ -39,6 +43,7 @@ No jq, external Python, Docker or external services are required.
 Examples:
   ./demo.sh demo
   ./demo.sh traffic --requests 20 --errors 3 --concurrency 4 --size 1000
+  ./demo.sh load --duration 120 --interval 2 --requests 10 --errors 1
   ./demo.sh restart --metrics false
   ./demo.sh stop
 The managed service remains running after demo for inspection. Logs/PID are private
@@ -49,15 +54,16 @@ fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 COMMAND=${1:-help}
 if [ "$COMMAND" = help ] || [ "$COMMAND" = --help ] || [ "$COMMAND" = -h ]; then usage; exit 0; fi
 shift
-case "$COMMAND" in start|stop|restart|status|smoke|traffic|metrics|health|console|logs|demo) ;; *) usage >&2; fail "Unknown command: $COMMAND" ;; esac
+case "$COMMAND" in start|stop|restart|status|smoke|traffic|load|metrics|health|console|logs|demo) ;; *) usage >&2; fail "Unknown command: $COMMAND" ;; esac
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --help|-h) usage; exit 0 ;;
-    --port|--host|--requests|--errors|--concurrency|--size|--metrics|--timeout|--console-path)
+    --port|--host|--requests|--errors|--concurrency|--size|--metrics|--timeout|--console-path|--duration|--interval)
       [ "$#" -ge 2 ] || fail "Missing value for $1"
       case "$1" in
         --port) PORT=$2 ;; --host) HOST=$2 ;; --requests) REQUESTS=$2 ;; --errors) ERRORS=$2 ;;
         --concurrency) CONCURRENCY=$2 ;; --size) SIZE=$2 ;; --metrics) METRICS=$2 ;; --console-path) CONSOLE_PATH=$2 ;; --timeout) TIMEOUT=$2 ;;
+        --duration) DURATION=$2 ;; --interval) INTERVAL=$2 ;;
       esac
       shift 2 ;;
     *) fail "Unknown option: $1" ;;
@@ -75,10 +81,16 @@ number errors "$ERRORS" 0 10000
 number concurrency "$CONCURRENCY" 1 16
 number size "$SIZE" 1 100000
 number timeout "$TIMEOUT" 1 3600
+number duration "$DURATION" 1 3600
+number interval "$INTERVAL" 1 60
 case "$HOST" in 127.0.0.1|localhost) ;; *) fail "The demo binds to loopback; host must be 127.0.0.1 or localhost" ;; esac
 case "$METRICS" in true|false) ;; *) fail "metrics must be true or false" ;; esac
 PORT=$((10#$PORT)); REQUESTS=$((10#$REQUESTS)); ERRORS=$((10#$ERRORS))
 CONCURRENCY=$((10#$CONCURRENCY)); SIZE=$((10#$SIZE)); TIMEOUT=$((10#$TIMEOUT))
+DURATION=$((10#$DURATION)); INTERVAL=$((10#$INTERVAL))
+if [ "$COMMAND" = load ]; then
+  [ "$((REQUESTS+ERRORS))" -gt 0 ] || fail 'Load requires at least one request or expected error per batch'
+fi
 [[ "$CONSOLE_PATH" =~ ^(/[a-zA-Z0-9_-]+)+$ ]] || fail "Invalid console path"
 case "$CONSOLE_PATH" in /actuator*|/error*) fail "Reserved console path" ;; esac
 BASE="http://$HOST:$PORT"
@@ -282,6 +294,22 @@ traffic() {
   printf 'One executor serializes guest execution; concurrent HTTP does not imply Python parallelism.\n'
   verify_deltas "$before" "$REQUESTS" "$ERRORS"
 }
+load() {
+  http /actuator/health/readiness 200 >/dev/null
+  local deadline=$((SECONDS+DURATION)) batch=0 remaining pause
+  printf 'Console: %s%s/\nLoad: %ss, %ss pause after each batch. Ctrl+C stops scheduling; the application stays running.\n' "$BASE" "$CONSOLE_PATH" "$DURATION" "$INTERVAL"
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    batch=$((batch+1))
+    printf '\n=== Batch %s ===\n' "$batch"
+    traffic
+    remaining=$((deadline-SECONDS))
+    [ "$remaining" -gt 0 ] || break
+    pause=$INTERVAL
+    if [ "$pause" -gt "$remaining" ]; then pause=$remaining; fi
+    sleep "$pause"
+  done
+  printf '\nLoad finished: %s batches. Application remains running.\n' "$batch"
+}
 metrics() {
   local names meter
   printf '=== Available polyglot meters (actual endpoint responses) ===\n'
@@ -314,11 +342,11 @@ case "$COMMAND" in
       printf '\n'
     else fail "No verified managed sample is running"; fi ;;
   logs) read_state; [[ "$TOKEN" =~ ^run\.[a-zA-Z0-9]+$ ]] || fail "No managed log path"; tail -n 60 "$STATE/$TOKEN/app.log" ;;
-  demo|smoke|traffic|metrics|health|console)
+  demo|smoke|traffic|load|metrics|health|console)
     if [ "$COMMAND" = demo ]; then start; fi
     command -v curl >/dev/null || fail "curl is required"
     case "$COMMAND" in
       demo) smoke; traffic; metrics; health; console ;;
-      smoke) smoke ;; traffic) traffic ;; metrics) metrics ;; health) health ;; console) console ;;
+      smoke) smoke ;; traffic) traffic ;; load) load ;; metrics) metrics ;; health) health ;; console) console ;;
     esac ;;
 esac

@@ -142,6 +142,31 @@ node --test runtime/polyglot-spring-boot-console/src/test/js/console-test.js
 ./mvnw -pl runtime/polyglot-spring-boot-console -am verify
 ```
 
+## Record a live console demo
+
+With the application already running, open its `/polyglot-console/` page and select a
+**2 seconds** refresh interval. In another terminal, run from the repository root:
+
+```bash
+./samples/spring-boot-example/demo.sh load --port 8545 \
+  --duration 120 --interval 2 --requests 8 --errors 1 --concurrency 2 --size 1000
+```
+
+Use the actual application port. If needed, start a local instance first with
+`./samples/spring-boot-example/demo.sh start --port 8545`.
+
+Each batch performs eight real successful NumPy calls and one expected Python failure,
+then pauses for two seconds. Counts, failure rate and session-local charts update from
+actual recorded calls; the first chart interval needs two snapshots. Keep the console tab
+visible while recording, since hidden tabs pause polling. No UI data is simulated.
+
+`--duration` bounds batch scheduling, not individual request latency; the last batch may
+finish after that duration. Ctrl+C stops further scheduling; in-flight requests may finish.
+The application remains running. The script reuses `traffic` and checks its exact Timer
+deltas, so use a dedicated demo instance without other request generators. The sample's
+Actuator HTTP endpoints are needed by this CLI, independently of the console's private API.
+This paced demo is not a calibrated throughput benchmark.
+
 ## Business operations and numerical contracts
 
 Input is a JSON object: `{"samples":[10,10,10,10,100]}`. Values are synthetic readings in arbitrary
@@ -235,6 +260,7 @@ Run from the sample directory, or prefix commands with `./samples/spring-boot-ex
 | `status` | Verified PID, readiness, URL and log path; nonzero when stopped/unready |
 | `smoke` | Reference analytics, input/guest failures, Timer deltas, health and info |
 | `traffic` | Known success/error counts across both contracts, configurable size and concurrent callers |
+| `load` | Repeat verified traffic batches with a pause, for live console recording; does not start/stop the application |
 | `metrics` | Discover all available `polyglot.*` meters, display actual tags/measurements/units |
 | `health` | Display health/info; no business-function health probe |
 | `logs` | Recent managed application logs |
@@ -242,7 +268,9 @@ Run from the sample directory, or prefix commands with `./samples/spring-boot-ex
 
 Options: `--port` (8080), `--host` (127.0.0.1 or localhost), `--requests` (10 successes), `--errors`
 (2 guest failures), `--size` (1000 values), `--concurrency` (1, maximum 16), `--metrics true|false`,
-`--timeout` (120 startup seconds). Total traffic is limited to 10000 calls per command. Matching
+`--timeout` (120 startup seconds), `--duration` (120 load seconds, maximum 3600), `--interval`
+(2 pause seconds between load batches, allowed 1–60). Traffic is limited to 10000 calls per
+batch; `load` repeats batches for the configured duration. Matching
 `DEMO_*` variables are listed by `help`. Plain non-interactive output also respects `NO_COLOR`.
 
 Private state/logs live under `.local/showcase/` (umask 077), outside Maven's cleaned target directory.

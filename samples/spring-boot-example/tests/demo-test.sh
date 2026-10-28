@@ -15,6 +15,7 @@ expect_failure() {
 }
 bash "$CLI" help | grep -q 'Embedded Python Analytics'
 bash "$CLI" help | grep -q 'console'
+bash "$CLI" load --help | grep -q 'pause seconds'
 sh "$CLI" help | grep -q 'Embedded Python Analytics'
 POSIXLY_CORRECT=1 sh "$CLI" help | grep -q 'Embedded Python Analytics'
 bash "$CLI" start --help | grep -q 'Prerequisites'
@@ -25,6 +26,12 @@ expect_failure 'requests must be' traffic --requests -1
 expect_failure 'Total requests/errors' traffic --requests 10000 --errors 1
 expect_failure 'concurrency must be' traffic --concurrency 17
 expect_failure 'size must be' smoke --size 0
+expect_failure 'duration must be' load --duration 0
+expect_failure 'duration must be' load --duration 3601
+expect_failure 'interval must be' load --interval 0
+expect_failure 'interval must be' load --interval 61
+expect_failure 'interval must be' load --interval 0.5
+expect_failure 'at least one request' load --requests 0 --errors 0
 expect_failure 'Invalid console path' start --console-path /../console
 expect_failure 'Reserved console path' start --console-path /actuator
 expect_failure 'metrics must be' start --metrics invalid
