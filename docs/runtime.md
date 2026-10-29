@@ -246,11 +246,68 @@ The executor:
 - Instance cache is keyed by Java interface type and stored via weak references.
 - `clearSourceCache()` clears only source entries; live Python instances remain reusable until instance cache is invalidated.
 - `invalidateContractCache(iface)` evicts source + instance entries for that single contract.
-- `reloadContract(iface)` is a focused helper: evict that contract cache and eagerly re-validate it.
+- `reloadContract(iface)` reads fresh code and validates the replacement, restoring known bindings/caches on failure (not arbitrary Python side effects).
 - Script changes are not auto-detected. To pick up changed code, invalidate/reload the affected contract or recreate the executor.
 
 The more explicit repository-level contract for these behaviors is documented in
 [`runtime-semantics.md`](runtime-semantics.md).
+
+### Explicit Python source reload
+
+Keep an existing client and refresh its implementation explicitly:
+
+```java
+ForecastService client = executor.bind(ForecastService.class);
+// Update forecast_service.py in the configured ScriptSource.
+executor.reloadContract(ForecastService.class);
+// The same proxy now resolves the new export and a fresh instance.
+```
+
+For top-level functions use `reloadContract(iface, Convention.BY_METHOD_NAME)`.
+The source is read afresh and syntax checked under the executor monitor. Existing calls and result
+conversions finish before reload; subsequent calls observe a validated replacement. Missing exports
+cannot silently fall back to the old bindings. No per-call reload checks or file watching are added.
+
+Missing sources and syntax errors preserve previous bindings. Evaluation/validation failures restore
+known contract bindings and cache entries, but **cannot undo arbitrary Python side effects**. The
+exception warns about this limitation; recreate the executor if clean guest state is required.
+Globals and imports are not generally cleared; assigned instance state resets on successful DEFAULT
+reload. Batch reload is sequential, not transactional. See [exact guarantees](runtime-semantics.md#explicit-reload-consistency).
+
+Spring clients already delegate to the same `PyExecutor`: inject it and call the same API with the
+client interface and convention. No bean recreation, HTTP reload endpoint or restart is required.
+Health remains a startup snapshot; it does not certify that arbitrary later reloads succeeded.
+
+The filesystem example loads a shipping policy from separate packaged Python files into its own
+working directory, then replaces the file while keeping the same Java client. The Java contract is
+`io.github.ih0rd.examples.contracts.ShippingPolicy`; Python policies are under
+`samples/java-maven-example/src/main/resources/reload/{initial,updated,incompatible}/`.
+The initial policy charges 500 cents below a 10,000-cent subtotal. Its replacement charges 350 cents
+below 7,500 cents. A third policy deliberately omits the required callable to demonstrate rejection.
+No repository Python file is overwritten; the temporary working directory is cleaned up on exit.
+Select a Java 25 JDK through `JAVA_HOME` before running:
+
+```bash
+./mvnw -B -ntp install -DskipTests
+./mvnw -B -ntp -f samples/java-maven-example/pom.xml package dependency:build-classpath \
+  -Dmdep.outputFile=target/reload-classpath.txt
+"$JAVA_HOME/bin/java" -cp "samples/java-maven-example/target/classes:$(cat samples/java-maven-example/target/reload-classpath.txt)" \
+  io.github.ih0rd.examples.PythonReloadDemo
+```
+
+For an 8,000-cent order, the logs show:
+
+```text
+Initial policy: subtotal=8,000 cents, shipping=500 cents
+File replaced, before explicit reload: subtotal=8,000 cents, shipping=500 cents
+After reload, same Java client: subtotal=8,000 cents, shipping=0 cents
+Replacement rejected; known bindings restored. Arbitrary Python side effects are not rolled back.
+After rejected replacement, same Java client: subtotal=8,000 cents, shipping=0 cents
+```
+
+Numeric grouping follows the logging locale. The source on disk changes before explicit reload,
+but cached calls retain the original policy. This example uses DEFAULT class binding; focused sample
+tests run the same Python policies through both DEFAULT and BY_METHOD_NAME.
 
 ## JavaScript Runtime Details
 
