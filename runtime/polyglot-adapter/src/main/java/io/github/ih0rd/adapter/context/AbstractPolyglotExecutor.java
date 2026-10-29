@@ -202,7 +202,7 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
             });
   }
 
-  private static void restoreInterrupt(Throwable failure) {
+  static void restoreInterrupt(Throwable failure) {
     // Language-specific execution may have wrapped the guest exception before it reaches bind.
     while (failure instanceof InvocationException && failure.getCause() != null) {
       failure = failure.getCause();

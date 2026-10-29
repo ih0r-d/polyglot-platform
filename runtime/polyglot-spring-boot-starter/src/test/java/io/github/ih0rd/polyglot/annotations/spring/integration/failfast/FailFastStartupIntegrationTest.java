@@ -6,6 +6,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.nio.file.Files;
@@ -79,6 +80,29 @@ class FailFastStartupIntegrationTest {
               assertThat(context).hasNotFailed();
               assertThat(context.getBean(FailingPythonClient.class).hello()).isEqualTo("hello");
             });
+  }
+
+  @Test
+  void existingSpringClientObservesReloadWithoutBeanRecreation() throws Exception {
+    writeClient("return 'before'");
+    for (boolean failFast : new boolean[] {true, false}) {
+      withPython(failFast)
+          .run(
+              application -> {
+                assertThat(application).hasNotFailed();
+                FailingPythonClient client = application.getBean(FailingPythonClient.class);
+                assertThat(client.hello()).isEqualTo("before");
+                try {
+                  writeClient("return 'after'");
+                  application.getBean(PyExecutor.class).reloadContract(FailingPythonClient.class);
+                  assertThat(application.getBean(FailingPythonClient.class)).isSameAs(client);
+                  assertThat(client.hello()).isEqualTo("after");
+                  writeClient("return 'before'");
+                } catch (IOException failure) {
+                  throw new AssertionError("Could not update reload test module", failure);
+                }
+              });
+    }
   }
 
   @Test
@@ -256,7 +280,7 @@ class FailFastStartupIntegrationTest {
             });
   }
 
-  private void writeClient(String body) throws Exception {
+  private void writeClient(String body) throws IOException {
     Files.writeString(
         scripts.resolve("failing_python_client.py"),
         "class FailingPythonClient:\n    def hello(self):\n        " + body + "\n");

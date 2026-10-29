@@ -215,7 +215,10 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
 
     Source source = resolveSource(iface);
     context.eval(source);
+    return instantiateExport(iface);
+  }
 
+  private <T> Value instantiateExport(Class<T> iface) {
     Value exported = resolveClass(iface);
 
     Value instance;
@@ -304,8 +307,7 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
 
   /** Clears cached Python instances resolved for bound contract types. */
   public void clearInstanceCache() {
-    ensureOpen();
-    instanceCache.clear();
+    withContextLock(instanceCache::clear);
   }
 
   /**
@@ -341,7 +343,10 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
    * Reloads a single Python contract by evicting its caches and eagerly re-validating the binding.
    *
    * <p>This method is useful when callers update one script and want deterministic pickup without
-   * clearing all executor caches.
+   * clearing all executor caches. Existing proxies resolve the replacement on their next call.
+   * Missing sources and syntax errors leave bindings unchanged. Evaluation failures restore known
+   * contract bindings and caches, but arbitrary Python side effects cannot be rolled back. Module
+   * globals and imported modules are not reset. Reentrant reload from callbacks is rejected.
    *
    * @param iface contract interface type
    * @param <T> interface type
@@ -363,6 +368,7 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
     }
     Convention effectiveConvention = requireConvention(convention);
 
+    rejectReentrantReload();
     withContextLock(() -> reloadSingleUnchecked(iface, effectiveConvention));
   }
 
@@ -377,6 +383,9 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
 
   /**
    * Reloads multiple Python contracts for the provided binding convention.
+   *
+   * <p>The batch is serialized but not transactional: successful earlier reloads remain published
+   * if a later contract fails. Contracts must not publish conflicting Context binding names.
    *
    * @param interfaces contract interfaces to reload
    * @param convention binding convention used during re-validation
@@ -395,6 +404,7 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
       targets.add(iface);
     }
 
+    rejectReentrantReload();
     withContextLock(
         () -> {
           for (Class<?> iface : targets) {
@@ -404,8 +414,10 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   }
 
   private <T> void validateInterfaceExportBinding(Class<T> iface) {
-    Value instance = resolveInstance(iface);
+    validateInstance(iface, resolveInstance(iface));
+  }
 
+  private void validateInstance(Class<?> iface, Value instance) {
     for (Method method : contractMethods(iface)) {
       resolveMember(instance, method.getName());
     }
@@ -492,14 +504,113 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
     super.closeExecutorResources();
   }
 
-  private void reloadSingleUnchecked(Class<?> iface, Convention convention) {
-    instanceCache.remove(iface);
-    sourceCache.remove(iface);
-    loadedMethodNameContracts.remove(iface);
+  private void rejectReentrantReload() {
+    if (Thread.holdsLock(contextMonitor)) {
+      throw new BindingException(
+          "Cannot reload a Python contract during an active executor operation");
+    }
+  }
 
+  private void reloadSingleUnchecked(Class<?> iface, Convention convention) {
+    String module = camelToSnake(iface.getSimpleName());
+    Source replacement = loadScript(SupportedLanguage.PYTHON, module);
+    try {
+      context.parse(replacement);
+    } catch (PolyglotException failure) {
+      restoreInterrupt(failure);
+      throw failure;
+    }
+
+    Set<String> names = new HashSet<>();
+    if (convention == Convention.BY_METHOD_NAME) {
+      for (Method method : contractMethods(iface)) {
+        names.add(method.getName());
+      }
+    } else {
+      names.add(iface.getSimpleName());
+    }
+    PythonReloadBindings bindings = new PythonReloadBindings(context, names);
+    Source previousSource = sourceCache.get(iface);
+    WeakReference<Value> previousReference = instanceCache.get(iface);
+    Value previousInstance = previousReference == null ? null : previousReference.get();
+    boolean previouslyLoaded = loadedMethodNameContracts.contains(iface);
+    try {
+      bindings.clear();
+      instanceCache.remove(iface);
+      sourceCache.put(iface, replacement);
+      loadedMethodNameContracts.remove(iface);
+      validateReplacement(iface, convention, module, replacement, names, bindings);
+    } catch (RuntimeException failure) {
+      restoreInterrupt(failure);
+      restoreAfterFailedReload(
+          iface, previousSource, previousInstance, previouslyLoaded, bindings, failure);
+      throw new BindingException(
+          "Failed to reload Python module '%s' for contract '%s'; Python side effects cannot be rolled back. Recreate the executor if clean guest state is required."
+              .formatted(module, iface.getName()),
+          failure);
+    }
+  }
+
+  private void validateReplacement(
+      Class<?> iface,
+      Convention convention,
+      String module,
+      Source replacement,
+      Set<String> names,
+      PythonReloadBindings bindings) {
+    // Language bindings can expose builtins after deletion; those are not replacement exports.
+    context.eval(replacement);
+    ensureOpen();
+    for (String name : names) {
+      if (!bindings.contains(name)) {
+        throw new BindingException(
+            "Replacement Python module '%s' does not define required symbol '%s'"
+                .formatted(module, name));
+      }
+    }
     switch (convention) {
-      case DEFAULT, BY_INTERFACE_EXPORT -> validateInterfaceExportBinding(iface);
-      case BY_METHOD_NAME -> validateMethodNameBinding(iface);
+      case DEFAULT, BY_INTERFACE_EXPORT -> validateInstance(iface, instantiateExport(iface));
+      case BY_METHOD_NAME -> {
+        loadedMethodNameContracts.add(iface);
+        validateMethodNameBinding(iface);
+      }
+    }
+  }
+
+  private void restoreAfterFailedReload(
+      Class<?> iface,
+      Source previousSource,
+      Value previousInstance,
+      boolean previouslyLoaded,
+      PythonReloadBindings bindings,
+      RuntimeException failure) {
+    if (isClosed()) {
+      return;
+    }
+    restoreContractCaches(iface, previousSource, previousInstance, previouslyLoaded);
+    try {
+      bindings.restore();
+    } catch (RuntimeException restorationFailure) {
+      failure.addSuppressed(restorationFailure);
+    }
+  }
+
+  private void restoreContractCaches(
+      Class<?> iface, Source previousSource, Value previousInstance, boolean previouslyLoaded) {
+    if (previousSource == null) {
+      sourceCache.remove(iface);
+    } else {
+      sourceCache.put(iface, previousSource);
+    }
+    if (previousInstance == null) {
+      instanceCache.remove(iface);
+    } else {
+      instanceCache.put(iface, new WeakReference<>(previousInstance));
+    }
+    if (previouslyLoaded) {
+      loadedMethodNameContracts.add(iface);
+    } else {
+      loadedMethodNameContracts.remove(iface);
     }
   }
 }

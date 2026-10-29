@@ -774,6 +774,11 @@ class PyExecutorTest {
     doReturn(source).when(exec).loadScript(SupportedLanguage.PYTHON, "api");
     when(ctx.eval(source)).thenReturn(mock(Value.class));
     when(ctx.getPolyglotBindings()).thenReturn(bindings);
+    when(ctx.getBindings("python")).thenReturn(bindings);
+    Value definedGlobal = mock(Value.class);
+    when(ctx.eval(eq("python"), anyString())).thenReturn(definedGlobal);
+    when(definedGlobal.execute(any())).thenReturn(definedGlobal);
+    when(definedGlobal.asBoolean()).thenReturn(true);
     when(bindings.getMember("Api")).thenReturn(exported);
     when(exported.canExecute()).thenReturn(false);
     when(exported.hasMember("hello")).thenReturn(true);
@@ -808,6 +813,11 @@ class PyExecutorTest {
     doReturn(source).when(exec).loadScript(eq(SupportedLanguage.PYTHON), any());
     when(ctx.eval(source)).thenReturn(mock(Value.class));
     when(ctx.getPolyglotBindings()).thenReturn(bindings);
+    when(ctx.getBindings("python")).thenReturn(bindings);
+    Value definedGlobal = mock(Value.class);
+    when(ctx.eval(eq("python"), anyString())).thenReturn(definedGlobal);
+    when(definedGlobal.execute(any())).thenReturn(definedGlobal);
+    when(definedGlobal.asBoolean()).thenReturn(true);
     when(bindings.getMember("Api")).thenReturn(apiExport);
     when(bindings.getMember("SharedApi")).thenReturn(sharedExport);
     when(apiExport.canExecute()).thenReturn(false);

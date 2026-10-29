@@ -86,6 +86,49 @@ Applications that relied on module-level side effects repeating on each call mus
 into the Python function or explicitly invalidate/reload the contract. The default Python
 export-based convention is unchanged.
 
+### Explicit reload consistency
+
+`reloadContract(iface, convention)` reloads the logical source derived from the interface name,
+not an arbitrary entry in Python's `sys.modules`. Existing proxies, including Spring clients,
+continue to use the same executor. No bean recreation or Context replacement is required.
+
+Reload is serialized with guest invocation, result conversion and shutdown. An in-flight call
+finishes first; the next call after a successful reload resolves the replacement. Reentrant reload
+from guest callbacks or result mappings is rejected. Calls after executor closure fail.
+If module initialization closes the executor through a host callback, reload fails and does not
+restore cache entries into that closed executor. Borrowed Context ownership is preserved.
+
+The source is read afresh and parsed before caches or supported exports change. The selected
+contract's expected export (DEFAULT/BY_INTERFACE_EXPORT) or functions (BY_METHOD_NAME) are removed
+from both binding scopes before evaluation, so removed symbols cannot be satisfied by old code.
+A successful reload resets the selected DEFAULT instance and retains the new source/loaded marker.
+Other Java contract cache entries are untouched. Multiple proxies of the same interface observe
+the replacement. A batch reload is sequential under one monitor, not an all-or-nothing transaction.
+
+If evaluation or contract validation fails, the previous supported binding references, Source,
+instance and loaded marker are restored. **This is not a Python-state rollback.** Module-level
+side effects, mutations of shared globals/objects, imports and external effects may already have
+occurred. If binding restoration itself fails, that failure is retained as a suppressed exception
+on the cause; an unusable or externally closed Context cannot provide recovery guarantees.
+The failure explicitly warns about this; recreate the executor when clean guest state
+is required. Missing sources and syntax errors are rejected before module execution. No business
+method is called for validation, but module initialization and exported constructors can execute.
+Validation checks export/callable existence, not Python argument arity, result types or business
+correctness. Signature/conversion incompatibilities retain ordinary invocation-time behavior;
+use the opt-in build-time contract validator for its supported static signature subset.
+
+Module globals retain ordinary evaluation semantics: explicitly assigned globals are replaced;
+other globals and imported modules persist. Dependencies are not recursively reloaded. Contract
+names/functions share Context bindings: unrelated modules must not publish conflicting names;
+reload cannot provide namespace isolation. Different Java types with the same simple name resolve
+the same logical file but retain separate caches; reload each affected contract explicitly.
+Existing guest-backed Java views or Values already returned to callers are not rebound.
+
+Cache invalidation remains lazy, not equivalent to explicit reload or transactional validation.
+`clearSourceCache()` still does not reset DEFAULT instances. Engine-owned compiled-code caching
+is separate and is neither cleared nor claimed to be purged by these operations. No filesystem
+checks or reload-version checks are added to ordinary cached invocations.
+
 ## Concurrency Model
 
 - Executor access to the underlying GraalVM `Context` is serialized.
@@ -161,7 +204,7 @@ The adapter defines its own exception hierarchy for structured error reporting:
 - `BindingException`: the guest function or export could not be resolved or is not executable
 - `InvocationException`: a runtime failure occurred during guest code execution or inline evaluation
 
-`PolyglotException` thrown during guest code execution is always wrapped as `InvocationException`.
+`PolyglotException` thrown during bound invocation is wrapped as `InvocationException`.
 This covers both proxy method calls (via `bind(...)`) and direct `preloadScript(...)` calls.
 The original `PolyglotException` is preserved as the cause.
 
@@ -173,8 +216,10 @@ host `InterruptedException` through `PolyglotException.asHostException()`. Exist
 wrappers and causes are retained. The invocation monitor is released on failure; acquiring that
 monitor remains non-interruptible, as with any Java `synchronized` block.
 
-Callers should expect adapter exceptions from all guest execution paths. Neither is checked, so
-explicit handling is optional but recommended for resilience.
+Explicit reload has separate failure semantics: missing sources throw `ScriptNotFoundException`;
+syntax preflight preserves `PolyglotException`; evaluation/validation failure throws `BindingException`
+with its original cause and the Python-side-effects warning. Interrupt status is preserved during
+reload as well. These failures are unchecked; handling is recommended for resilience.
 
 Proxy methods with `void` return type execute the guest function normally and return without
 attempting result conversion. Any guest exception still propagates to the caller.
@@ -184,7 +229,7 @@ attempting result conversion. Any guest exception still propagates to the caller
 The current runtime contract does not guarantee:
 
 - hostile sandboxing or restriction of guest access to host APIs
-- hot reload
+- automatic hot reload or transactional Python-state rollback
 - source version tracking
 - automatic pickup of changed guest-language code
 - JavaScript parity with Python lifecycle behavior

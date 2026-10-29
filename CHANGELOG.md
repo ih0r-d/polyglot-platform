@@ -5,6 +5,10 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Added
+- Harden explicit Python contract reload: fresh source/syntax preflight, no fallback to stale
+  exports, serialized binding publication, recovery of known bindings/caches on failure and
+  reentrant-reload rejection. Python side effects are not transactional. Existing Java/Spring
+  clients retain their proxies; add a filesystem reload demo and separate JMH reload coverage.
 - Refine the experimental console dashboard with consistent All/Python/JavaScript invocation
   filtering, independent session histories and compact runtime/JVM panels. Keep effective
   configuration available through Console Data.
