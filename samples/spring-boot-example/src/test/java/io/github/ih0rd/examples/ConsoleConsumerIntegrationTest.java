@@ -31,7 +31,7 @@ class ConsoleConsumerIntegrationTest {
       var redirect = get(http, base + "/ops/python");
       assertThat(redirect.statusCode()).isEqualTo(302);
       assertThat(redirect.headers().firstValue("location")).contains("/consumer/ops/python/");
-      for (String path : new String[] {"/", "/assets/api.js", "/assets/console.css", "/data"}) {
+      for (String path : new String[] {"/", "/assets/js/api.js", "/assets/css/console.css", "/data"}) {
         assertThat(get(http, base + "/ops/python" + path).statusCode()).as(path).isEqualTo(200);
       }
       assertThat(get(http, base + "/actuator/metrics").statusCode()).isEqualTo(404);
