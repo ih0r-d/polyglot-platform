@@ -5,6 +5,9 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Added
+- Refine the experimental console dashboard with consistent All/Python/JavaScript invocation
+  filtering, independent session histories and compact runtime/JVM panels. Keep effective
+  configuration available through Console Data.
 - Show allowlisted standard JVM metrics in the experimental console: runtime identity, process
   uptime, used/committed heap and live platform threads. Preserve missing readings, avoid new
   instrumentation, and clarify runtime availability and startup-hook labels.

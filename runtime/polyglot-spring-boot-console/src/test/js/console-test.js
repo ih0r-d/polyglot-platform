@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ConsoleApi, ConsoleRequestError } from '../../main/resources/META-INF/polyglot-console/api.js';
-import { SessionHistory, snapshotModel } from '../../main/resources/META-INF/polyglot-console/model.js';
-import { SnapshotPoller } from '../../main/resources/META-INF/polyglot-console/polling.js';
+import { ConsoleApi, ConsoleRequestError } from '../../main/resources/META-INF/polyglot-console/js/api.js';
+import { SessionHistory, snapshotModel } from '../../main/resources/META-INF/polyglot-console/js/model.js';
+import { SnapshotPoller } from '../../main/resources/META-INF/polyglot-console/js/polling.js';
 
 function metric(count, seconds, maximum = 0.01) {
   return { baseUnit: 'seconds', measurements: [
@@ -15,18 +15,23 @@ function snapshot(count = 10, seconds = 0.1, failures = 2, startTime = 'instance
     refreshIntervalMillis: 5000, runtime: [], configuration: [], invocations: [
       { language: 'python', outcome: 'success', count: count - failures, totalSeconds: seconds * 0.8, windowMaxSeconds: 0.1 },
       { language: 'python', outcome: 'failure', count: failures, totalSeconds: seconds * 0.2, windowMaxSeconds: 0.02 },
-      { language: 'js', outcome: 'success', count: 999, totalSeconds: 999, windowMaxSeconds: 1 },
     ] };
 }
 
+function withJavaScript(source) {
+  source.invocations.push(
+    {language: 'js', outcome: 'success', count: 4, totalSeconds: 0.04, windowMaxSeconds: 0.02},
+    {language: 'js', outcome: 'failure', count: 1, totalSeconds: 0.01, windowMaxSeconds: 0.01});
+  return source;
+}
+
 test('matching Python tag scopes produce cumulative counts and mean, excluding JavaScript', () => {
-  const model = snapshotModel(snapshot());
+  const model = snapshotModel(withJavaScript(snapshot()), 'python');
   assert.equal(model.totals.count, 10);
   assert.equal(model.totals.successRate, 80);
   assert.equal(model.totals.failures, 2);
   assert.ok(Math.abs(model.totals.meanMs - 10) < 1e-9);
   assert.equal(model.health, 'UP');
-  assert.equal(model.pythonHealth, 'UP');
   assert.ok(!JSON.stringify(model).includes('/private/secret'));
 });
 
@@ -38,6 +43,41 @@ test('missing and zero-call metrics are not fabricated', () => {
   assert.equal(snapshotModel(source).totals, null);
   source.invocations = [{ language: 'python', outcome: 'success', count: 1, totalSeconds: 1 }];
   assert.equal(snapshotModel(source).totals, null);
+});
+
+test('All, Python and JavaScript totals retain matching outcome and duration scopes', () => {
+  const source = withJavaScript(snapshot());
+  const all = snapshotModel(source);
+  assert.equal(all.language, 'all');
+  assert.deepEqual(all.languages, ['python', 'js']);
+  assert.equal(all.totals.count, 15);
+  assert.equal(all.totals.successes, 12);
+  assert.equal(all.totals.failures, 3);
+  assert.equal(all.totals.successRate, 80);
+  assert.ok(Math.abs(all.totals.meanMs - 10) < 1e-9);
+  const javascript = snapshotModel(source, 'js');
+  assert.equal(javascript.totals.count, 5);
+  assert.equal(javascript.totals.failures, 1);
+  assert.equal(javascript.scopes.length, 2);
+  assert.equal(snapshotModel(source, 'python').totals.count, 10);
+  assert.equal(snapshotModel(snapshot(), 'js').language, 'all');
+});
+
+test('incomplete scopes keep observed failures visible without claiming complete totals', () => {
+  const source = withJavaScript(snapshot());
+  source.invocations.pop();
+  const model = snapshotModel(source);
+  assert.equal(model.totals, null);
+  assert.equal(model.scopes.find(scope => scope.language === 'python' && scope.outcome === 'failure').count, 2);
+  assert.equal(snapshotModel(source, 'python').totals.count, 10);
+  source.invocations = snapshot().invocations;
+  source.runtime = [{name: 'polyglot.executor.enabled', language: 'js', value: 1}];
+  assert.equal(snapshotModel(source).totals, null);
+  assert.deepEqual(snapshotModel(source).languages, ['python', 'js']);
+  for (const value of [-1, Number.NaN, Infinity]) {
+    const invalid = snapshot(); invalid.invocations[0].totalSeconds = value;
+    assert.equal(snapshotModel(invalid).totals, null);
+  }
 });
 
 test('bounded history derives rates and interval means, with gaps for idle latency', () => {
@@ -63,6 +103,23 @@ test('counter resets, outcome resets, restart and missing meters clear history',
   const source = snapshot(); source.invocations = [];
   history.add(snapshotModel(source), 2000);
   assert.equal(history.previous, null);
+});
+
+test('per-language histories detect resets hidden by growth in another language', () => {
+  const previous = withJavaScript(snapshot());
+  for (const change of ['count', 'duration']) {
+    const next = withJavaScript(snapshot(30, 0.5));
+    if (change === 'count') next.invocations[2].count = 1;
+    else next.invocations[2].totalSeconds = 0.001;
+    const histories = new Map(['all', 'python', 'js'].map(language => [language, new SessionHistory()]));
+    for (const [language, history] of histories) history.add(snapshotModel(previous, language), 1000);
+    assert.equal(histories.get('all').add(snapshotModel(next), 2000).reset, true);
+    assert.equal(histories.get('js').add(snapshotModel(next, 'js'), 2000).reset, true);
+    assert.equal(histories.get('python').add(snapshotModel(next, 'python'), 2000).sample.rate, 20);
+  }
+  const history = new SessionHistory();
+  history.add(snapshotModel(previous, 'python'), 1000);
+  assert.equal(history.add(snapshotModel(previous, 'js'), 2000).reset, true);
 });
 
 test('API fetches only its private data endpoint on the current application origin and context', async () => {
@@ -140,11 +197,15 @@ test('rendering handles real snapshot models, missing values and chart gaps with
     createElement: element,
   };
   try {
-    const { renderSnapshot, connection, format } = await import('../../main/resources/META-INF/polyglot-console/view.js');
+    const { renderSnapshot, connection, format } = await import('../../main/resources/META-INF/polyglot-console/js/view.js');
     const model = snapshotModel(snapshot());
+    document.getElementById('invocation-columns').children = ['Language', 'Outcome', 'Count',
+      'Total time (s)', 'Mean (ms)', 'Window max (ms)', 'Share'].map(textContent => ({textContent}));
     renderSnapshot(model, [], null);
     assert.equal(nodes.get('total').textContent, '10');
-    assert.equal(nodes.get('scopes').children.length, 3);
+    assert.equal(nodes.get('scopes').children.length, 2);
+    assert.equal(nodes.get('scopes').children[0].children[0].attributes['data-label'], 'Language');
+    assert.equal(nodes.get('scopes').children[0].children[6].attributes['data-label'], 'Share');
     assert.equal(nodes.get('mean').textContent, '10 ms');
     assert.equal(nodes.get('jvm-values').children[1].textContent, 'Unavailable');
     model.jvm = { javaVersion: '25-test', runtime: '<script>unsafe</script>', vendor: 'Test vendor',
@@ -155,16 +216,18 @@ test('rendering handles real snapshot models, missing values and chart gaps with
     assert.equal(nodes.get('jvm-values').children[1].textContent, '25-test');
     assert.equal(nodes.get('jvm-values').children[3].textContent, '<script>unsafe</script>');
     assert.equal(nodes.get('jvm-values').children[7].textContent, '2 min');
-    assert.equal(nodes.get('jvm-values').children[9].textContent, '1 MiB');
-    assert.equal(nodes.get('jvm-values').children[13].textContent, '42');
+    assert.equal(nodes.get('heap-summary').textContent, '1 MiB / 2 MiB');
+    assert.equal(nodes.get('heap-usage').value, 50);
+    assert.equal(nodes.get('heap-percent').textContent, '50%');
+    assert.equal(nodes.get('jvm-threads').textContent, '42');
     assert.equal(nodes.get('runtime-values').children[1].textContent, 'No');
     assert.equal(nodes.get('runtime-values').children[3].textContent, 'Yes');
     assert.equal(format(null), '—');
     renderSnapshot(model, [{ time: 1, rate: 3, meanMs: 2 }, { time: 2, rate: 0, meanMs: null }], { rate: 0, meanMs: null });
     assert.equal(nodes.get('interval-mean').textContent, '—');
-    model.health = 'DOWN'; model.configuration = [['Flag', '<script>unsafe</script>']];
+    model.health = 'DOWN';
     renderSnapshot(model, [], null);
-    assert.equal(nodes.get('configuration').children[1].textContent, '<script>unsafe</script>');
+    assert.equal(nodes.get('health').textContent, 'DOWN');
     model.scopes = []; model.totals = null; model.pythonAvailable = null;
     renderSnapshot(model, [], null);
     assert.equal(nodes.get('total').textContent, '—');
@@ -181,7 +244,7 @@ test('file preview has actionable HTTP guidance without loading modules or makin
   const { readFile } = await import('node:fs/promises');
   const { runInNewContext } = await import('node:vm');
   const nodes = { notice: { hidden: true }, connection: {} };
-  const url = new URL('../../main/resources/META-INF/polyglot-console/bootstrap.js', import.meta.url);
+  const url = new URL('../../main/resources/META-INF/polyglot-console/js/bootstrap.js', import.meta.url);
   runInNewContext(await readFile(url, 'utf8'), {
     location: { protocol: 'file:' }, document: { getElementById: id => nodes[id] },
   }, { filename: url.pathname });
@@ -211,18 +274,16 @@ test('runtime view retains every supplied gauge and its language scope, includin
   ];
   const model = snapshotModel(source);
   assert.deepEqual(model.runtime, [
-    ['Python executor available', 'Yes'], ['JavaScript source cache', 2], ['JavaScript loaded interfaces', null],
+    ['Python available', 'Yes'], ['JavaScript cached sources', 2], ['JavaScript bindings', null],
   ]);
   source.runtime[0].value = 0;
   assert.equal(snapshotModel(source).runtime[0][1], 'No');
   source.runtime[0].value = null;
   assert.equal(snapshotModel(source).runtime[0][1], null);
-  source.configuration = [{name: 'Fail-fast', value: true}, {name: 'JavaScript enabled', value: false}];
-  assert.deepEqual(snapshotModel(source).configuration, [['Fail-fast', 'Enabled'], ['JavaScript enabled', 'Disabled']]);
 });
 
 test('JVM units distinguish unknown readings, zero values and binary memory sizes', async () => {
-  const { formatUptime, formatMemory } = await import('../../main/resources/META-INF/polyglot-console/view.js');
+  const { formatUptime, formatMemory } = await import('../../main/resources/META-INF/polyglot-console/js/view.js');
   for (const value of [null, undefined, -1, Number.NaN, Infinity]) {
     assert.equal(formatUptime(value), 'Unavailable');
     assert.equal(formatMemory(value), 'Unavailable');
@@ -242,32 +303,69 @@ test('dashboard initializes its controls and preserves polling, pause and hidden
   const pageEvents = new Map();
   const windowEvents = new Map();
   const context = Object.fromEntries(['clearRect', 'beginPath', 'moveTo', 'lineTo', 'stroke', 'fillText', 'fillRect', 'setTransform', 'arc', 'closePath', 'fill'].map(name => [name, () => {}]));
-  function element() {
+  function element(id = '') {
     return { children: [], listeners: new Map(), options: [{value: '5000'}], value: '5000', width: 600, height: 230,
       classList: { add() {} }, append(...items) { this.children.push(...items); },
       setAttribute(name, value) { (this.attributes ??= {})[name] = value; },
-      replaceChildren() { this.children = []; }, getContext() { return context; },
+      replaceChildren(...items) { this.children = items; if (id === 'language-filter') this.options = items; }, getContext() { return context; },
       addEventListener(name, listener) { this.listeners.set(name, listener); },
       add(option) { this.options.push(option); } };
   }
   globalThis.document = {
     baseURI: 'http://localhost/app/ops/console/', hidden: false,
-    getElementById(id) { if (!nodes.has(id)) nodes.set(id, element()); return nodes.get(id); },
+    getElementById(id) {
+      if (!nodes.has(id)) {
+        const node = element(id);
+        if (id === 'language-filter') { node.options = [{value:'all'}]; node.value = 'all'; }
+        nodes.set(id, node);
+      }
+      return nodes.get(id);
+    },
     createElement: element, addEventListener(name, listener) { pageEvents.set(name, listener); },
   };
   globalThis.window = { addEventListener(name, listener) { windowEvents.set(name, listener); } };
   globalThis.Option = function (label, value) { this.textContent = label; this.value = value; };
   let failed = false;
-  globalThis.fetch = async () => ({ ok: !failed, status: failed ? 403 : 200,
-    json: async () => ({ ...snapshot(), refreshIntervalMillis: 7000 }) });
+  let source = snapshot();
+  let requests = 0;
+  globalThis.fetch = async () => {
+    requests++;
+    return { ok: !failed, status: failed ? 403 : 200,
+      json: async () => ({ ...source, refreshIntervalMillis: 7000 }) };
+  };
   try {
-    await import('../../main/resources/META-INF/polyglot-console/app.js');
+    await import('../../main/resources/META-INF/polyglot-console/js/app.js');
     await new Promise(setImmediate);
     assert.equal(nodes.get('total').textContent, '10');
     assert.equal(nodes.get('refresh').value, '7000');
     assert.equal(nodes.get('connection').textContent, 'Live');
+    const filter = nodes.get('language-filter');
+    assert.deepEqual(filter.options.map(option => option.value), ['all','python']);
+    source = withJavaScript(snapshot());
+    nodes.get('refresh').listeners.get('change')();
+    await new Promise(setImmediate);
+    assert.equal(nodes.get('total').textContent, '15');
+    assert.deepEqual(filter.options.map(option => option.value), ['all','python','js']);
+    source = withJavaScript(snapshot(20, 0.3));
+    nodes.get('refresh').listeners.get('change')();
+    await new Promise(setImmediate);
+    const beforeFilter = requests;
+    const freshness = nodes.get('freshness').textContent;
+    filter.value = 'js'; filter.listeners.get('change')();
+    assert.equal(nodes.get('total').textContent, '5');
+    assert.equal(nodes.get('failure-count').textContent, '1');
+    assert.equal(nodes.get('chart-scope').textContent, 'JavaScript');
+    assert.equal(nodes.get('scopes').children.length, 2);
+    filter.value = 'python'; filter.listeners.get('change')();
+    assert.equal(nodes.get('total').textContent, '20');
+    assert.notEqual(nodes.get('rate').textContent, '0 /s');
+    assert.equal(nodes.get('freshness').textContent, freshness);
+    assert.equal(requests, beforeFilter);
     nodes.get('pause').listeners.get('click')();
     assert.equal(nodes.get('pause').textContent, 'Resume');
+    assert.equal(nodes.get('connection').textContent, 'Paused');
+    filter.value = 'js'; filter.listeners.get('change')();
+    assert.equal(nodes.get('total').textContent, '5');
     assert.equal(nodes.get('connection').textContent, 'Paused');
     nodes.get('pause').listeners.get('click')();
     await new Promise(setImmediate);
@@ -276,30 +374,57 @@ test('dashboard initializes its controls and preserves polling, pause and hidden
     document.hidden = false; failed = true; pageEvents.get('visibilitychange')();
     await new Promise(setImmediate);
     assert.equal(nodes.get('connection').textContent, 'Disconnected');
+    filter.value = 'all'; filter.listeners.get('change')();
+    assert.equal(nodes.get('connection').textContent, 'Disconnected');
     assert.equal(nodes.get('notice').hidden, false);
     failed = false; nodes.get('refresh').value = '2000'; nodes.get('refresh').listeners.get('change')();
     await new Promise(setImmediate);
     assert.equal(nodes.get('connection').textContent, 'Live');
+    filter.value = 'js'; source = snapshot();
+    nodes.get('refresh').listeners.get('change')();
+    await new Promise(setImmediate);
+    assert.equal(filter.value, 'all');
+    assert.deepEqual(filter.options.map(option => option.value), ['all','python']);
+    source = {invocations:[], runtime:[]};
+    nodes.get('refresh').listeners.get('change')();
+    await new Promise(setImmediate);
+    assert.equal(nodes.get('total').textContent, '—');
+    assert.equal(filter.disabled, true);
+    assert.equal(nodes.get('notice').hidden, false);
+    windowEvents.get('resize')();
   } finally {
     windowEvents.get('pagehide')?.();
     Object.assign(globalThis, previous);
   }
 });
 
-test('outcome bars use complete matching language scopes and never infer missing outcomes', async () => {
-  const { outcomeShare, format } = await import('../../main/resources/META-INF/polyglot-console/view.js');
-  const scopes = snapshotModel(snapshot()).scopes;
-  assert.equal(outcomeShare(scopes, scopes[0]), 80);
-  assert.equal(outcomeShare(scopes, scopes[1]), 20);
-  assert.equal(outcomeShare(scopes, scopes[2]), null);
-  const empty = snapshotModel(snapshot(0, 0, 0)).scopes;
-  assert.equal(outcomeShare(empty, empty[0]), null);
+test('outcome bars use selected totals and never infer missing outcomes', async () => {
+  const { outcomeShare, format } = await import('../../main/resources/META-INF/polyglot-console/js/view.js');
+  const model = snapshotModel(snapshot());
+  assert.equal(outcomeShare(model.scopes[0], model.totals), 80);
+  assert.equal(outcomeShare(model.scopes[1], model.totals), 20);
+  assert.equal(outcomeShare(model.scopes[0], null), null);
+  assert.equal(outcomeShare({count: -1}, model.totals), null);
+  assert.equal(outcomeShare({count: 11}, model.totals), null);
+  const empty = snapshotModel(snapshot(0, 0, 0));
+  assert.equal(outcomeShare(empty.scopes[0], empty.totals), null);
+  const all = snapshotModel(withJavaScript(snapshot()));
+  assert.ok(Math.abs(outcomeShare(all.scopes[0], all.totals) - 8 / 15 * 100) < 1e-9);
   assert.notEqual(format(0.00012), '0');
   assert.equal(format(0), '0');
 });
 
+test('heap utilization uses committed heap and rejects missing or inconsistent measurements', async () => {
+  const { heapPercentage } = await import('../../main/resources/META-INF/polyglot-console/js/view.js');
+  assert.equal(heapPercentage(50, 100), 50);
+  assert.equal(heapPercentage(0, 100), 0);
+  for (const [used, committed] of [[null,100],[1,null],[-1,100],[1,0],[101,100],[Infinity,100]]) {
+    assert.equal(heapPercentage(used, committed), null);
+  }
+});
+
 test('chart time labels reflect the collected monotonic time range without invented history', async () => {
-  const { timeLabels, axisMaximum } = await import('../../main/resources/META-INF/polyglot-console/charts.js');
+  const { timeLabels, axisMaximum } = await import('../../main/resources/META-INF/polyglot-console/js/charts.js');
   const origin = Date.UTC(2026, 9, 27, 12, 0, 0);
   const labels = timeLabels(0, 10000, 600, origin);
   assert.equal(labels[0].fraction, 0);
@@ -314,7 +439,7 @@ test('chart time labels reflect the collected monotonic time range without inven
 });
 
 test('Canvas uses device pixels, draws time labels and preserves gaps in latency samples', async () => {
-  const { drawChart } = await import('../../main/resources/META-INF/polyglot-console/charts.js');
+  const { drawChart } = await import('../../main/resources/META-INF/polyglot-console/js/charts.js');
   const traces = [];
   const context = Object.fromEntries(['clearRect', 'beginPath', 'moveTo', 'lineTo', 'stroke', 'fillText', 'arc', 'closePath', 'fill', 'setTransform']
     .map(name => [name, (...args) => traces.push({ name, args })]));

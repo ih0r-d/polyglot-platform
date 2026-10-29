@@ -50,7 +50,7 @@ class ConsoleAutoConfigurationTest {
                   io.github.ih0rd.polyglot.console.internal.web.ConsoleStartupLogger.class);
           var mvc = MockMvcBuilders.webAppContextSetup(context).build();
           mvc.perform(get("/polyglot-console")).andExpect(status().isNotFound());
-          mvc.perform(get("/polyglot-console/assets/app.js")).andExpect(status().isNotFound());
+          mvc.perform(get("/polyglot-console/assets/js/app.js")).andExpect(status().isNotFound());
         });
   }
 
@@ -94,18 +94,22 @@ class ConsoleAutoConfigurationTest {
                       .getResponse()
                       .getContentAsString();
               assertThat(page)
-                  .contains("./assets/console.css", "./assets/bootstrap.js")
+                  .contains("./assets/css/console.css", "./assets/js/bootstrap.js")
                   .doesNotContain("/actuator/");
               for (String asset :
                   new String[] {
-                    "app.js",
-                    "api.js",
-                    "model.js",
-                    "polling.js",
-                    "view.js",
-                    "charts.js",
-                    "bootstrap.js",
-                    "console.css",
+                    "js/app.js",
+                    "js/api.js",
+                    "js/model.js",
+                    "js/polling.js",
+                    "js/view.js",
+                    "js/charts.js",
+                    "js/bootstrap.js",
+                    "css/console.css",
+                    "css/base.css",
+                    "css/dashboard.css",
+                    "css/diagnostics.css",
+                    "css/responsive.css",
                     "icons.svg"
                   }) {
                 mvc.perform(get("/app/ops/console/assets/" + asset).contextPath("/app"))
@@ -241,7 +245,7 @@ class ConsoleAutoConfigurationTest {
                   new String[] {
                     "/polyglot-console/",
                     "/polyglot-console/data",
-                    "/polyglot-console/assets/app.js"
+                    "/polyglot-console/assets/js/app.js"
                   }) {
                 mvc.perform(
                         get(path)
@@ -277,7 +281,7 @@ class ConsoleAutoConfigurationTest {
                   new String[] {
                     "/polyglot-console/",
                     "/polyglot-console/data",
-                    "/polyglot-console/assets/app.js"
+                    "/polyglot-console/assets/js/app.js"
                   }) {
                 mvc.perform(get(path)).andExpect(status().isForbidden());
               }

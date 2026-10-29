@@ -6,8 +6,8 @@
   <meta name="color-scheme" content="light">
   <meta name="referrer" content="no-referrer">
   <title>Polyglot Console</title>
-  <link rel="stylesheet" href="./assets/console.css">
-  <script defer src="./assets/bootstrap.js"></script>
+  <link rel="stylesheet" href="./assets/css/console.css">
+  <script defer src="./assets/js/bootstrap.js"></script>
 </head>
 <body>
   <main>
@@ -16,7 +16,6 @@
         <svg class="icon brand-logo" aria-hidden="true"><use href="./assets/icons.svg#cube"/></svg>
         <div>
           <div class="brand-title"><h1>Polyglot Console</h1><span class="experimental">Experimental</span></div>
-          <p>Java ↔ Python runtime observability</p>
         </div>
       </div>
       <div class="live-status">
@@ -37,10 +36,10 @@
 
     <div id="notice" class="notice" role="status" hidden></div>
 
-    <section class="stats" aria-label="Cumulative Python invocation metrics">
+    <section class="stats" id="stats" aria-label="Cumulative invocation metrics for all enabled languages">
       <article class="stat">
         <span class="stat-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#layers"/></svg></span>
-        <div><h2>Python invocations</h2><strong id="total">—</strong><small>Cumulative</small></div>
+        <div><h2>Total invocations</h2><strong id="total">—</strong><small id="scope-label">All enabled languages · cumulative</small></div>
       </article>
       <article class="stat">
         <span class="stat-icon green"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#shield"/></svg></span>
@@ -59,49 +58,56 @@
     <section class="charts" aria-label="Session-local invocation charts">
       <article class="panel chart-panel">
         <div class="chart-heading">
-          <div class="panel-title"><span class="panel-icon purple"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#activity"/></svg></span><div><h2>Invocation throughput</h2><p>Java → Python calls per second · session history</p></div></div>
+          <div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#activity"/></svg></span><div><h2>Invocation throughput</h2><p><span id="chart-scope">All enabled languages</span> · session history</p></div></div>
           <div class="chart-reading"><strong id="rate" class="chart-value green-text">—</strong><span class="chart-legend green-dot">Calls / second</span></div>
         </div>
-        <canvas id="throughput-chart" width="700" height="230" aria-label="Session-local Python throughput, calls per second">Python invocation throughput, with local time on the horizontal axis.</canvas>
+        <canvas id="throughput-chart" width="700" height="230" aria-label="Selected invocation throughput, calls per second">Invocation throughput, with local time on the horizontal axis.</canvas>
       </article>
       <article class="panel chart-panel">
         <div class="chart-heading">
           <div class="panel-title"><span class="panel-icon purple"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#clock"/></svg></span><div><h2>Interval mean latency</h2><p>Mean execution time per polling interval</p></div></div>
           <div class="chart-reading"><strong id="interval-mean" class="chart-value purple-text">—</strong><span class="chart-legend purple-dot">Mean latency (ms)</span></div>
         </div>
-        <canvas id="latency-chart" width="700" height="230" aria-label="Session-local mean latency, milliseconds; idle intervals have no point">Python invocation latency, with local time on the horizontal axis.</canvas>
+        <canvas id="latency-chart" width="700" height="230" aria-label="Selected mean latency, milliseconds; idle intervals have no point">Invocation latency, with local time on the horizontal axis.</canvas>
       </article>
     </section>
 
-    <section class="panel breakdown" aria-labelledby="breakdown-title">
-      <div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#table"/></svg></span><div><h2 id="breakdown-title">Invocations by language and outcome</h2><p>Micrometer Timer: <code>polyglot.client.invocations</code></p></div></div>
-      <div class="table-scroll">
+    <section class="diagnostics-grid" aria-label="Invocation breakdown and global runtime diagnostics">
+      <article class="panel breakdown" aria-labelledby="breakdown-title">
+        <div class="panel-heading breakdown-heading">
+          <div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#table"/></svg></span><h2 id="breakdown-title">Invocations by language and outcome</h2></div>
+          <label class="language-control" for="language-filter">Language
+            <select id="language-filter"><option value="all">All</option></select>
+          </label>
+        </div>
+      <section class="invocation-table" aria-label="Invocation breakdown table">
         <table>
-          <thead><tr>
+          <thead><tr id="invocation-columns">
             <th scope="col">Language</th><th scope="col">Outcome</th><th scope="col">Count</th>
             <th scope="col">Total time (s)</th><th scope="col">Mean (ms)</th><th scope="col">Window max (ms)</th>
-            <th scope="col">Share within language</th>
+            <th scope="col" title="Share of invocation count in the selected language scope">Share</th>
           </tr></thead>
           <tbody id="scopes"><tr><td colspan="7">Waiting for metrics.</td></tr></tbody>
         </table>
-      </div>
-    </section>
-
-    <section class="runtime-grid" aria-label="Runtime diagnostics">
-      <article class="panel">
-        <div class="panel-heading"><div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#activity"/></svg></span><h2>Runtime status</h2></div><span id="python-state" class="status">UNKNOWN</span></div>
-        <dl id="runtime-values" class="values"></dl>
+      </section>
       </article>
       <article class="panel">
-        <div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#settings"/></svg></span><h2>Effective configuration</h2></div>
-        <dl id="configuration" class="values"></dl>
+        <div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#activity"/></svg></span><h2>Runtime status <span class="scope-badge">Global</span></h2></div>
+        <dl id="runtime-values" class="values"></dl>
       </article>
       <article class="panel jvm-panel">
         <div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#server"/></svg></span><h2>JVM information</h2></div>
         <dl id="jvm-values" class="values"></dl>
-        <p class="jvm-note">JVM-wide metrics. Heap excludes native memory.</p>
+        <div class="heap-section">
+          <div class="heap-heading"><span>Heap used / committed</span><strong id="heap-summary">Unavailable</strong></div>
+          <div id="heap-meter" class="heap-meter" hidden>
+            <progress id="heap-usage" max="100" value="0" aria-label="Used heap as a percentage of committed heap"></progress><span id="heap-percent">—</span>
+          </div>
+        </div>
+        <dl class="values"><dt>Live platform threads</dt><dd id="jvm-threads">Unavailable</dd></dl>
       </article>
     </section>
+
   </main>
 </body>
 </html>

@@ -44,36 +44,48 @@ function health(id, value) {
   if (['DOWN', 'OUT_OF_SERVICE'].includes(value)) target.classList.add('down');
 }
 
-export function outcomeShare(scopes, scope) {
-  const matching = scopes.filter(item => item.language === scope.language);
-  const success = matching.find(item => item.outcome === 'success');
-  const failure = matching.find(item => item.outcome === 'failure');
-  if (matching.length !== 2 || !Number.isFinite(success?.count) || !Number.isFinite(failure?.count)
-      || success.count < 0 || failure.count < 0) return null;
-  const total = success.count + failure.count;
-  return total > 0 ? scope.count / total * 100 : null;
+export function outcomeShare(scope, totals) {
+  if (!totals || totals.count <= 0 || !Number.isFinite(scope.count)
+      || scope.count < 0 || scope.count > totals.count) return null;
+  return scope.count / totals.count * 100;
 }
 
-function invocationRow(scope, scopes) {
+export function heapPercentage(used, committed) {
+  if (!Number.isFinite(used) || !Number.isFinite(committed)
+      || used < 0 || committed <= 0 || used > committed) return null;
+  return used / committed * 100;
+}
+
+function renderHeap(jvm) {
+  const percentage = heapPercentage(jvm.heapUsedBytes, jvm.heapCommittedBytes);
+  text('heap-summary', `${formatMemory(jvm.heapUsedBytes)} / ${formatMemory(jvm.heapCommittedBytes)}`);
+  byId('heap-meter').hidden = percentage === null;
+  byId('heap-usage').value = percentage ?? 0;
+  text('heap-percent', percentage === null ? '—' : `${format(percentage)}%`);
+}
+
+function invocationRow(scope, totals, columns) {
   const row = document.createElement('tr');
   const values = [scope.language, scope.outcome, format(scope.count), format(scope.seconds),
     scope.count > 0 && scope.seconds !== null ? format(scope.seconds / scope.count * 1000) : '—',
     scope.maximum === null ? '—' : format(scope.maximum * 1000)];
   for (const [index, value] of values.entries()) {
     const cell = document.createElement('td');
+    cell.setAttribute('data-label', columns[index] ?? '');
     const label = document.createElement('span');
     label.textContent = value;
     if (index === 1) label.className = 'outcome ' + (scope.outcome === 'success' ? 'success' : 'failure');
     cell.append(label); row.append(cell);
   }
   const cell = document.createElement('td');
+  cell.setAttribute('data-label', columns[6] ?? '');
   const container = document.createElement('div'); container.className = 'share-cell';
-  const share = outcomeShare(scopes, scope);
+  const share = outcomeShare(scope, totals);
   if (share !== null) {
     const progress = document.createElement('progress');
     progress.max = 100; progress.value = share;
     progress.className = scope.outcome === 'success' ? 'success' : 'failure';
-    progress.setAttribute('aria-label', `${scope.language} ${scope.outcome}: ${format(share)}% within language`);
+    progress.setAttribute('aria-label', `${scope.language} ${scope.outcome}: ${format(share)}% of selected invocations`);
     container.append(progress);
   }
   const label = document.createElement('span'); label.className = 'share-value';
@@ -82,8 +94,12 @@ function invocationRow(scope, scopes) {
   return row;
 }
 
-export function renderSnapshot(model, history, latest) {
+export function renderSnapshot(model, history, latest, updatedAt = Date.now()) {
   const totals = model.totals;
+  const scopeName = { python: 'Python', js: 'JavaScript' }[model.language] ?? 'All enabled languages';
+  text('scope-label', `${scopeName} · cumulative`);
+  text('chart-scope', scopeName);
+  byId('stats').setAttribute('aria-label', `Cumulative invocation metrics: ${scopeName}`);
   text('total', format(totals?.count));
   text('success-count', format(totals?.successes));
   text('failure-count', format(totals?.failures));
@@ -92,31 +108,30 @@ export function renderSnapshot(model, history, latest) {
   text('rate', latest ? `${format(latest.rate)} /s` : '—');
   text('interval-mean', latest?.meanMs == null ? '—' : `${format(latest.meanMs)} ms`);
   health('health', model.health);
-  health('python-state', model.pythonHealth);
   rows('runtime-values', [
-    ['Python available at startup', availability(model.pythonAvailable)],
+    ['Python at startup', availability(model.pythonAvailable)],
     ...model.runtime.map(([name, value]) => [name, typeof value === 'number' ? format(value) : value]),
   ]);
-  rows('configuration', model.configuration);
   const jvm = model.jvm;
   rows('jvm-values', [
     ['Java', jvm.javaVersion], ['Runtime', jvm.runtime], ['Vendor', jvm.vendor],
     ['Uptime', formatUptime(jvm.uptimeSeconds)],
-    ['Heap used', formatMemory(jvm.heapUsedBytes)],
-    ['Heap committed', formatMemory(jvm.heapCommittedBytes)],
-    ['Live platform threads', Number.isFinite(jvm.liveThreads) ? format(jvm.liveThreads) : 'Unavailable'],
   ]);
+  renderHeap(jvm);
+  text('jvm-threads', Number.isFinite(jvm.liveThreads) ? format(jvm.liveThreads) : 'Unavailable');
   const table = byId('scopes');
+  const columns = Array.from(byId('invocation-columns').children, column => column.textContent);
   table.replaceChildren();
-  for (const scope of model.scopes) table.append(invocationRow(scope, model.scopes));
+  for (const scope of model.scopes) table.append(invocationRow(scope, totals, columns));
   if (model.scopes.length === 0) {
     const row = document.createElement('tr'); const cell = document.createElement('td');
+    row.className = 'empty-row';
     cell.colSpan = 7; cell.textContent = 'Invocation metrics unavailable, disabled or filtered.';
     row.append(cell); table.append(row);
   }
   drawChart(byId('throughput-chart'), history, 'rate');
   drawChart(byId('latency-chart'), history, 'meanMs');
-  text('freshness', `Updated ${new Date().toLocaleTimeString()}`);
+  text('freshness', `Updated ${new Date(updatedAt).toLocaleTimeString()}`);
 }
 
 export function connection(message, warning = '') {

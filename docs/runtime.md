@@ -736,9 +736,25 @@ forwarded-header configuration remains the application's responsibility.
 Only known polyglot/JVM meter names, allowed scopes, lifecycle status, context identity,
 JVM identity tags and allowlisted booleans are returned. Missing metrics remain unavailable. Means use matching
 COUNT/TOTAL_TIME; MAX is time-window dependent. Charts retain at most 120 browser-session
-intervals, clear on observed counter decreases/context restarts, and pause in hidden tabs.
+intervals per language filter, clear on observed counter decreases/context restarts, and pause in hidden tabs.
 They do not recover history or estimate percentiles. Health reports recorded startup state,
 not business-method liveness.
+
+The language selector applies to all invocation KPIs, charts and table rows. `All` combines
+enabled language/outcome scopes; incomplete scopes leave totals unavailable while retaining
+observed table rows. Shares use the selected total. Each filter retains its own bounded session
+history, so switching filters does not combine counters or create artificial traffic. Runtime
+and JVM panels remain application-wide. Allowlisted effective configuration is available through
+the existing Console Data link, keeping the dashboard focused on live diagnostics.
+Narrow invocation tables reflow into labelled groups with all measurements visible, instead of
+requiring horizontal scrolling. Charts adapt to viewport height; short or narrow screens can
+still scroll vertically to keep text and data readable.
+
+Packaged assets are separated into `index.html`, native ES modules under `js/`, and styles
+under `css/`. The CSS entry point imports base, dashboard, diagnostics and responsive styles;
+there is no frontend dependency or build step. JavaScript uses standardized ECMAScript syntax,
+including private class fields for request/polling state. A modern browser with native ES module
+support is required; no legacy-browser transpilation or draft language features are supplied.
 
 The [Spring Boot sample](https://github.com/ih0r-d/polyglot-platform/blob/main/samples/spring-boot-example/README.md)
 consumes this artifact and demonstrates real NumPy traffic. Its CLI still uses exposed Actuator
