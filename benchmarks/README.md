@@ -193,3 +193,19 @@ The existing conversion contracts and buffer limitations are described in
 
 JMH follows the [OpenJDK JMH harness and samples](https://github.com/openjdk/jmh).
 See [BASELINE.md](BASELINE.md) for the recorded local measurements and limitations.
+
+## Explicit Python reload
+
+`ReloadBenchmark.cachedInvocation` uses the same BY_METHOD_NAME workload with `reloaded=false/true`;
+reload occurs in trial setup, outside the cached invocation measurement. `explicitReload` measures
+fresh in-memory source loading, syntax parsing, module evaluation and binding validation separately.
+It does not measure disk I/O or arbitrary application imports. Defaults match the invocation suite.
+
+```bash
+benchmarks/run.sh ReloadBenchmark.cachedInvocation -bm avgt -prof gc -foe true -rf json -rff benchmarks/target/reload-invocation.json
+benchmarks/run.sh ReloadBenchmark.cachedInvocation -bm thrpt -tu s -prof gc -foe true -rf json -rff benchmarks/target/reload-throughput.json
+benchmarks/run.sh ReloadBenchmark.explicitReload -p reloaded=false -bm avgt -prof gc -foe true -rf json -rff benchmarks/target/reload-cost.json
+```
+
+Use the pinned Oracle GraalVM and freshly installed source artifacts. HotSpot interpreter runs are
+functional smoke checks only and must not be presented as GraalVM JIT performance results.
