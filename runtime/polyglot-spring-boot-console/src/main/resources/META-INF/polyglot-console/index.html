@@ -55,6 +55,19 @@
       </article>
     </section>
 
+    <div class="tab-toolbar">
+      <div id="console-tabs" class="tabs" role="tablist" aria-label="Runtime metrics">
+        <button type="button" id="tab-overview" role="tab" data-tab="overview" aria-controls="panel-overview" aria-selected="true">Overview</button>
+        <button type="button" id="tab-execution" role="tab" data-tab="execution" aria-controls="panel-execution" aria-selected="false" tabindex="-1">Execution</button>
+        <button type="button" id="tab-caching" role="tab" data-tab="caching" aria-controls="panel-caching" aria-selected="false" tabindex="-1">Caching</button>
+        <button type="button" id="tab-reloads" role="tab" data-tab="reloads" aria-controls="panel-reloads" aria-selected="false" tabindex="-1">Reloads</button>
+      </div>
+      <label class="language-control" for="language-filter">Language
+        <select id="language-filter"><option value="all">All</option></select>
+      </label>
+    </div>
+
+    <section id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
     <section class="charts" aria-label="Session-local invocation charts">
       <article class="panel chart-panel">
         <div class="chart-heading">
@@ -72,45 +85,9 @@
       </article>
     </section>
 
-    <section class="runtime-metrics-grid" aria-label="Executor observations for the selected languages">
-      <article class="panel">
-        <h2>Executor calls</h2>
-        <p class="panel-caption">All bound calls · includes conversion</p>
-        <dl class="values">
-          <dt>Active</dt><dd id="runtime-active">—</dd>
-          <dt>Awaiting monitor</dt><dd id="runtime-waiting">—</dd>
-          <dt>Mean admission</dt><dd id="runtime-wait">—</dd>
-          <dt>Mean under lock</dt><dd id="runtime-execution">—</dd>
-          <dt>Completed</dt><dd id="runtime-completed">—</dd>
-        </dl>
-      </article>
-      <article class="panel cache-performance">
-        <h2>Cache performance</h2>
-        <table>
-          <thead><tr id="cache-columns"><th scope="col">Cache</th><th scope="col">Hit</th><th scope="col">Miss</th><th scope="col">Rate</th><th scope="col">Evicted</th><th scope="col">Entries</th></tr></thead>
-          <tbody id="cache-scopes"><tr><td colspan="6">Cache metrics unavailable</td></tr></tbody>
-        </table>
-      </article>
-      <article class="panel">
-        <h2>Python reloads</h2>
-        <p class="panel-caption">Python executors · includes admission</p>
-        <dl class="values">
-          <dt>Successful</dt><dd id="reload-success">—</dd>
-          <dt>Failed</dt><dd id="reload-failure">—</dd>
-          <dt>In progress</dt><dd id="reload-active">—</dd>
-          <dt>Mean duration</dt><dd id="reload-mean">—</dd>
-          <dt title="Evicted entries can be restored after a failed reload">Reload evictions</dt><dd id="reload-evictions">—</dd>
-        </dl>
-      </article>
-    </section>
-
-    <section class="diagnostics-grid" aria-label="Invocation breakdown and global runtime diagnostics">
       <article class="panel breakdown" aria-labelledby="breakdown-title">
         <div class="panel-heading breakdown-heading">
           <div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#table"/></svg></span><h2 id="breakdown-title">Invocations by language and outcome</h2></div>
-          <label class="language-control" for="language-filter">Language
-            <select id="language-filter"><option value="all">All</option></select>
-          </label>
         </div>
       <section class="invocation-table" aria-label="Invocation breakdown table">
         <table>
@@ -123,12 +100,60 @@
         </table>
       </section>
       </article>
-      <details class="panel">
-        <summary class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#activity"/></svg></span><h2>Runtime diagnostics <span class="scope-badge">Global</span></h2></summary>
-        <dl id="runtime-values" class="values"></dl>
-      </details>
-      <details class="panel jvm-panel">
-        <summary class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#server"/></svg></span><h2>JVM information</h2></summary>
+    </section>
+
+    <section id="panel-execution" role="tabpanel" aria-labelledby="tab-execution" tabindex="0" hidden>
+      <article class="panel">
+        <h2>Executor contention</h2>
+        <p class="panel-caption">All bound calls in the selected language scope · cumulative measurements</p>
+        <dl class="execution-summary">
+          <div><dt>Active invocations</dt><dd id="runtime-active">—</dd></div>
+          <div><dt>Waiting invocations</dt><dd id="runtime-waiting">—</dd></div>
+          <div><dt>Completed calls</dt><dd id="runtime-completed">—</dd></div>
+        </dl>
+        <div class="timing-comparison" aria-label="Independent mean durations in milliseconds">
+          <div><label for="admission-meter" title="Includes uncontended monitor acquisition and scheduling delay; not exact OS-blocked time">Monitor admission</label><strong id="runtime-wait">—</strong><meter id="admission-meter" min="0" max="1" value="0" hidden></meter></div>
+          <div><label for="execution-meter" title="Includes lazy initialization, guest execution, conversion and error handling under the monitor">Under lock</label><strong id="runtime-execution">—</strong><meter id="execution-meter" min="0" max="1" value="0" hidden></meter></div>
+        </div>
+        <p class="panel-caption">Independent timing scopes, not an additive breakdown or guest CPU time.</p>
+      </article>
+    </section>
+
+    <section id="panel-caching" role="tabpanel" aria-labelledby="tab-caching" tabindex="0" hidden>
+      <article class="panel cache-performance">
+        <h2>Cache performance</h2>
+        <table>
+          <thead><tr id="cache-columns"><th scope="col">Cache</th><th scope="col">Hits</th><th scope="col">Misses</th><th scope="col">Hit rate</th><th scope="col">Evictions</th><th scope="col">Entries</th></tr></thead>
+          <tbody id="cache-scopes"><tr class="empty-row"><td colspan="6">Waiting for cache metrics.</td></tr></tbody>
+        </table>
+      </article>
+    </section>
+
+    <section id="panel-reloads" role="tabpanel" aria-labelledby="tab-reloads" tabindex="0" hidden>
+      <article class="panel reload-panel">
+        <h2>Python module reloads</h2>
+        <p class="panel-caption">Explicit reload requests · includes monitor admission</p>
+        <dl class="reload-summary">
+          <div><dt>Successful</dt><dd id="reload-success">—</dd></div>
+          <div><dt>Failed</dt><dd id="reload-failure">—</dd></div>
+          <div><dt>In progress</dt><dd id="reload-active">—</dd></div>
+          <div><dt>Mean duration</dt><dd id="reload-mean">—</dd></div>
+          <div><dt>Reload evictions</dt><dd id="reload-evictions">—</dd></div>
+        </dl>
+        <p id="reload-state" class="panel-caption" role="status">Waiting for reload metrics.</p>
+        <table aria-label="Cache entries evicted by Python reloads">
+          <thead><tr id="reload-columns"><th scope="col">Cache</th><th scope="col">Reload evictions</th></tr></thead>
+          <tbody id="reload-caches"><tr class="empty-row"><td colspan="2">Waiting for cache metrics.</td></tr></tbody>
+        </table>
+        <p class="panel-caption">Failed reloads may restore evicted entries. No reload controls are exposed.</p>
+      </article>
+    </section>
+
+    <details id="advanced-diagnostics" class="advanced">
+      <summary>Advanced diagnostics <span class="scope-badge">Global</span></summary>
+      <div class="diagnostics-grid">
+        <section class="panel"><h2>Runtime and executors</h2><dl id="runtime-values" class="values"></dl></section>
+        <section class="panel jvm-panel"><h2>JVM information</h2>
         <dl id="jvm-values" class="values"></dl>
         <div class="heap-section">
           <div class="heap-heading"><span>Heap used / committed</span><strong id="heap-summary">Unavailable</strong></div>
@@ -137,9 +162,10 @@
           </div>
         </div>
         <dl class="values"><dt>Live platform threads</dt><dd id="jvm-threads">Unavailable</dd></dl>
-      </details>
-    </section>
-
+        </section>
+        <section class="panel"><h2>Effective configuration</h2><p class="panel-caption">Configured values, not runtime state</p><dl id="configuration-values" class="values"></dl></section>
+      </div>
+    </details>
   </main>
 </body>
 </html>

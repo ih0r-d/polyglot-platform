@@ -1,6 +1,7 @@
 import { ConsoleApi } from './api.js';
 import { SessionHistory, snapshotModel } from './model.js';
 import { SnapshotPoller } from './polling.js';
+import { ConsoleTabs } from './tabs.js';
 import { connection, renderSnapshot } from './view.js';
 
 const api = new ConsoleApi(new URL('./', document.baseURI));
@@ -35,7 +36,7 @@ function renderSelected() {
   if (document.hidden) { connection('Paused'); return; }
   const selected = languageFilter.value || 'all';
   const state = states.get(selected);
-  if (state) renderSnapshot(state.model, sessions.get(selected).samples, state.sample, updatedAt);
+  if (state) renderSnapshot(state.model, sessions.get(selected).samples, state.sample, updatedAt, tabs.selected);
   if (paused || document.hidden) {
     connection('Paused');
   } else if (connected === null) {
@@ -48,6 +49,9 @@ function renderSelected() {
     connection('Live', warning);
   }
 }
+
+const tabs = new ConsoleTabs(document.getElementById('console-tabs'), renderSelected, window.location.href, window.history);
+document.getElementById('advanced-diagnostics').addEventListener('toggle', renderSelected);
 
 const poller = new SnapshotPoller(signal => api.snapshot(signal), snapshot => {
   const model = snapshotModel(snapshot);

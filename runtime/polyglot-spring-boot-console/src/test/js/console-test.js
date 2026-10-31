@@ -4,6 +4,34 @@ import { ConsoleApi, ConsoleRequestError } from '../../main/resources/META-INF/p
 import { SessionHistory, snapshotModel } from '../../main/resources/META-INF/polyglot-console/js/model.js';
 import { SnapshotPoller } from '../../main/resources/META-INF/polyglot-console/js/polling.js';
 
+function tabFixture(nodes) {
+    const make = () => ({
+        listeners: new Map(), attributes: {},
+        addEventListener(name, listener) {
+            this.listeners.set(name, listener);
+        },
+        setAttribute(name, value) {
+            this.attributes[name] = value;
+        },
+        getAttribute(name) {
+            return this.attributes[name];
+        },
+        focus() {
+            this.focused = true;
+        }
+    });
+    const tablist = make();
+    tablist.children = ['overview', 'execution', 'caching', 'reloads'].map(name => {
+        const button = make();
+        button.dataset = {tab: name};
+        button.setAttribute('aria-controls', 'panel-' + name);
+        nodes.set('panel-' + name, {hidden: name !== 'overview'});
+        return button;
+    });
+    nodes.set('console-tabs', tablist);
+    return tablist;
+}
+
 function metric(count, seconds, maximum = 0.01) {
   return { baseUnit: 'seconds', measurements: [
     { statistic: 'COUNT', value: count }, { statistic: 'TOTAL_TIME', value: seconds },
@@ -201,6 +229,7 @@ test('rendering handles real snapshot models, missing values and chart gaps with
     const model = snapshotModel(snapshot());
     document.getElementById('invocation-columns').children = ['Language', 'Outcome', 'Count',
       'Total time (s)', 'Mean (ms)', 'Window max (ms)', 'Share'].map(textContent => ({textContent}));
+    document.getElementById('advanced-diagnostics').open = true;
     renderSnapshot(model, [], null);
     assert.equal(nodes.get('total').textContent, '10');
     assert.equal(nodes.get('scopes').children.length, 2);
@@ -323,7 +352,9 @@ test('dashboard initializes its controls and preserves polling, pause and hidden
     },
     createElement: element, addEventListener(name, listener) { pageEvents.set(name, listener); },
   };
-  globalThis.window = { addEventListener(name, listener) { windowEvents.set(name, listener); } };
+  const tabs = tabFixture(nodes);
+  globalThis.window = { location: {href: document.baseURI}, history: {replaceState() {}},
+    addEventListener(name, listener) { windowEvents.set(name, listener); } };
   globalThis.Option = function (label, value) { this.textContent = label; this.value = value; };
   let failed = false;
   let source = snapshot();
@@ -349,6 +380,13 @@ test('dashboard initializes its controls and preserves polling, pause and hidden
     source = withJavaScript(snapshot(20, 0.3));
     nodes.get('refresh').listeners.get('change')();
     await new Promise(setImmediate);
+    const beforeTabs = requests;
+    for (const index of [1, 2, 3, 0]) {
+      tabs.children[index].listeners.get('click')();
+      assert.equal(nodes.get(tabs.children[index].getAttribute('aria-controls')).hidden, false);
+      assert.equal(tabs.children.filter(button => button.attributes['aria-selected'] === 'true').length, 1);
+    }
+    assert.equal(requests, beforeTabs, 'Tab changes must not start another poll or fetch');
     const beforeFilter = requests;
     const freshness = nodes.get('freshness').textContent;
     filter.value = 'js'; filter.listeners.get('change')();
@@ -528,16 +566,177 @@ test('cache view renders actual measurements with accessible mobile column label
     const {renderRuntimeMetrics} = await import('../../main/resources/META-INF/polyglot-console/js/runtime-view.js');
     const model = {observations: {active:0, waiting:1, reloadEvictions:3,
       caches:[{language:'python', cache:'source', hits:3, misses:1, hitRate:75, invalidatedEntries:4, size:2}]}};
-    renderRuntimeMetrics(model, value => Number.isFinite(value) ? String(value) : '—');
+    for (const tab of ['execution', 'reloads', 'caching']) {
+      renderRuntimeMetrics(model, value => Number.isFinite(value) ? String(value) : '—', tab);
+    }
     assert.equal(nodes.get('runtime-active').textContent, '0');
     assert.equal(nodes.get('reload-evictions').textContent, '3');
     const row = nodes.get('cache-scopes').children[0];
     assert.equal(row.children[3].textContent, '75%');
     assert.equal(row.children[3].attributes['data-label'], 'Rate');
     model.observations.caches = [];
-    renderRuntimeMetrics(model, value => String(value));
+    renderRuntimeMetrics(model, value => String(value), 'caching');
     assert.equal(nodes.get('cache-scopes').children[0].children[0].colSpan, 6);
   } finally {
     globalThis.document = previous;
   }
+});
+
+test('tabs honor deep links, preserve URL scope and expose exactly one accessible panel', async () => {
+    const previous = globalThis.document;
+    const nodes = new Map(), tablist = tabFixture(nodes), links = [];
+    globalThis.document = {
+        getElementById(id) {
+            return nodes.get(id);
+        }
+    };
+    try {
+        const {ConsoleTabs} = await import('../../main/resources/META-INF/polyglot-console/js/tabs.js');
+        let changes = 0;
+        const tabs = new ConsoleTabs(tablist, () => changes++, 'http://localhost/app/console/?tab=caching&keep=1#snapshot',
+            {
+                replaceState(state, title, url) {
+                    links.push(new URL(url));
+                }
+            });
+        assert.equal(tabs.selected, 'caching');
+        assert.equal(nodes.get('panel-caching').hidden, false);
+        assert.equal(nodes.get('panel-overview').hidden, true);
+        assert.equal(changes, 0);
+        assert.equal(links.length, 0);
+        tabs.select('caching');
+        tabs.select('unknown');
+        assert.equal(changes, 0);
+        tablist.children[1].listeners.get('click')();
+        assert.equal(tabs.selected, 'execution');
+        assert.equal(changes, 1);
+        assert.equal(links[0].searchParams.get('tab'), 'execution');
+        assert.equal(links[0].searchParams.get('keep'), '1');
+        assert.equal(links[0].pathname, '/app/console/');
+        assert.equal(links[0].hash, '#snapshot');
+        for (const button of tablist.children) {
+            const active = button.dataset.tab === 'execution';
+            assert.equal(button.attributes['aria-selected'], String(active));
+            assert.equal(button.tabIndex, active ? 0 : -1);
+            assert.equal(nodes.get(button.getAttribute('aria-controls')).hidden, !active);
+        }
+    } finally {
+        globalThis.document = previous;
+    }
+});
+
+test('tabs support automatic arrow, Home and End activation without capturing unrelated keys', async () => {
+    const previous = globalThis.document;
+    const nodes = new Map(), tablist = tabFixture(nodes);
+    globalThis.document = {
+        getElementById(id) {
+            return nodes.get(id);
+        }
+    };
+    try {
+        const {ConsoleTabs} = await import('../../main/resources/META-INF/polyglot-console/js/tabs.js');
+        const tabs = new ConsoleTabs(tablist, () => {
+        }, 'http://localhost/?tab=unknown', {
+            replaceState() {
+            }
+        });
+        assert.equal(tabs.selected, 'overview');
+        const press = (key, expected, modifiers = {}) => {
+            let prevented = false;
+            const target = tablist.children.find(button => button.dataset.tab === tabs.selected);
+            tablist.listeners.get('keydown')({
+                key, target, preventDefault() {
+                    prevented = true;
+                }, ...modifiers
+            });
+            assert.equal(tabs.selected, expected);
+            return prevented;
+        };
+        assert.equal(press('ArrowLeft', 'reloads'), true);
+        assert.equal(press('ArrowRight', 'overview'), true);
+        assert.equal(press('End', 'reloads'), true);
+        assert.equal(press('Home', 'overview'), true);
+        assert.equal(press('Tab', 'overview'), false);
+        assert.equal(press('__proto__', 'overview'), false);
+        assert.equal(press('ArrowRight', 'overview', {ctrlKey: true}), false);
+        assert.equal(tablist.children[0].focused, true);
+    } finally {
+        globalThis.document = previous;
+    }
+});
+
+test('diagnostics preserve global values and hide only cache sizes already shown by the active scope', async () => {
+    const {diagnosticsRows} = await import('../../main/resources/META-INF/polyglot-console/js/model.js');
+    const source = snapshot();
+    source.configuration = [{name: 'Core enabled', value: true}, {name: 'Invalid setting', value: '/secret/path'}];
+    source.runtime = [
+        {name: 'polyglot.executor.source.cache.size', language: 'python', value: 3},
+        {name: 'polyglot.executor.source.cache.size', language: 'js', value: 4},
+        {name: 'polyglot.python.bound.interfaces.count', language: 'python', value: 2},
+    ];
+    source.caches = [{language: 'python', cache: 'source', hits: 3, misses: 1, size: 3}];
+    const model = snapshotModel(source, 'python');
+    assert.deepEqual(model.configuration, [['Core enabled', 'Yes']]);
+    const caching = diagnosticsRows(model, 'caching');
+    assert.equal(caching.some(([name]) => name === 'Python cached sources'), false);
+    assert.equal(caching.some(([name]) => name === 'JavaScript cached sources'), true);
+    assert.equal(caching.some(([name]) => name === 'Python bindings (DEFAULT)'), true);
+    assert.equal(diagnosticsRows(model, 'execution').some(([name]) => name === 'Python cached sources'), true);
+    model.observations.caches[0].size = null;
+    assert.equal(diagnosticsRows(model, 'caching').some(([name]) => name === 'Python cached sources'), true);
+});
+
+test('hidden chart panels do not render Canvas and independent duration meters retain missing versus zero', async () => {
+    const previous = globalThis.document;
+    const nodes = new Map();
+    let paints = 0;
+    const make = () => ({
+        children: [], attributes: {}, append(...items) {
+            this.children.push(...items);
+        },
+        replaceChildren() {
+            this.children = [];
+        }, setAttribute(name, value) {
+            this.attributes[name] = value;
+        },
+        classList: {
+            add() {
+            }
+        }, getContext() {
+            paints++;
+            throw new Error('Hidden Canvas rendered');
+        }
+    });
+    globalThis.document = {
+        getElementById(id) {
+            if (!nodes.has(id)) nodes.set(id, make());
+            return nodes.get(id);
+        }, createElement: make
+    };
+    try {
+        const {renderSnapshot} = await import('../../main/resources/META-INF/polyglot-console/js/view.js');
+        const model = snapshotModel(snapshot());
+        model.observations.wait = {meanMs: 0};
+        model.observations.execution = {count: 2, meanMs: 4};
+        renderSnapshot(model, [], null, 1, 'execution');
+        assert.equal(paints, 0);
+        assert.equal(nodes.get('runtime-wait').textContent, '0 ms');
+        assert.equal(nodes.get('admission-meter').value, 0);
+        assert.equal(nodes.get('admission-meter').hidden, false);
+        assert.equal(nodes.get('execution-meter').max, 4);
+        assert.equal(nodes.has('runtime-values'), false, 'Closed diagnostics must not be rendered');
+        model.observations.wait = null;
+        renderSnapshot(model, [], null, 1, 'execution');
+        assert.equal(nodes.get('runtime-wait').textContent, '—');
+        assert.equal(nodes.get('admission-meter').hidden, true);
+        renderSnapshot(model, [], null, 1, 'reloads');
+        assert.equal(nodes.get('reload-state').textContent, 'Python reload metrics unavailable for this language scope.');
+        model.observations.reload = {count: 0, successes: 0, failures: 0, meanMs: null};
+        model.observations.activeReloads = 0;
+        renderSnapshot(model, [], null, 1, 'reloads');
+        assert.equal(nodes.get('reload-state').textContent, 'No reload activity recorded.');
+        assert.equal(nodes.get('reload-mean').textContent, '—');
+    } finally {
+        globalThis.document = previous;
+    }
 });

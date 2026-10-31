@@ -797,15 +797,21 @@ intervals per language filter, clear on observed counter decreases/context resta
 They do not recover history or estimate percentiles. Health reports recorded startup state,
 not business-method liveness.
 
-The language selector applies to all invocation KPIs, charts and table rows. `All` combines
-enabled language/outcome scopes; incomplete scopes leave totals unavailable while retaining
-observed table rows. Shares use the selected total. Each filter retains its own bounded session
-history, so switching filters does not combine counters or create artificial traffic. Runtime
-and JVM panels remain application-wide. Allowlisted effective configuration is available through
-the existing Console Data link, keeping the dashboard focused on live diagnostics.
-Narrow invocation tables reflow into labelled groups with all measurements visible, instead of
-requiring horizontal scrolling. Charts adapt to viewport height; short or narrow screens can
-still scroll vertically to keep text and data readable.
+The compact dashboard keeps the header, cumulative KPIs and language selector above four local tabs:
+Overview (throughput, interval mean client latency and outcome table), Execution (admission/under-lock
+means and active/waiting calls), Caching (reuse/evictions/sizes), and Reloads (Python requests and
+reload-caused evictions). Only the selected panel renders. Switching tabs does not restart polling
+or history. Left/Right, Home and End select tabs; `?tab=caching` deep-links to a tab on the canonical
+trailing-slash console URL, without a router or additional request.
+
+The language selector scopes KPIs and all tab measurements. `All` combines enabled language/outcome
+scopes; incomplete scopes leave totals unavailable while retaining observed table rows. Each filter
+retains independent bounded history. Advanced diagnostics is collapsed by default and remains global:
+runtime/executor state, JVM measurements and allowlisted effective boolean configuration. Cache sizes
+already shown in Caching are omitted there. Execution bars compare independent means, not additive
+latency components or guest CPU time. Narrow tables reflow into labelled groups without horizontal
+page overflow. See the [Console guide](https://github.com/ih0r-d/polyglot-platform/blob/main/runtime/polyglot-spring-boot-console/README.md) for the sample
+commands and metric limitations.
 
 Packaged assets are separated into `index.html`, native ES modules under `js/`, and styles
 under `css/`. The CSS entry point imports base, dashboard, diagnostics and responsive styles;

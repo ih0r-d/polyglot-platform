@@ -1,6 +1,7 @@
 .diagnostics-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.8fr) minmax(310px, 1.4fr) minmax(300px, 1.05fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
     gap: 16px;
     margin-bottom: 0;
 }
@@ -34,7 +35,7 @@
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 18px;
+    margin-top: 12px;
     text-align: right;
     font-size: 13px;
     font-variant-numeric: tabular-nums;
@@ -48,7 +49,7 @@ th {
 }
 
 th, td {
-    padding: 12px 7px;
+    padding: 9px 7px;
     border-bottom: 1px solid var(--line);
 }
 
@@ -292,48 +293,19 @@ progress.failure::-moz-progress-bar {
     }
 }
 
-.runtime-metrics-grid {
-    display: grid;
-    grid-template-columns: minmax(230px, 1fr) minmax(420px, 1.8fr) minmax(230px, 1fr);
-    gap: 16px;
-    margin-bottom: 16px;
-}
-
-.cache-performance {
-    container-type: inline-size;
-}
-
-@media (max-width: 1050px) {
-    .runtime-metrics-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .cache-performance { grid-column: 1 / -1; grid-row: 2; }
-}
-
-@media (max-width: 600px) {
-    .runtime-metrics-grid { grid-template-columns: minmax(0, 1fr); }
-    .cache-performance { grid-column: auto; grid-row: auto; }
-}
-
-details.panel {
-    align-self: start;
-}
-
-summary.panel-title {
+.advanced > summary {
     cursor: pointer;
-    list-style: none;
+    color: var(--muted);
+    padding: 10px 0;
+    font-weight: 500;
+    font-size: 13px;
 }
 
-summary.panel-title::after {
-    content: '+';
-    margin-left: auto;
-    font-size: 18px;
-}
+.advanced[open] > summary { margin-bottom: 8px; }
+.cache-performance { container-type: inline-size; }
+.cache-rate progress { display: block; margin: 5px 0 0 auto; }
+.reload-panel { container-type: inline-size; }
+.reload-panel table { max-width: 740px; }
 
-details[open] > summary.panel-title::after {
-    content: '−';
-}
-
-details.jvm-panel {
-    display: block;
-}
+.cache-performance th:nth-child(2), .cache-performance td:nth-child(2),
+.reload-panel th:last-child, .reload-panel td:last-child { text-align: right; }

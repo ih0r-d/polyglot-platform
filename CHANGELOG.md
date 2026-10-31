@@ -5,6 +5,8 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Added
+- Compact experimental Console into accessible Overview, Execution, Caching and Reloads tabs;
+  retain shared KPIs, language scopes and bounded polling history with collapsed advanced diagnostics.
 - Add optional runtime operation, monitor-admission, active/waiting, cache and reload observations;
   adapt them to cached Micrometer meters and the read-only Console. Preserve existing client timers,
   reload/lifecycle semantics and metrics disable behavior. Break session charts across unavailable

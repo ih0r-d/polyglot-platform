@@ -1,5 +1,6 @@
 import { renderRuntimeMetrics } from './runtime-view.js';
 import { drawChart } from './charts.js';
+import { diagnosticsRows } from './model.js';
 
 const numberFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 export const format = value => {
@@ -95,25 +96,12 @@ function invocationRow(scope, totals, columns) {
   return row;
 }
 
-export function renderSnapshot(model, history, latest, updatedAt = Date.now()) {
-  const totals = model.totals;
-  renderRuntimeMetrics(model, format);
-  const scopeName = { python: 'Python', js: 'JavaScript' }[model.language] ?? 'All enabled languages';
-  text('scope-label', `${scopeName} · client totals`);
-  text('chart-scope', scopeName);
-  byId('stats').setAttribute('aria-label', `Cumulative invocation metrics: ${scopeName}`);
-  text('total', format(totals?.count));
-  text('success-count', format(totals?.successes));
-  text('failure-count', format(totals?.failures));
-  text('success-rate', totals?.successRate == null ? '—' : `${format(totals.successRate)}%`);
-  text('mean', totals?.meanMs == null ? '—' : `${format(totals.meanMs)} ms`);
-  text('rate', latest ? `${format(latest.rate)} /s` : '—');
-  text('interval-mean', latest?.meanMs == null ? '—' : `${format(latest.meanMs)} ms`);
-  health('health', model.health);
+function renderDiagnostics(model, tab) {
   rows('runtime-values', [
     ['Python at startup', availability(model.pythonAvailable)],
-    ...model.runtime.map(([name, value]) => [name, typeof value === 'number' ? format(value) : value]),
+    ...diagnosticsRows(model, tab).map(([name, value]) => [name, typeof value === 'number' ? format(value) : value]),
   ]);
+  rows('configuration-values', model.configuration.length ? model.configuration : [['Configuration', 'Unavailable']]);
   const jvm = model.jvm;
   rows('jvm-values', [
     ['Java', jvm.javaVersion], ['Runtime', jvm.runtime], ['Vendor', jvm.vendor],
@@ -121,6 +109,13 @@ export function renderSnapshot(model, history, latest, updatedAt = Date.now()) {
   ]);
   renderHeap(jvm);
   text('jvm-threads', Number.isFinite(jvm.liveThreads) ? format(jvm.liveThreads) : 'Unavailable');
+}
+
+function renderOverview(model, history, latest) {
+  const totals = model.totals;
+  text('chart-scope', { python: 'Python', js: 'JavaScript' }[model.language] ?? 'All enabled languages');
+  text('rate', latest ? `${format(latest.rate)} /s` : '—');
+  text('interval-mean', latest?.meanMs == null ? '—' : `${format(latest.meanMs)} ms`);
   const table = byId('scopes');
   const columns = Array.from(byId('invocation-columns').children, column => column.textContent);
   table.replaceChildren();
@@ -133,6 +128,22 @@ export function renderSnapshot(model, history, latest, updatedAt = Date.now()) {
   }
   drawChart(byId('throughput-chart'), history, 'rate');
   drawChart(byId('latency-chart'), history, 'meanMs');
+}
+
+export function renderSnapshot(model, history, latest, updatedAt = Date.now(), tab = 'overview') {
+  const totals = model.totals;
+  renderRuntimeMetrics(model, format, tab);
+  const scopeName = { python: 'Python', js: 'JavaScript' }[model.language] ?? 'All enabled languages';
+  text('scope-label', `${scopeName} · client totals`);
+  byId('stats').setAttribute('aria-label', `Cumulative invocation metrics: ${scopeName}`);
+  text('total', format(totals?.count));
+  text('success-count', format(totals?.successes));
+  text('failure-count', format(totals?.failures));
+  text('success-rate', totals?.successRate == null ? '—' : `${format(totals.successRate)}%`);
+  text('mean', totals?.meanMs == null ? '—' : `${format(totals.meanMs)} ms`);
+  health('health', model.health);
+  if (tab === 'overview') renderOverview(model, history, latest);
+  if (byId('advanced-diagnostics').open) renderDiagnostics(model, tab);
   text('freshness', `Updated ${new Date(updatedAt).toLocaleTimeString()}`);
 }
 

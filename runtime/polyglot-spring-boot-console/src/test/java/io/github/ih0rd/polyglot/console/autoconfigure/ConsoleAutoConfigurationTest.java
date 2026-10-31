@@ -99,6 +99,7 @@ class ConsoleAutoConfigurationTest {
               for (String asset :
                   new String[] {
                     "js/app.js",
+                    "js/tabs.js",
                     "js/api.js",
                     "js/model.js",
                     "js/runtime-model.js",

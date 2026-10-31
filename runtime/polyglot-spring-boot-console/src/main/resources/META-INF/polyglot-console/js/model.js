@@ -51,16 +51,31 @@ export function snapshotModel(snapshot, selected = 'all') {
     const included = language === 'all' ? languages : [language];
     return {
         language, languages, scopes, totals: invocationTotals(scopes, included),
-    health: snapshot.health,
+        health: snapshot.health,
         pythonAvailable: snapshot.pythonAvailable ?? null,
         startTime: snapshot.instanceId,
         runtime: [...readings.filter(item => !item.name.startsWith('polyglot.runtime.') || item.name === 'polyglot.runtime.executors.closed')
             .map(item => [runtimeLabel(item.name, item.language),
                 item.unit === 'boolean' ? ({0: 'No', 1: 'Yes'}[item.value] ?? null) : (item.value ?? null)]),
             ...operationCounts(snapshot, languages)],
+        configuration: (snapshot.configuration ?? []).filter(setting => typeof setting.value === 'boolean')
+            .map(setting => [setting.name, setting.value ? 'Yes' : 'No']),
         jvm: snapshot.jvm ?? {},
         observations: runtimeMetricsModel(snapshot, included),
     };
+}
+
+/** Omit cache sizes only when that same language/category is already visible in Caching. */
+export function diagnosticsRows(model, tab) {
+    const visible = new Set();
+    if (tab === 'caching') {
+        for (const cache of model.observations.caches) {
+            if (!Number.isFinite(cache.size)) continue;
+            if (cache.cache === 'source') visible.add(runtimeLabel('polyglot.executor.source.cache.size', cache.language));
+            if (cache.cache === 'instance') visible.add(runtimeLabel('polyglot.python.instance.cache.size', cache.language));
+        }
+    }
+    return model.runtime.filter(([name]) => !visible.has(name));
 }
 
 /** Bounded, browser-session samples. No persistence and no invented historical data. */
