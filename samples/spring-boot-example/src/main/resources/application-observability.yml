@@ -5,6 +5,7 @@ server:
 polyglot:
   console:
     enabled: true
+    path: /metrics-console
 management:
   endpoint:
     health:
