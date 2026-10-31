@@ -29,6 +29,7 @@ import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.annotations.spring.client.PolyglotClientFactoryBean;
 import io.github.ih0rd.polyglot.annotations.spring.config.PolyglotAutoConfiguration;
 import io.github.ih0rd.polyglot.annotations.spring.config.PolyglotMetricsAutoConfiguration;
+import io.github.ih0rd.polyglot.annotations.spring.config.PolyglotRuntimeMetricsAutoConfiguration;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
@@ -38,12 +39,17 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @Warmup(iterations = 5, time = 1)
 @Measurement(iterations = 5, time = 1)
-@Fork(value = 2, jvmArgsAppend = {"-Xms512m", "-Xmx2g"})
+@Fork(
+    value = 2,
+    jvmArgsAppend = {"-Xms512m", "-Xmx2g"})
 @Threads(1)
 public class SpringObservabilityBenchmark {
 
   @Param({"false", "true"})
   public boolean metricsEnabled;
+
+  @Param({"true"})
+  public boolean runtimeMetrics;
 
   private AnnotationConfigApplicationContext application;
   private InvocationBenchmark.MethodNameBenchApi client;
@@ -53,13 +59,19 @@ public class SpringObservabilityBenchmark {
   public void setup() {
     application = new AnnotationConfigApplicationContext();
     try {
-      application.getEnvironment().getPropertySources().addFirst(new MapPropertySource(
-          "benchmark", Map.of(
-              "polyglot.python.enabled", true,
-              "polyglot.core.log-metadata-on-startup", false,
-              "polyglot.metrics.enabled", metricsEnabled)));
-      application.register(Fixture.class, PolyglotAutoConfiguration.class,
-          PolyglotMetricsAutoConfiguration.class);
+      application
+          .getEnvironment()
+          .getPropertySources()
+          .addFirst(
+              new MapPropertySource(
+                  "benchmark",
+                  Map.of(
+                      "polyglot.python.enabled", true,
+                      "polyglot.core.log-metadata-on-startup", false,
+                      "polyglot.metrics.enabled", metricsEnabled)));
+      application.register(
+          Fixture.class, PolyglotAutoConfiguration.class, PolyglotMetricsAutoConfiguration.class);
+      if (runtimeMetrics) application.register(PolyglotRuntimeMetricsAutoConfiguration.class);
       application.refresh();
       client = application.getBean(InvocationBenchmark.MethodNameBenchApi.class);
       if (client.increment(41) != 42) {
@@ -69,6 +81,11 @@ public class SpringObservabilityBenchmark {
       int meters = registry.find("polyglot.client.invocations").timers().size();
       if (meters != (metricsEnabled ? 4 : 0)) {
         throw new AssertionError("Unexpected invocation meter count: " + meters);
+      }
+      int runtimeTimers = registry.find("polyglot.runtime.operations").timers().size();
+      int expectedRuntimeTimers = metricsEnabled && runtimeMetrics ? 16 : 0;
+      if (runtimeTimers != expectedRuntimeTimers) {
+        throw new AssertionError("Unexpected runtime operation meter count: " + runtimeTimers);
       }
     } catch (RuntimeException | Error failure) {
       application.close();
@@ -93,9 +110,10 @@ public class SpringObservabilityBenchmark {
 
     @Bean(destroyMethod = "close")
     PyExecutor executor() {
-      return new PyExecutor(PolyglotHelper.newContext(SupportedLanguage.PYTHON),
-          new InMemoryScriptSource(Map.of(
-              "python/method_name_bench_api", InvocationBenchmark.SCRIPT)));
+      return new PyExecutor(
+          PolyglotHelper.newContext(SupportedLanguage.PYTHON),
+          new InMemoryScriptSource(
+              Map.of("python/method_name_bench_api", InvocationBenchmark.SCRIPT)));
     }
 
     @Bean(destroyMethod = "close")
@@ -105,7 +123,8 @@ public class SpringObservabilityBenchmark {
 
     @Bean
     PolyglotClientFactoryBean<InvocationBenchmark.MethodNameBenchApi> benchmarkClient() {
-      return new PolyglotClientFactoryBean<>(InvocationBenchmark.MethodNameBenchApi.class.getName());
+      return new PolyglotClientFactoryBean<>(
+          InvocationBenchmark.MethodNameBenchApi.class.getName());
     }
   }
 }

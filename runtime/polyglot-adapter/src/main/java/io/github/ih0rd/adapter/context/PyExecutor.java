@@ -21,6 +21,10 @@ import org.graalvm.polyglot.Value;
 
 import io.github.ih0rd.adapter.exceptions.BindingException;
 import io.github.ih0rd.adapter.exceptions.InvocationException;
+import io.github.ih0rd.adapter.observability.InvalidationReason;
+import io.github.ih0rd.adapter.observability.RuntimeCache;
+import io.github.ih0rd.adapter.observability.RuntimeObserver;
+import io.github.ih0rd.adapter.observability.RuntimeOperation;
 import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
@@ -110,9 +114,18 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
 
     withContextLock(
         () -> {
-          switch (requireConvention(convention)) {
-            case DEFAULT, BY_INTERFACE_EXPORT -> validateInterfaceExportBinding(iface);
-            case BY_METHOD_NAME -> validateMethodNameBinding(iface);
+          RuntimeObserver observer = runtimeObserver();
+          long started = RuntimeObservation.start(observer, RuntimeOperation.CONTRACT_VALIDATION);
+          boolean failed = true;
+          try {
+            switch (requireConvention(convention)) {
+              case DEFAULT, BY_INTERFACE_EXPORT -> validateInterfaceExportBinding(iface);
+              case BY_METHOD_NAME -> validateMethodNameBinding(iface);
+            }
+            failed = false;
+          } finally {
+            RuntimeObservation.finish(
+                observer, RuntimeOperation.CONTRACT_VALIDATION, started, failed);
           }
         });
   }
@@ -186,7 +199,7 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   public void preloadScript(String scriptName) {
     Source source = loadScript(SupportedLanguage.PYTHON, scriptName);
     try {
-      withContextLock(() -> context.eval(source));
+      withContextLock(() -> evaluateScript(source));
     } catch (PolyglotException e) {
       if (e.isInterrupted()) {
         Thread.currentThread().interrupt();
@@ -210,11 +223,13 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
     WeakReference<Value> ref = instanceCache.get(iface);
     Value cached = (ref != null ? ref.get() : null);
     if (cached != null && !cached.isNull()) {
+      RuntimeObservation.cache(runtimeObserver(), RuntimeCache.INSTANCE, true);
       return cached;
     }
+    RuntimeObservation.cache(runtimeObserver(), RuntimeCache.INSTANCE, false);
 
     Source source = resolveSource(iface);
-    context.eval(source);
+    evaluateScript(source);
     return instantiateExport(iface);
   }
 
@@ -226,7 +241,7 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
     if (exported.canExecute()) {
       // class-style export
       try {
-        instance = exported.execute();
+        instance = createObservedInstance(exported);
       } catch (Exception e) {
         throw new InvocationException(
             "Failed to instantiate Python class '%s'".formatted(iface.getSimpleName()), e);
@@ -238,6 +253,19 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
 
     instanceCache.put(iface, new WeakReference<>(instance));
     return instance;
+  }
+
+  private Value createObservedInstance(Value exported) {
+    RuntimeObserver observer = runtimeObserver();
+    long started = RuntimeObservation.start(observer, RuntimeOperation.INSTANCE_CREATION);
+    boolean failed = true;
+    try {
+      Value instance = exported.execute();
+      failed = false;
+      return instance;
+    } finally {
+      RuntimeObservation.finish(observer, RuntimeOperation.INSTANCE_CREATION, started, failed);
+    }
   }
 
   /** Resolves the exported Python contract by interface simple name. */
@@ -296,18 +324,17 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
 
   /** Resolves and caches the Python source for the given Java contract. */
   private <T> Source resolveSource(Class<T> iface) {
+    Source cached = sourceCache.get(iface);
+    RuntimeObservation.cache(runtimeObserver(), RuntimeCache.SOURCE, cached != null);
+    if (cached != null) return cached;
     return sourceCache.computeIfAbsent(
         iface,
-        cls -> {
-          String interfaceName = cls.getSimpleName();
-          String moduleName = camelToSnake(interfaceName);
-          return loadScript(SupportedLanguage.PYTHON, moduleName);
-        });
+        contract -> loadScript(SupportedLanguage.PYTHON, camelToSnake(contract.getSimpleName())));
   }
 
   /** Clears cached Python instances resolved for bound contract types. */
   public void clearInstanceCache() {
-    withContextLock(instanceCache::clear);
+    withContextLock(() -> clearPythonCaches(InvalidationReason.CLEAR, false));
   }
 
   /**
@@ -323,8 +350,7 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
     }
     withContextLock(
         () -> {
-          loadedMethodNameContracts.remove(iface);
-          instanceCache.remove(iface);
+          invalidatePythonContract(iface, InvalidationReason.EXPLICIT);
           super.invalidateContractCache(iface);
         });
   }
@@ -334,7 +360,10 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   public void clearSourceCache() {
     withContextLock(
         () -> {
+          int modules = loadedMethodNameContracts.size();
           loadedMethodNameContracts.clear();
+          RuntimeObservation.invalidate(
+              runtimeObserver(), RuntimeCache.MODULE, InvalidationReason.CLEAR, modules);
           super.clearSourceCache();
         });
   }
@@ -368,8 +397,7 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
     }
     Convention effectiveConvention = requireConvention(convention);
 
-    rejectReentrantReload();
-    withContextLock(() -> reloadSingleUnchecked(iface, effectiveConvention));
+    observeReload(() -> reloadSingleUnchecked(iface, effectiveConvention));
   }
 
   /**
@@ -404,8 +432,7 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
       targets.add(iface);
     }
 
-    rejectReentrantReload();
-    withContextLock(
+    observeReload(
         () -> {
           for (Class<?> iface : targets) {
             reloadSingleUnchecked(iface, effectiveConvention);
@@ -432,12 +459,12 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   }
 
   private <T> void ensureModuleLoaded(Class<T> iface) {
-    if (loadedMethodNameContracts.contains(iface)) {
-      return;
-    }
+    boolean loaded = loadedMethodNameContracts.contains(iface);
+    RuntimeObservation.cache(runtimeObserver(), RuntimeCache.MODULE, loaded);
+    if (loaded) return;
 
     Source source = resolveSource(iface);
-    context.eval(source);
+    evaluateScript(source);
     loadedMethodNameContracts.add(iface);
   }
 
@@ -490,18 +517,48 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   public void clearAllCaches() {
     withContextLock(
         () -> {
-          instanceCache.clear();
-          sourceCache.clear();
-          loadedMethodNameContracts.clear();
+          clearPythonCaches(InvalidationReason.CLEAR, true);
+          super.clearSourceCache();
         });
   }
 
   /** Clears Python-specific caches when the executor is closed. */
   @Override
   protected void closeExecutorResources() {
-    instanceCache.clear();
-    loadedMethodNameContracts.clear();
+    clearPythonCaches(InvalidationReason.SHUTDOWN, true);
     super.closeExecutorResources();
+  }
+
+  private void observeReload(Runnable reload) {
+    RuntimeObserver observer = runtimeObserver();
+    long started = RuntimeObservation.start(observer, RuntimeOperation.RELOAD);
+    boolean failed = true;
+    try {
+      rejectReentrantReload();
+      withContextLock(reload);
+      failed = false;
+    } finally {
+      RuntimeObservation.finish(observer, RuntimeOperation.RELOAD, started, failed);
+    }
+  }
+
+  private void invalidatePythonContract(Class<?> iface, InvalidationReason reason) {
+    boolean module = loadedMethodNameContracts.remove(iface);
+    WeakReference<Value> instance = instanceCache.remove(iface);
+    RuntimeObservation.invalidate(runtimeObserver(), RuntimeCache.MODULE, reason, module ? 1 : 0);
+    RuntimeObservation.invalidate(
+        runtimeObserver(), RuntimeCache.INSTANCE, reason, instance == null ? 0 : 1);
+  }
+
+  private void clearPythonCaches(InvalidationReason reason, boolean includeModules) {
+    int instances = instanceCache.size();
+    instanceCache.clear();
+    RuntimeObservation.invalidate(runtimeObserver(), RuntimeCache.INSTANCE, reason, instances);
+    if (includeModules) {
+      int modules = loadedMethodNameContracts.size();
+      loadedMethodNameContracts.clear();
+      RuntimeObservation.invalidate(runtimeObserver(), RuntimeCache.MODULE, reason, modules);
+    }
   }
 
   private void rejectReentrantReload() {
@@ -536,9 +593,13 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
     boolean previouslyLoaded = loadedMethodNameContracts.contains(iface);
     try {
       bindings.clear();
-      instanceCache.remove(iface);
+      invalidatePythonContract(iface, InvalidationReason.RELOAD);
       sourceCache.put(iface, replacement);
-      loadedMethodNameContracts.remove(iface);
+      RuntimeObservation.invalidate(
+          runtimeObserver(),
+          RuntimeCache.SOURCE,
+          InvalidationReason.RELOAD,
+          previousSource == null ? 0 : 1);
       validateReplacement(iface, convention, module, replacement, names, bindings);
     } catch (RuntimeException failure) {
       restoreInterrupt(failure);
@@ -559,7 +620,7 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
       Set<String> names,
       PythonReloadBindings bindings) {
     // Language bindings can expose builtins after deletion; those are not replacement exports.
-    context.eval(replacement);
+    evaluateScript(replacement);
     ensureOpen();
     for (String name : names) {
       if (!bindings.contains(name)) {

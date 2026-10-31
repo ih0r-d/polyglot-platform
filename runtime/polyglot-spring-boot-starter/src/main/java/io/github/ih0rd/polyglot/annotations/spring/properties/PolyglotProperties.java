@@ -210,7 +210,8 @@ public record PolyglotProperties(
    * <p>Prefix: {@code polyglot.metrics.*}
    *
    * @param enabled Registers executor and startup gauges when Micrometer is present, and bounded
-   *     Spring-managed client invocation timers when a MeterRegistry is available.
+   *     Spring-managed client invocation timers and runtime operation/cache observations when a
+   *     MeterRegistry is available.
    */
   public record MetricsProperties(@DefaultValue("true") boolean enabled) {
 

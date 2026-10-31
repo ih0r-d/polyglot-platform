@@ -209,3 +209,19 @@ benchmarks/run.sh ReloadBenchmark.explicitReload -p reloaded=false -bm avgt -pro
 
 Use the pinned Oracle GraalVM and freshly installed source artifacts. HotSpot interpreter runs are
 functional smoke checks only and must not be presented as GraalVM JIT performance results.
+
+## Runtime Metrics 2.0 overhead
+
+`SpringObservabilityBenchmark` keeps `metricsEnabled` and adds `runtimeMetrics`. Compare these
+three scopes using the same JDK, source artifacts, forks, warmup and measurement settings:
+
+```bash
+benchmarks/run.sh SpringObservabilityBenchmark -p metricsEnabled=false -p runtimeMetrics=false -prof gc -foe true
+benchmarks/run.sh SpringObservabilityBenchmark -p metricsEnabled=true -p runtimeMetrics=false -prof gc -foe true
+benchmarks/run.sh SpringObservabilityBenchmark -p metricsEnabled=true -p runtimeMetrics=true -prof gc -foe true
+```
+
+Repeat with `-bm thrpt -tu s` for throughput, reverse execution order, and retain JSON results.
+The cases are disabled, original client Timer, and client plus runtime observations. Source loading
+and binding happen in setup; no application reload or filesystem checks are added to timed calls.
+No results are claimed until the exact pinned Oracle GraalVM is available and measurements complete.

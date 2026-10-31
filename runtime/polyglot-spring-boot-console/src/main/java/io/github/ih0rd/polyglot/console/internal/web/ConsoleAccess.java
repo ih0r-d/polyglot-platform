@@ -1,11 +1,12 @@
 package io.github.ih0rd.polyglot.console.internal.web;
 
-import java.util.*;
+import java.util.Set;
 
-import org.jspecify.annotations.*;
-import org.springframework.web.servlet.*;
+import org.jspecify.annotations.NonNull;
+import org.springframework.web.servlet.HandlerInterceptor;
 
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /** Additional local-only restriction. Application security filters always run first. */
 public final class ConsoleAccess implements HandlerInterceptor {

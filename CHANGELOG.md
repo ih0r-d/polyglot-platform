@@ -5,6 +5,10 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Added
+- Add optional runtime operation, monitor-admission, active/waiting, cache and reload observations;
+  adapt them to cached Micrometer meters and the read-only Console. Preserve existing client timers,
+  reload/lifecycle semantics and metrics disable behavior. Break session charts across unavailable
+  polling intervals. Add an explicit Spring runtime-metrics demo profile.
 - Harden explicit Python contract reload: fresh source/syntax preflight, no fallback to stale
   exports, serialized binding publication, recovery of known bindings/caches on failure and
   reentrant-reload rejection. Python side effects are not transactional. Existing Java/Spring

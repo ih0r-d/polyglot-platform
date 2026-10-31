@@ -39,7 +39,7 @@
     <section class="stats" id="stats" aria-label="Cumulative invocation metrics for all enabled languages">
       <article class="stat">
         <span class="stat-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#layers"/></svg></span>
-        <div><h2>Total invocations</h2><strong id="total">—</strong><small id="scope-label">All enabled languages · cumulative</small></div>
+        <div><h2>Total invocations</h2><strong id="total">—</strong><small id="scope-label">All enabled languages · client totals</small></div>
       </article>
       <article class="stat">
         <span class="stat-icon green"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#shield"/></svg></span>
@@ -65,10 +65,42 @@
       </article>
       <article class="panel chart-panel">
         <div class="chart-heading">
-          <div class="panel-title"><span class="panel-icon purple"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#clock"/></svg></span><div><h2>Interval mean latency</h2><p>Mean execution time per polling interval</p></div></div>
+          <div class="panel-title"><span class="panel-icon purple"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#clock"/></svg></span><div><h2>Interval mean latency</h2><p>Mean client call duration per polling interval</p></div></div>
           <div class="chart-reading"><strong id="interval-mean" class="chart-value purple-text">—</strong><span class="chart-legend purple-dot">Mean latency (ms)</span></div>
         </div>
         <canvas id="latency-chart" width="700" height="230" aria-label="Selected mean latency, milliseconds; idle intervals have no point">Invocation latency, with local time on the horizontal axis.</canvas>
+      </article>
+    </section>
+
+    <section class="runtime-metrics-grid" aria-label="Executor observations for the selected languages">
+      <article class="panel">
+        <h2>Executor calls</h2>
+        <p class="panel-caption">All bound calls · includes conversion</p>
+        <dl class="values">
+          <dt>Active</dt><dd id="runtime-active">—</dd>
+          <dt>Awaiting monitor</dt><dd id="runtime-waiting">—</dd>
+          <dt>Mean admission</dt><dd id="runtime-wait">—</dd>
+          <dt>Mean under lock</dt><dd id="runtime-execution">—</dd>
+          <dt>Completed</dt><dd id="runtime-completed">—</dd>
+        </dl>
+      </article>
+      <article class="panel cache-performance">
+        <h2>Cache performance</h2>
+        <table>
+          <thead><tr id="cache-columns"><th scope="col">Cache</th><th scope="col">Hit</th><th scope="col">Miss</th><th scope="col">Rate</th><th scope="col">Evicted</th><th scope="col">Entries</th></tr></thead>
+          <tbody id="cache-scopes"><tr><td colspan="6">Cache metrics unavailable</td></tr></tbody>
+        </table>
+      </article>
+      <article class="panel">
+        <h2>Python reloads</h2>
+        <p class="panel-caption">Python executors · includes admission</p>
+        <dl class="values">
+          <dt>Successful</dt><dd id="reload-success">—</dd>
+          <dt>Failed</dt><dd id="reload-failure">—</dd>
+          <dt>In progress</dt><dd id="reload-active">—</dd>
+          <dt>Mean duration</dt><dd id="reload-mean">—</dd>
+          <dt title="Evicted entries can be restored after a failed reload">Reload evictions</dt><dd id="reload-evictions">—</dd>
+        </dl>
       </article>
     </section>
 
@@ -91,12 +123,12 @@
         </table>
       </section>
       </article>
-      <article class="panel">
-        <div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#activity"/></svg></span><h2>Runtime status <span class="scope-badge">Global</span></h2></div>
+      <details class="panel">
+        <summary class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#activity"/></svg></span><h2>Runtime diagnostics <span class="scope-badge">Global</span></h2></summary>
         <dl id="runtime-values" class="values"></dl>
-      </article>
-      <article class="panel jvm-panel">
-        <div class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#server"/></svg></span><h2>JVM information</h2></div>
+      </details>
+      <details class="panel jvm-panel">
+        <summary class="panel-title"><span class="panel-icon blue"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#server"/></svg></span><h2>JVM information</h2></summary>
         <dl id="jvm-values" class="values"></dl>
         <div class="heap-section">
           <div class="heap-heading"><span>Heap used / committed</span><strong id="heap-summary">Unavailable</strong></div>
@@ -105,7 +137,7 @@
           </div>
         </div>
         <dl class="values"><dt>Live platform threads</dt><dd id="jvm-threads">Unavailable</dd></dl>
-      </article>
+      </details>
     </section>
 
   </main>

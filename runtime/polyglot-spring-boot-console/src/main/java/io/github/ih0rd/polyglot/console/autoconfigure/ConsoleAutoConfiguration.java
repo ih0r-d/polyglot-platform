@@ -1,22 +1,26 @@
 package io.github.ih0rd.polyglot.console.autoconfigure;
 
-import org.springframework.beans.factory.*;
-import org.springframework.beans.factory.annotation.*;
-import org.springframework.boot.autoconfigure.*;
-import org.springframework.boot.autoconfigure.condition.*;
-import org.springframework.boot.context.properties.*;
-import org.springframework.boot.health.contributor.*;
-import org.springframework.context.annotation.*;
-import org.springframework.web.servlet.*;
-import org.springframework.web.servlet.config.annotation.*;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.context.annotation.Bean;
+import org.springframework.web.servlet.DispatcherServlet;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import io.github.ih0rd.polyglot.annotations.spring.properties.*;
+import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
 import io.github.ih0rd.polyglot.console.internal.metrics.ConsoleSnapshotService;
 import io.github.ih0rd.polyglot.console.internal.web.ConsoleAccess;
 import io.github.ih0rd.polyglot.console.internal.web.ConsoleController;
 import io.github.ih0rd.polyglot.console.internal.web.ConsoleStartupLogger;
 import io.github.ih0rd.polyglot.console.properties.ConsoleProperties;
-import io.micrometer.core.instrument.*;
+import io.micrometer.core.instrument.MeterRegistry;
 
 /** Experimental servlet console. No HTTP Actuator endpoint exposure is required. */
 @AutoConfiguration(

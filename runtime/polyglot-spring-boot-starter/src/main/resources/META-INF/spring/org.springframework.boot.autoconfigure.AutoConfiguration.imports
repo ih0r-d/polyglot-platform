@@ -3,3 +3,4 @@ io.github.ih0rd.polyglot.annotations.spring.config.PolyglotPythonAutoConfigurati
 io.github.ih0rd.polyglot.annotations.spring.config.PolyglotJsAutoConfiguration
 io.github.ih0rd.polyglot.annotations.spring.config.PolyglotActuatorAutoConfiguration
 io.github.ih0rd.polyglot.annotations.spring.config.PolyglotMetricsAutoConfiguration
+io.github.ih0rd.polyglot.annotations.spring.config.PolyglotRuntimeMetricsAutoConfiguration

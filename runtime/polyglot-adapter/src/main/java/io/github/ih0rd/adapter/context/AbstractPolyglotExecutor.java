@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.graalvm.polyglot.Context;
@@ -20,6 +21,10 @@ import io.github.ih0rd.adapter.exceptions.BindingException;
 import io.github.ih0rd.adapter.exceptions.EvaluationException;
 import io.github.ih0rd.adapter.exceptions.InvocationException;
 import io.github.ih0rd.adapter.exceptions.ScriptNotFoundException;
+import io.github.ih0rd.adapter.observability.InvalidationReason;
+import io.github.ih0rd.adapter.observability.RuntimeCache;
+import io.github.ih0rd.adapter.observability.RuntimeObserver;
+import io.github.ih0rd.adapter.observability.RuntimeOperation;
 import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
@@ -62,6 +67,45 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
 
   /** Tracks whether the executor has been closed. */
   private final AtomicBoolean closed = new AtomicBoolean(false);
+
+  private final AtomicReference<RuntimeObserver> runtimeObserver = new AtomicReference<>();
+
+  /**
+   * Attaches the first optional observer without replacing application instrumentation.
+   *
+   * @param observerFactory creates a thread-safe observer only if attachment is possible
+   * @return true if attached; false if already observed or closed
+   */
+  public boolean attachRuntimeObserver(Supplier<? extends RuntimeObserver> observerFactory) {
+    Objects.requireNonNull(observerFactory, "RuntimeObserver factory must not be null");
+    synchronized (contextMonitor) {
+      if (closed.get() || runtimeObserver.get() != null) return false;
+      RuntimeObserver observer =
+          Objects.requireNonNull(observerFactory.get(), "RuntimeObserver must not be null");
+      return !closed.get() && runtimeObserver.compareAndSet(null, observer);
+    }
+  }
+
+  final RuntimeObserver runtimeObserver() {
+    return runtimeObserver.get();
+  }
+
+  final Value evaluateScript(Source source) {
+    return evaluateObservedSource(source, RuntimeOperation.SCRIPT_EVALUATION);
+  }
+
+  private Value evaluateObservedSource(Source source, RuntimeOperation operation) {
+    RuntimeObserver observer = runtimeObserver.get();
+    long started = RuntimeObservation.start(observer, operation);
+    boolean failed = true;
+    try {
+      Value result = context.eval(source);
+      failed = false;
+      return result;
+    } finally {
+      RuntimeObservation.finish(observer, operation, started, failed);
+    }
+  }
 
   /**
    * Creates a new executor instance.
@@ -126,7 +170,8 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
     try {
       Source source =
           Source.newBuilder(languageId(), code, "inline." + languageId()).buildLiteral();
-      return withContextLock(() -> context.eval(source));
+      return withContextLock(
+          () -> evaluateObservedSource(source, RuntimeOperation.INLINE_EVALUATION));
     } catch (IllegalStateException e) {
       if (isClosed()) {
         throw e;
@@ -179,27 +224,40 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
               }
               String methodName = method.getName();
               Object[] safeArgs = (args != null ? args : new Object[0]);
-              synchronized (contextMonitor) {
-                ensureOpen();
-                try {
-                  Value result = evaluate(effectiveConvention, methodName, iface, safeArgs);
-                  if (method.getReturnType() == void.class) {
-                    return null;
-                  }
-                  if (result == null || result.isNull()) {
-                    return null;
-                  }
-                  return result.as(method.getReturnType());
-                } catch (PolyglotException e) {
-                  restoreInterrupt(e);
-                  throw new InvocationException(
-                      "Failed to invoke polyglot method: " + methodName, e);
-                } catch (InvocationException e) {
-                  restoreInterrupt(e);
-                  throw e;
-                }
-              }
+              return invokeBound(iface, effectiveConvention, method, methodName, safeArgs);
             });
+  }
+
+  private Object invokeBound(
+      Class<?> iface, Convention convention, Method method, String methodName, Object[] args) {
+    RuntimeObserver observer = runtimeObserver.get();
+    boolean reentrant = observer != null && Thread.holdsLock(contextMonitor);
+    long waiting =
+        reentrant ? 0 : RuntimeObservation.start(observer, RuntimeOperation.INVOCATION_WAIT);
+    synchronized (contextMonitor) {
+      if (!reentrant)
+        RuntimeObservation.finish(observer, RuntimeOperation.INVOCATION_WAIT, waiting, false);
+      long started = RuntimeObservation.start(observer, RuntimeOperation.INVOCATION_EXECUTION);
+      boolean failed = true;
+      try {
+        ensureOpen();
+        Value result = evaluate(convention, methodName, iface, args);
+        Object converted =
+            method.getReturnType() == void.class || result == null || result.isNull()
+                ? null
+                : result.as(method.getReturnType());
+        failed = false;
+        return converted;
+      } catch (PolyglotException failure) {
+        restoreInterrupt(failure);
+        throw new InvocationException("Failed to invoke polyglot method: " + methodName, failure);
+      } catch (InvocationException failure) {
+        restoreInterrupt(failure);
+        throw failure;
+      } finally {
+        RuntimeObservation.finish(observer, RuntimeOperation.INVOCATION_EXECUTION, started, failed);
+      }
+    }
   }
 
   static void restoreInterrupt(Throwable failure) {
@@ -305,6 +363,19 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
    * @return compiled source
    */
   protected Source loadScript(SupportedLanguage language, String scriptName) {
+    RuntimeObserver observer = runtimeObserver.get();
+    long started = RuntimeObservation.start(observer, RuntimeOperation.SOURCE_LOAD);
+    boolean failed = true;
+    try {
+      Source source = readScript(language, scriptName);
+      failed = false;
+      return source;
+    } finally {
+      RuntimeObservation.finish(observer, RuntimeOperation.SOURCE_LOAD, started, failed);
+    }
+  }
+
+  private Source readScript(SupportedLanguage language, String scriptName) {
     if (!scriptSource.exists(language, scriptName)) {
       throw new ScriptNotFoundException(
           "Script not found: " + scriptName + " for language " + language);
@@ -320,8 +391,13 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
 
   /** Clears the per-interface source cache. */
   public void clearSourceCache() {
-    ensureOpen();
-    sourceCache.clear();
+    withContextLock(
+        () -> {
+          int count = sourceCache.size();
+          sourceCache.clear();
+          RuntimeObservation.invalidate(
+              runtimeObserver.get(), RuntimeCache.SOURCE, InvalidationReason.CLEAR, count);
+        });
   }
 
   /**
@@ -337,8 +413,15 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
     if (iface == null) {
       throw new IllegalArgumentException("Interface type must not be null");
     }
-    ensureOpen();
-    sourceCache.remove(iface);
+    withContextLock(
+        () -> {
+          Source removed = sourceCache.remove(iface);
+          RuntimeObservation.invalidate(
+              runtimeObserver.get(),
+              RuntimeCache.SOURCE,
+              InvalidationReason.EXPLICIT,
+              removed == null ? 0 : 1);
+        });
   }
 
   /** Clears all caches maintained by this executor. */
@@ -381,16 +464,23 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
       if (!closed.compareAndSet(false, true)) {
         return;
       }
-      closeExecutorResources();
-      if (contextOwnership == ContextOwnership.OWNED_BY_EXECUTOR) {
-        context.close();
+      try {
+        closeExecutorResources();
+        if (contextOwnership == ContextOwnership.OWNED_BY_EXECUTOR) {
+          context.close();
+        }
+      } finally {
+        RuntimeObservation.closed(runtimeObserver.get());
       }
     }
   }
 
   /** Releases executor-owned resources that are independent from context ownership. */
   protected void closeExecutorResources() {
+    int count = sourceCache.size();
     sourceCache.clear();
+    RuntimeObservation.invalidate(
+        runtimeObserver.get(), RuntimeCache.SOURCE, InvalidationReason.SHUTDOWN, count);
   }
 
   /**

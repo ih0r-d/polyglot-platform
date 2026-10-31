@@ -1,3 +1,5 @@
+import { operationCounts, runtimeMetricsModel } from './runtime-model.js';
+
 export function invocationTotals(scopes, languages) {
     if (!languages.length || scopes.length !== languages.length * 2) return null;
     let successes = 0;
@@ -25,8 +27,9 @@ function runtimeLabel(name, language) {
         'polyglot.executor.configured.count': 'Configured executors',
         'polyglot.executor.available.count': 'Available executors',
         'polyglot.startup.duration': 'Startup hook (ms)',
-        'polyglot.executor.enabled': 'available',
+        'polyglot.executor.enabled': 'bean present',
         'polyglot.executor.source.cache.size': 'cached sources',
+        'polyglot.runtime.executors.closed': 'executor closures',
         'polyglot.python.bound.interfaces.count': 'bindings (DEFAULT)',
         'polyglot.python.instance.cache.size': 'instances (DEFAULT)',
         'polyglot.js.loaded.interfaces.count': 'bindings',
@@ -51,9 +54,12 @@ export function snapshotModel(snapshot, selected = 'all') {
     health: snapshot.health,
         pythonAvailable: snapshot.pythonAvailable ?? null,
         startTime: snapshot.instanceId,
-        runtime: readings.map(item => [runtimeLabel(item.name, item.language),
-            item.unit === 'boolean' ? ({0: 'No', 1: 'Yes'}[item.value] ?? null) : (item.value ?? null)]),
+        runtime: [...readings.filter(item => !item.name.startsWith('polyglot.runtime.') || item.name === 'polyglot.runtime.executors.closed')
+            .map(item => [runtimeLabel(item.name, item.language),
+                item.unit === 'boolean' ? ({0: 'No', 1: 'Yes'}[item.value] ?? null) : (item.value ?? null)]),
+            ...operationCounts(snapshot, languages)],
         jvm: snapshot.jvm ?? {},
+        observations: runtimeMetricsModel(snapshot, included),
     };
 }
 
@@ -63,16 +69,26 @@ export class SessionHistory {
         this.limit = limit;
         this.samples = [];
         this.previous = null;
+        this.last = null;
     }
 
     clear() {
         this.samples = [];
         this.previous = null;
+        this.last = null;
+    }
+
+    gap(time) {
+        this.previous = null;
+        if (this.samples.length && this.samples.at(-1).rate !== null) {
+            this.samples.push({time, rate: null, meanMs: null});
+            if (this.samples.length > this.limit) this.samples.shift();
+        }
     }
 
     add(model, time) {
         if (!model.totals) {
-            this.clear();
+            this.gap(time);
             return {reset: false, sample: null};
         }
         const current = {
@@ -80,11 +96,12 @@ export class SessionHistory {
             scopes: model.scopes.map(scope => ({...scope})), ...model.totals
         };
         const previous = this.previous;
-        const reset = Boolean(previous && (
-            (current.startTime !== null && previous.startTime !== null && current.startTime !== previous.startTime)
-            || current.count < previous.count || current.seconds < previous.seconds
-            || current.language !== previous.language || scopeReset(previous.scopes, current.scopes)
-            || current.successes < previous.successes || current.failures < previous.failures));
+        const last = this.last;
+        const reset = Boolean(last && (
+            (current.startTime != null && last.startTime != null && current.startTime !== last.startTime)
+            || current.count < last.count || current.seconds < last.seconds
+            || current.language !== last.language || scopeReset(last.scopes, current.scopes)
+            || current.successes < last.successes || current.failures < last.failures));
         if (reset) this.clear();
         let sample = null;
         if (previous && !reset && time > previous.time) {
@@ -97,6 +114,7 @@ export class SessionHistory {
             if (this.samples.length > this.limit) this.samples.shift();
         }
         this.previous = current;
+        this.last = current;
         return {reset, sample};
     }
 }

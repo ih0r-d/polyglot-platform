@@ -101,6 +101,8 @@ class ConsoleAutoConfigurationTest {
                     "js/app.js",
                     "js/api.js",
                     "js/model.js",
+                    "js/runtime-model.js",
+                    "js/runtime-view.js",
                     "js/polling.js",
                     "js/view.js",
                     "js/charts.js",
@@ -312,6 +314,7 @@ class ConsoleAutoConfigurationTest {
                   .afterSingletonsInstantiated();
               var expected =
                   registry.getMeters().stream()
+                      .filter(meter -> meter instanceof io.micrometer.core.instrument.Gauge)
                       .map(
                           meter ->
                               meter.getId().getName()
@@ -323,7 +326,11 @@ class ConsoleAutoConfigurationTest {
                   context.getBean(ConsoleSnapshotService.class).snapshot().runtime().stream()
                       .map(metric -> metric.name() + "|" + metric.language())
                       .collect(java.util.stream.Collectors.toSet());
-              assertThat(actual).hasSize(10).isEqualTo(expected);
+              assertThat(actual).hasSize(17).containsAll(expected);
+              assertThat(context.getBean(ConsoleSnapshotService.class).snapshot().runtime())
+                  .filteredOn(metric -> metric.name().startsWith("polyglot.runtime."))
+                  .hasSize(7)
+                  .allSatisfy(metric -> assertThat(metric.value()).isNull());
             });
   }
 

@@ -14,6 +14,7 @@ import org.graalvm.polyglot.Value;
 
 import io.github.ih0rd.adapter.exceptions.BindingException;
 import io.github.ih0rd.adapter.exceptions.InvocationException;
+import io.github.ih0rd.adapter.observability.RuntimeCache;
 import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.annotations.ExperimentalApi;
@@ -182,7 +183,7 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
   public void preloadScript(String scriptName) {
     Source source = loadScript(SupportedLanguage.JS, scriptName);
     try {
-      withContextLock(() -> context.eval(source));
+      withContextLock(() -> evaluateScript(source));
     } catch (PolyglotException e) {
       if (e.isInterrupted()) {
         Thread.currentThread().interrupt();
@@ -193,13 +194,17 @@ public final class JsExecutor extends AbstractPolyglotExecutor {
 
   /** Loads and evaluates the JavaScript script associated with the given contract if needed. */
   private <T> void ensureModuleLoaded(Class<T> iface) {
+    if (runtimeObserver() != null) {
+      RuntimeObservation.cache(
+          runtimeObserver(), RuntimeCache.SOURCE, sourceCache.containsKey(iface));
+    }
     sourceCache.computeIfAbsent(
         iface,
         cls -> {
           String interfaceName = cls.getSimpleName();
           String moduleName = camelToSnake(interfaceName);
           Source src = loadScript(SupportedLanguage.JS, moduleName);
-          context.eval(src);
+          evaluateScript(src);
           return src;
         });
   }

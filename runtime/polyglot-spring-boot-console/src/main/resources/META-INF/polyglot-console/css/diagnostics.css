@@ -291,3 +291,49 @@ progress.failure::-moz-progress-bar {
         content: none;
     }
 }
+
+.runtime-metrics-grid {
+    display: grid;
+    grid-template-columns: minmax(230px, 1fr) minmax(420px, 1.8fr) minmax(230px, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.cache-performance {
+    container-type: inline-size;
+}
+
+@media (max-width: 1050px) {
+    .runtime-metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .cache-performance { grid-column: 1 / -1; grid-row: 2; }
+}
+
+@media (max-width: 600px) {
+    .runtime-metrics-grid { grid-template-columns: minmax(0, 1fr); }
+    .cache-performance { grid-column: auto; grid-row: auto; }
+}
+
+details.panel {
+    align-self: start;
+}
+
+summary.panel-title {
+    cursor: pointer;
+    list-style: none;
+}
+
+summary.panel-title::after {
+    content: '+';
+    margin-left: auto;
+    font-size: 18px;
+}
+
+details[open] > summary.panel-title::after {
+    content: '−';
+}
+
+details.jvm-panel {
+    display: block;
+}

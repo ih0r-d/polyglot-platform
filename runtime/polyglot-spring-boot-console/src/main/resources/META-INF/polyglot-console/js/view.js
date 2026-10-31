@@ -1,3 +1,4 @@
+import { renderRuntimeMetrics } from './runtime-view.js';
 import { drawChart } from './charts.js';
 
 const numberFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
@@ -96,8 +97,9 @@ function invocationRow(scope, totals, columns) {
 
 export function renderSnapshot(model, history, latest, updatedAt = Date.now()) {
   const totals = model.totals;
+  renderRuntimeMetrics(model, format);
   const scopeName = { python: 'Python', js: 'JavaScript' }[model.language] ?? 'All enabled languages';
-  text('scope-label', `${scopeName} · cumulative`);
+  text('scope-label', `${scopeName} · client totals`);
   text('chart-scope', scopeName);
   byId('stats').setAttribute('aria-label', `Cumulative invocation metrics: ${scopeName}`);
   text('total', format(totals?.count));

@@ -1,12 +1,12 @@
 package io.github.ih0rd.polyglot.console.properties;
 
-import java.time.*;
+import java.time.Duration;
 
-import org.springframework.boot.context.properties.*;
-import org.springframework.boot.context.properties.bind.*;
-import org.springframework.boot.context.properties.source.*;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
+import org.springframework.boot.context.properties.source.InvalidConfigurationPropertyValueException;
 
-import io.github.ih0rd.polyglot.annotations.*;
+import io.github.ih0rd.polyglot.annotations.ExperimentalApi;
 
 /**
  * Experimental console settings. The console never changes application authorization.

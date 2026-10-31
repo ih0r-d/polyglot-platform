@@ -1,198 +1,104 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-    <modelVersion>4.0.0</modelVersion>
+  <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>io.github.ih0r-d</groupId>
-        <artifactId>polyglot-aggregator</artifactId>
-        <version>0.5.0-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
-    </parent>
+  <parent>
+    <groupId>io.github.ih0r-d</groupId>
+    <artifactId>polyglot-aggregator</artifactId>
+    <version>0.5.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
 
-    <artifactId>polyglot-adapter-parent</artifactId>
-    <packaging>pom</packaging>
+  <artifactId>polyglot-adapter-parent</artifactId>
+  <packaging>pom</packaging>
 
-    <name>polyglot-adapter-parent</name>
-    <description>Runtime layer of the Polyglot Adapter (GraalVM execution)</description>
+  <name>polyglot-adapter-parent</name>
+  <description>Runtime layer of the Polyglot Adapter (GraalVM execution)</description>
 
-    <modules>
-        <module>polyglot-bom</module>
-        <module>polyglot-adapter</module>
-        <module>polyglot-spring-boot-starter</module>
-        <module>polyglot-spring-boot-console</module>
-    </modules>
+  <modules>
+    <module>polyglot-bom</module>
+    <module>polyglot-adapter</module>
+    <module>polyglot-spring-boot-starter</module>
+    <module>polyglot-spring-boot-console</module>
+  </modules>
 
-    <properties>
-        <mockito.agent.argLine>
-            -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar
-        </mockito.agent.argLine>
-    </properties>
+  <properties>
+    <mockito.agent.argLine>
+      -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar
+    </mockito.agent.argLine>
+  </properties>
 
-    <build>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <inherited>false</inherited>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.sonatype.central</groupId>
+        <artifactId>central-publishing-maven-plugin</artifactId>
+        <inherited>false</inherited>
+        <configuration>
+          <skipPublishing>true</skipPublishing>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>api-compat</id>
+      <build>
         <plugins>
-            <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <inherited>false</inherited>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.sonatype.central</groupId>
-                <artifactId>central-publishing-maven-plugin</artifactId>
-                <inherited>false</inherited>
-                <configuration>
-                    <skipPublishing>true</skipPublishing>
-                </configuration>
-            </plugin>
+          <plugin>
+            <groupId>org.revapi</groupId>
+            <artifactId>revapi-maven-plugin</artifactId>
+            <configuration>
+              <failOnMissingConfigurationFiles>true</failOnMissingConfigurationFiles>
+              <expandProperties>true</expandProperties>
+              <analysisConfigurationFiles>
+                <configurationFile>
+                  <path>${maven.multiModuleProjectDirectory}/config/revapi/api-filter.xml</path>
+                </configurationFile>
+                <configurationFile>
+                  <path>${maven.multiModuleProjectDirectory}/config/revapi/api-differences.xml</path>
+                </configurationFile>
+              </analysisConfigurationFiles>
+            </configuration>
+          </plugin>
         </plugins>
-    </build>
-
-    <profiles>
-        <profile>
-            <id>api-compat</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.revapi</groupId>
-                        <artifactId>revapi-maven-plugin</artifactId>
-                        <configuration>
-                            <analysisConfiguration>
-                                <revapi.filter>
-                                    <elements>
-                                        <exclude>
-                                            <!-- Explicitly internal starter support; keep public wiring APIs checked. -->
-                                            <item>
-                                                <matcher>java-package</matcher>
-                                                <match>io.github.ih0rd.polyglot.annotations.spring.internal</match>
-                                            </item>
-                                        </exclude>
-                                    </elements>
-                                </revapi.filter>
-                                <revapi.differences>
-                                    <differences>
-                                        <item>
-                                            <code>java\.annotation\.added</code>
-                                            <regex>true</regex>
-                                            <new>class io\.github\.ih0rd\.polyglot\.annotations\.spring\.config\.Polyglot(?:Actuator|Metrics)AutoConfiguration</new>
-                                            <annotation>@org\.springframework\.boot\.context\.properties\.EnableConfigurationProperties\(\{io\.github\.ih0rd\.polyglot\.annotations\.spring\.properties\.PolyglotProperties\.class\}\)</annotation>
-                                            <criticality>documented</criticality>
-                                            <justification>Registers the existing properties model when optional observability is used without the core auto-configuration. This exact annotation adds no properties or defaults; all Java signatures remain checked.</justification>
-                                        </item>
-                                        <item>
-                                            <code>java.annotation.added</code>
-                                            <new>method org.springframework.boot.actuate.info.InfoContributor io.github.ih0rd.polyglot.annotations.spring.config.PolyglotActuatorAutoConfiguration::polyglotInfoContributor(io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors, io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties)</new>
-                                            <annotation>@org.springframework.boot.autoconfigure.condition.ConditionalOnBean({io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors.class})</annotation>
-                                            <criticality>documented</criticality>
-                                            <justification>Only the info contributor backs off when the global core switch removes its executor facade. Its released descriptor and behavior with an enabled core are preserved. No other conditions are downgraded.</justification>
-                                        </item>
-                                        <item>
-                                            <code>java\.annotation\.attributeAdded</code>
-                                            <regex>true</regex>
-                                            <new>class io\.github\.ih0rd\.polyglot\.annotations\.spring\.config\.Polyglot(?:Actuator|Metrics)AutoConfiguration</new>
-                                            <annotationType>org\.springframework\.boot\.autoconfigure\.AutoConfiguration</annotationType>
-                                            <attribute>after</attribute>
-                                            <value>\{io\.github\.ih0rd\.polyglot\.annotations\.spring\.config\.PolyglotAutoConfiguration\.class\}</value>
-                                            <criticality>documented</criticality>
-                                            <justification>Orders the two optional integrations after their existing core beans. Only adding this exact ordering target is documented; changed values, removals and other attributes remain checked.</justification>
-                                        </item>
-                                        <item>
-                                            <code>java.annotation.attributeAdded</code>
-                                            <new>class io.github.ih0rd.polyglot.annotations.spring.config.PolyglotMetricsAutoConfiguration</new>
-                                            <annotationType>org.springframework.boot.autoconfigure.AutoConfiguration</annotationType>
-                                            <attribute>afterName</attribute>
-                                            <value>{"org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration"}</value>
-                                            <criticality>documented</criticality>
-                                            <justification>Waits for Boot's registry definitions before testing for a registry. This exact optional ordering string preserves operation without Actuator; no other annotation or signature differences are downgraded.</justification>
-                                        </item>
-                                        <item>
-                                            <code>java\.annotation\.added</code>
-                                            <regex>true</regex>
-                                            <new>class io\.github\.ih0rd\.polyglot\.annotations\.spring\.config\.Polyglot(?:Js|Python)AutoConfiguration</new>
-                                            <annotationType>org\.springframework\.context\.annotation\.Conditional</annotationType>
-                                            <criticality>documented</criticality>
-                                            <justification>Adds one global core-enabled condition to the Python and experimental JavaScript auto-configurations while retaining their existing public annotations, methods and language-specific conditions. This makes the documented polyglot.core.enabled=false switch apply consistently. No other annotation changes are downgraded.</justification>
-                                        </item>
-                                        <item>
-                                            <code>java\.annotation\.added</code>
-                                            <regex>true</regex>
-                                            <new>parameter void io\.github\.ih0rd\.polyglot\.annotations\.spring\.properties\.PolyglotProperties\.(?:CoreProperties|PythonProperties|JsProperties|MetricsProperties|ActuatorProperties(?:\.(?:InfoProperties|HealthProperties))?)::&lt;init&gt;.*</new>
-                                            <annotationType>org\.springframework\.boot\.context\.properties\.bind\.DefaultValue</annotationType>
-                                            <criticality>documented</criticality>
-                                            <justification>Adds only Spring Boot binding-default metadata to existing PolyglotProperties constructor parameters. Constructor descriptors and accessors are unchanged; partial property groups now retain the defaults already declared by the public properties model. Other annotations and property types remain checked.</justification>
-                                        </item>
-                                        <item>
-                                            <code>java.class.externalClassExposedInAPI</code>
-                                            <new>enum io.github.ih0rd.adapter.context.ContextOwnership</new>
-                                            <newArchive>io.github.ih0r-d:polyglot-adapter:jar:${project.version}</newArchive>
-                                            <newArchiveRole>supplementary</newArchiveRole>
-                                            <criticality>documented</criticality>
-                                            <justification>Additive ownership enum exposed through new executor overloads; existing signatures and legacy ownership remain unchanged. The adapter is checked separately.</justification>
-                                        </item>
-                                        <item>
-                                            <code>java.class.externalClassExposedInAPI</code>
-                                            <new>interface org.graalvm.polyglot.Engine.CancellationCallback</new>
-                                            <newArchive>org.graalvm.polyglot:polyglot:jar:25.0.4.1.1</newArchive>
-                                            <newArchiveRole>supplementary</newArchiveRole>
-                                            <criticality>documented</criticality>
-                                            <justification>Polyglot 25.0.4.1.1 adds Engine.persistCache(CancellationCallback); the callback is newly reachable through existing Context/Engine APIs. No existing member is removed or changed. Other types, difference codes and artifact versions remain checked.</justification>
-                                        </item>
-                                        <!-- Revapi reports these existing ambiguities even for unchanged upstream APIs. -->
-                                        <item>
-                                            <code>java\.method\.varargOverloadsOnlyDifferInVarargParameter</code>
-                                            <regex>true</regex>
-                                            <old>method (io\.micrometer\.core\.instrument\.(?:DistributionSummary\.Builder|distribution\.DistributionStatisticConfig\.Builder)) \1::sla\((?:double|long)\[\]\)|method (io\.micrometer\.core\.instrument\.Tags) \2::(?:and|of)\((?:java\.lang\.String|io\.micrometer\.core\.instrument\.Tag)\[\]\)</old>
-                                            <new>method (io\.micrometer\.core\.instrument\.(?:DistributionSummary\.Builder|distribution\.DistributionStatisticConfig\.Builder)) \1::sla\((?:double|long)\[\]\)|method (io\.micrometer\.core\.instrument\.Tags) \2::(?:and|of)\((?:java\.lang\.String|io\.micrometer\.core\.instrument\.Tag)\[\]\)</new>
-                                            <oldArchive>io\.micrometer:micrometer-core:jar:1\.17\.0</oldArchive>
-                                            <newArchive>io\.micrometer:micrometer-core:jar:1\.17\.0</newArchive>
-                                            <criticality>documented</criticality>
-                                            <justification>Unchanged Micrometer 1.17.0 varargs ambiguities already exist in the published baseline; retain the diagnostic without treating it as a project regression. Other difference codes and dependency versions remain checked.</justification>
-                                        </item>
-                                        <item>
-                                            <code>java\.method\.varargOverloadsOnlyDifferInVarargParameter</code>
-                                            <regex>true</regex>
-                                            <old>method org\.springframework\.core\.ResolvableType org\.springframework\.core\.ResolvableType::forClassWithGenerics\(java\.lang\.Class&lt;\?&gt;, (java\.lang\.Class&lt;\?&gt;|org\.springframework\.core\.ResolvableType)\[\]\)</old>
-                                            <new>method org\.springframework\.core\.ResolvableType org\.springframework\.core\.ResolvableType::forClassWithGenerics\(java\.lang\.Class&lt;\?&gt;, (java\.lang\.Class&lt;\?&gt;|org\.springframework\.core\.ResolvableType)\[\]\)</new>
-                                            <oldArchive>org\.springframework:spring-core:jar:7\.0\.8</oldArchive>
-                                            <newArchive>org\.springframework:spring-core:jar:7\.0\.8</newArchive>
-                                            <criticality>documented</criticality>
-                                            <justification>Unchanged Spring Core 7.0.8 overload ambiguity exists in both APIs; only this diagnostic for these pinned members is non-blocking.</justification>
-                                        </item>
-                                    </differences>
-                                </revapi.differences>
-                            </analysisConfiguration>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>release</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.sonatype.central</groupId>
-                        <artifactId>central-publishing-maven-plugin</artifactId>
-                        <extensions>true</extensions>
-                        <inherited>true</inherited>
-                        <configuration>
-                            <skipPublishing>false</skipPublishing>
-                            <publishingServerId>central</publishingServerId>
-                            <autoPublish>false</autoPublish>
-                            <waitUntil>VALIDATED</waitUntil>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
+      </build>
+    </profile>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <extensions>true</extensions>
+            <inherited>true</inherited>
+            <configuration>
+              <skipPublishing>false</skipPublishing>
+              <publishingServerId>central</publishingServerId>
+              <autoPublish>false</autoPublish>
+              <waitUntil>VALIDATED</waitUntil>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>

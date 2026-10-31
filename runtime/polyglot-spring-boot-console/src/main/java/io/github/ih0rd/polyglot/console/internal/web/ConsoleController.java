@@ -1,16 +1,20 @@
 package io.github.ih0rd.polyglot.console.internal.web;
 
-import java.net.*;
+import java.net.URI;
 
-import org.springframework.core.io.*;
-import org.springframework.http.*;
-import org.springframework.stereotype.*;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import io.github.ih0rd.polyglot.console.internal.dto.ConsoleSnapshot;
 import io.github.ih0rd.polyglot.console.internal.metrics.ConsoleSnapshotService;
 import io.github.ih0rd.polyglot.console.properties.ConsoleProperties;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 /** Internal routes, registered explicitly only by the enabled auto-configuration. */
 @Controller

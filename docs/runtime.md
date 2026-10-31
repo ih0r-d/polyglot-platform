@@ -867,3 +867,100 @@ INFO URL using its actual bound port, servlet context path and configured consol
 The link uses localhost because console access is local-only. Application authorization still
 applies. No startup URL is announced for a disabled console, a different application context,
 a failed startup or a context without an embedded server.
+
+## Runtime operation metrics
+
+Runtime Metrics 2.0 uses optional, framework-neutral executor observations. Spring attaches the
+Micrometer observer before client validation when a unique application registry is available and
+`polyglot.metrics.enabled=true` (the existing default). Without it, no clocks or observation objects
+are created for these measurements. Core has no Micrometer/Actuator dependency. Direct core proxies
+and Spring proxies share the same executor boundaries; existing `polyglot.client.invocations` still
+measures Spring client calls only.
+
+| Name | Type / unit | Bounded tags | Meaning and availability |
+| --- | --- | --- | --- |
+| `polyglot.client.invocations` | Timer / seconds on Console wire | language, outcome | Existing Spring-client total latency, unchanged: dispatch, admission, execution, conversion and wrapper overhead. |
+| `polyglot.runtime.operations` | Timer / seconds on Console wire | language, operation, outcome | Actual observed operations, including failures; see boundaries below. |
+| `polyglot.runtime.invocations.active` | Gauge / calls | language | Bound calls holding their executor monitor, including conversion; reentrant calls count individually. |
+| `polyglot.runtime.invocations.waiting` | Gauge / calls | language | Non-reentrant bound calls attempting to acquire their executor monitor. |
+| `polyglot.runtime.reloads.active` | Gauge / requests | language=python | Valid explicit reload requests in progress, including admission. |
+| `polyglot.runtime.cache.access` | Counter / lookups | language, cache, result=hit/miss | A lookup reused an entry, or did not yield a reusable entry. |
+| `polyglot.runtime.cache.invalidations` | Counter / entries | language, cache, reason | Stored entries explicitly evicted; failed reload can restore them later. |
+| `polyglot.runtime.executors.closed` | Counter / executors | language | Executor close transitions; idempotent close does not count twice. |
+
+Timer export units follow the configured registry; the Console normalizes durations to seconds.
+See [Micrometer Timer semantics](https://docs.micrometer.io/micrometer/reference/concepts/timers.html).
+
+`operation` has these fixed values:
+
+- `invocation_wait`: immediately before monitor acquisition to immediately after acquisition.
+  This includes uncontended acquisition overhead and scheduling delay, **not exact OS-blocked time**.
+  Reentrant calls emit no wait sample. Interrupted monitor acquisition remains non-interruptible,
+  consistent with Java synchronized semantics.
+- `invocation_execution`: admission through return conversion/error handling under the monitor.
+  Includes lazy module loading, constructors, cache access and conversion when needed. This is not
+  pure Python execution or guest CPU time. A closed-executor rejection is a failed admitted call.
+- `source_load`: configured ScriptSource existence check, fresh reader, Source construction and
+  reader close. A missing or unreadable source records failure; no source names are tags.
+- `script_evaluation`: actual `Context.eval(Source)` for a script, including preload/reload; cached
+  method-name calls do not emit another evaluation. Parsing/JIT/import work inside eval is included.
+- `inline_evaluation`: actual inline eval under the monitor, including the existing startup warmup
+  expression. This is not complete Context initialization.
+- `contract_validation`: explicit Python binding validation, including resolution and callable checks.
+  Internal reload validation is part of the reload timer rather than a second validation request.
+- `instance_creation`: execution of a callable DEFAULT Python export to create an instance. Reused
+  instances and dictionary exports do not create instance samples.
+- `reload`: one valid public reload request, including admission, fresh load, preflight, evaluation,
+  validation and attempted restoration. A batch counts once and succeeds only if every requested
+  contract reload completes. It remains sequential and nontransactional. Closed/reentrant failures
+  count; invalid Java arguments rejected before observation do not.
+
+Operations nest: do not sum source/evaluation/validation/reload durations or failure counts as
+independent traffic/errors. No extra error counter duplicates the outcome timers. Existing
+invocation exception types, interrupt restoration, conversion locking and Context/Engine ownership
+are unchanged. Runtime counts can exceed Spring-client counts because direct executor clients are
+also measured. Wait/execution means may have different counts due to reentrancy; the Console does
+not fabricate an additive breakdown against the Spring-client Timer.
+
+Cache categories are `source`, `module` (Python BY_METHOD_NAME loaded markers), and `instance`
+(Python weak target references). A collected weak target is a miss, not a hit. DEFAULT calls using
+an instance do not consult a separate module cache. JavaScript's single source/loaded cache is
+reported once as `source`; it has no separate module or instance counter. There is no additional
+contract-binding cache to instrument. `reason` is `explicit`, `clear`, `reload`, or `shutdown`.
+Rollback bookkeeping and GC are not new explicit invalidations. Existing size gauges are reused;
+no new duplicate size instrumentation is registered. A module marker size is unavailable on the
+Console because no such existing gauge exists. Engine code caches are not observed or purged.
+
+The existing `polyglot.startup.duration` gauge is unchanged. It measures the Spring lifecycle hook,
+not JVM launch or complete Context creation. Millisecond truncation can legitimately produce zero;
+its legacy unrecorded negative sentinel is also exposed as zero. Consult lifecycle health to
+interpret it. Contexts created before observer attachment are not retrospectively timed. No guest
+execution is added to health or Console polling.
+
+Meters are cached at attachment; hot calls perform no registry searches or registration. Gauges use
+atomic state owned by a context-local collector, not executor/Context references. One collector per
+language aggregates independent executor beans. Callback RuntimeExceptions are isolated from the
+business call, without suppressing VM Errors. Application-provided observers are not replaced.
+An optional observer factory is evaluated only if attachment can succeed.
+
+### Distributions and Console limitations
+
+Histograms/percentiles are opt-in via standard Spring Boot/Micrometer configuration, for example:
+
+```properties
+management.metrics.distribution.percentiles.polyglot.runtime.operations=0.95,0.99
+management.metrics.distribution.percentiles-histogram.polyglot.client.invocations=true
+```
+
+No histogram is enabled by this library. Distribution statistics cost memory per meter/tag scope;
+configure only needed prefixes and supported exporters. Client-side percentiles cannot be summed
+across languages or outcomes. The Console shows counts, means and time-window MAX only, not invented
+p95/p99. See [Micrometer distributions](https://docs.micrometer.io/micrometer/reference/concepts/histogram-quantiles.html).
+
+The read-only Console data API adds fixed operation/cache snapshots and active/waiting/reload gauges.
+It reads Spring-managed meters in-process without Actuator HTTP exposure, arbitrary registry data,
+source paths or guest execution. Missing values remain unavailable. Language filters apply to runtime
+panels. Charts are session-local, bounded to 120 samples: polling errors, hidden tabs, explicit pause
+and unavailable data break interval continuity. Reconnection establishes a new baseline rather than
+interpolating traffic across a gap. Observed counter decreases or context restarts clear history,
+even when the change happens during a gap.

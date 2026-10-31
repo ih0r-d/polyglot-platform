@@ -210,7 +210,7 @@ test('rendering handles real snapshot models, missing values and chart gaps with
     assert.equal(nodes.get('jvm-values').children[1].textContent, 'Unavailable');
     model.jvm = { javaVersion: '25-test', runtime: '<script>unsafe</script>', vendor: 'Test vendor',
       uptimeSeconds: 120, heapUsedBytes: 1048576, heapCommittedBytes: 2097152, liveThreads: 42 };
-    model.runtime = [['Python executor available', 'Yes']];
+    model.runtime = [['Python bean present', 'Yes']];
     model.pythonAvailable = false;
     renderSnapshot(model, [], null);
     assert.equal(nodes.get('jvm-values').children[1].textContent, '25-test');
@@ -274,7 +274,7 @@ test('runtime view retains every supplied gauge and its language scope, includin
   ];
   const model = snapshotModel(source);
   assert.deepEqual(model.runtime, [
-    ['Python available', 'Yes'], ['JavaScript cached sources', 2], ['JavaScript bindings', null],
+    ['Python bean present', 'Yes'], ['JavaScript cached sources', 2], ['JavaScript bindings', null],
   ]);
   source.runtime[0].value = 0;
   assert.equal(snapshotModel(source).runtime[0][1], 'No');
@@ -462,4 +462,82 @@ test('Canvas uses device pixels, draws time labels and preserves gaps in latency
     drawChart(canvas, [], 'rate');
     drawChart({getContext: () => null}, [], 'rate');
   } finally { globalThis.devicePixelRatio = previous; }
+});
+
+test('history has visible gaps across pause, failed polling and unavailable metrics', () => {
+  const history = new SessionHistory();
+  history.add(snapshotModel(snapshot(10, 0.1)), 1000);
+  history.add(snapshotModel(snapshot(20, 0.2)), 2000);
+  history.gap(2500);
+  assert.equal(history.samples.at(-1).rate, null);
+  assert.equal(history.add(snapshotModel(snapshot(50, 0.5)), 5000).sample, null);
+  assert.equal(history.add(snapshotModel(snapshot(60, 0.6)), 6000).sample.rate, 10);
+  assert.equal(history.samples.length, 3);
+  history.add(snapshotModel({invocations: []}), 7000);
+  assert.equal(history.samples.at(-1).meanMs, null);
+  assert.equal(history.add(snapshotModel(snapshot(70, 0.7, 2, 'restarted')), 8000).reset, true);
+  assert.equal(history.samples.length, 0);
+});
+
+test('runtime means, cache ratios and reload outcomes keep complete language scopes', async () => {
+  const {runtimeMetricsModel, cacheHitRate} = await import('../../main/resources/META-INF/polyglot-console/js/runtime-model.js');
+  const source = {operations: [
+    {language: 'python', operation: 'invocation_execution', outcome: 'success', count: 3, totalSeconds: 0.3},
+    {language: 'python', operation: 'invocation_execution', outcome: 'failure', count: 1, totalSeconds: 0.1},
+    {language: 'js', operation: 'invocation_execution', outcome: 'success', count: 999, totalSeconds: 999},
+    {language: 'python', operation: 'reload', outcome: 'success', count: 2, totalSeconds: 0.02},
+    {language: 'python', operation: 'reload', outcome: 'failure', count: 1, totalSeconds: 0.01},
+  ], caches: [{language: 'python', cache: 'source', hits: 3, misses: 1}], runtime: [
+    {name: 'polyglot.runtime.invocations.active', language: 'python', value: 0},
+    {name: 'polyglot.runtime.invocations.waiting', language: 'python', value: 2},
+  ]};
+  const python = runtimeMetricsModel(source, ['python']);
+  assert.equal(python.execution.meanMs, 100);
+  assert.equal(python.reload.successes, 2);
+  assert.equal(python.reload.failures, 1);
+  assert.equal(python.active, 0);
+  assert.equal(python.waiting, 2);
+  assert.equal(python.caches[0].hitRate, 75);
+  assert.equal(runtimeMetricsModel(source, ['python', 'js']).execution, null);
+  assert.equal(runtimeMetricsModel({}, ['python']).active, null);
+  assert.equal(cacheHitRate(0, 0), null);
+  assert.equal(cacheHitRate(1, null), null);
+  assert.equal(cacheHitRate(-1, 2), null);
+});
+
+test('reload evictions require complete cache categories and diagnostics use only observed operations', async () => {
+  const {runtimeMetricsModel, operationCounts} = await import('../../main/resources/META-INF/polyglot-console/js/runtime-model.js');
+  const source = {caches: ['source', 'module', 'instance'].map(cache => ({language: 'python', cache, reloadInvalidatedEntries: 2})),
+    operations: ['success', 'failure'].map(outcome => ({language:'python', operation:'source_load', outcome, count: 2, totalSeconds: 0.01}))};
+  assert.equal(runtimeMetricsModel(source, ['python']).reloadEvictions, 6);
+  assert.equal(runtimeMetricsModel(source, ['js']).reloadEvictions, null);
+  assert.deepEqual(operationCounts(source, ['python']), [['Python source loads', 4]]);
+  source.caches.pop();
+  assert.equal(runtimeMetricsModel(source, ['python']).reloadEvictions, null);
+});
+
+test('cache view renders actual measurements with accessible mobile column labels', async () => {
+  const previous = globalThis.document;
+  const nodes = new Map();
+  const make = () => ({textContent:'', children: [], attributes: {},
+    replaceChildren() {this.children=[];}, append(...items) {this.children.push(...items);},
+    setAttribute(name, value) {this.attributes[name]=value;}});
+  globalThis.document = {getElementById(id) {if (!nodes.has(id)) nodes.set(id, make()); return nodes.get(id);}, createElement: make};
+  try {
+    document.getElementById('cache-columns').children = ['Cache', 'Hit', 'Miss', 'Rate', 'Evicted', 'Entries'].map(textContent => ({textContent}));
+    const {renderRuntimeMetrics} = await import('../../main/resources/META-INF/polyglot-console/js/runtime-view.js');
+    const model = {observations: {active:0, waiting:1, reloadEvictions:3,
+      caches:[{language:'python', cache:'source', hits:3, misses:1, hitRate:75, invalidatedEntries:4, size:2}]}};
+    renderRuntimeMetrics(model, value => Number.isFinite(value) ? String(value) : '—');
+    assert.equal(nodes.get('runtime-active').textContent, '0');
+    assert.equal(nodes.get('reload-evictions').textContent, '3');
+    const row = nodes.get('cache-scopes').children[0];
+    assert.equal(row.children[3].textContent, '75%');
+    assert.equal(row.children[3].attributes['data-label'], 'Rate');
+    model.observations.caches = [];
+    renderRuntimeMetrics(model, value => String(value));
+    assert.equal(nodes.get('cache-scopes').children[0].children[0].colSpan, 6);
+  } finally {
+    globalThis.document = previous;
+  }
 });

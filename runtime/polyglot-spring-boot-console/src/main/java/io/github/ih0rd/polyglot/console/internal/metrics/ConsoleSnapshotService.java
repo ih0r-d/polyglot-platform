@@ -1,18 +1,24 @@
 package io.github.ih0rd.polyglot.console.internal.metrics;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
-import org.jspecify.annotations.*;
-import org.springframework.beans.factory.*;
-import org.springframework.boot.health.contributor.*;
+import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.health.contributor.Health;
+import org.springframework.boot.health.contributor.HealthIndicator;
 
-import io.github.ih0rd.polyglot.*;
-import io.github.ih0rd.polyglot.annotations.spring.properties.*;
-import io.github.ih0rd.polyglot.console.internal.dto.*;
-import io.github.ih0rd.polyglot.console.properties.*;
-import io.micrometer.core.instrument.*;
-import io.micrometer.core.instrument.distribution.*;
+import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties;
+import io.github.ih0rd.polyglot.console.internal.dto.ConsoleSettingSnapshot;
+import io.github.ih0rd.polyglot.console.internal.dto.ConsoleSnapshot;
+import io.github.ih0rd.polyglot.console.internal.dto.InvocationSnapshot;
+import io.github.ih0rd.polyglot.console.internal.dto.RuntimeMetricSnapshot;
+import io.github.ih0rd.polyglot.console.properties.ConsoleProperties;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.distribution.HistogramSnapshot;
 
 /** Reads existing lifecycle and meter snapshots without creating contexts or registering meters. */
 public final class ConsoleSnapshotService {
@@ -64,7 +70,9 @@ public final class ConsoleSnapshotService {
         invocations(registry, languages),
         runtime(registry, languages),
         configuration(configured),
-        ConsoleJvmMetrics.snapshot(registry));
+        ConsoleJvmMetrics.snapshot(registry),
+        ConsoleRuntimeMetrics.operations(registry, languages),
+        ConsoleRuntimeMetrics.caches(registry, languages));
   }
 
   private static List<SupportedLanguage> enabledLanguages(@Nullable PolyglotProperties configured) {
@@ -117,6 +125,20 @@ public final class ConsoleSnapshotService {
     for (SupportedLanguage language : languages) {
       values.add(value(registry, "polyglot.executor.enabled", language.id(), "boolean"));
       values.add(value(registry, "polyglot.executor.source.cache.size", language.id(), "count"));
+      values.add(value(registry, "polyglot.runtime.invocations.active", language.id(), "count"));
+      values.add(value(registry, "polyglot.runtime.invocations.waiting", language.id(), "count"));
+      values.add(
+          new RuntimeMetricSnapshot(
+              "polyglot.runtime.executors.closed",
+              language.id(),
+              "count",
+              registry == null
+                  ? null
+                  : ConsoleRuntimeMetrics.counter(
+                      registry, "polyglot.runtime.executors.closed", language.id())));
+      if (language == SupportedLanguage.PYTHON) {
+        values.add(value(registry, "polyglot.runtime.reloads.active", language.id(), "count"));
+      }
     }
     if (languages.contains(SupportedLanguage.PYTHON)) {
       values.add(

@@ -25,7 +25,14 @@ function languages(available) {
   languageFilter.disabled = available.length === 0;
 }
 
+function markGap() {
+  const time = performance.now();
+  for (const history of sessions.values()) history.gap(time);
+  for (const state of states.values()) state.sample = null;
+}
+
 function renderSelected() {
+  if (document.hidden) { connection('Paused'); return; }
   const selected = languageFilter.value || 'all';
   const state = states.get(selected);
   if (state) renderSnapshot(state.model, sessions.get(selected).samples, state.sample, updatedAt);
@@ -70,12 +77,13 @@ const poller = new SnapshotPoller(signal => api.snapshot(signal), snapshot => {
   renderSelected();
 }, () => {
   connected = false;
+  markGap();
   renderSelected();
 });
 
 function resume() {
   if (paused || document.hidden) {
-    poller.stop(); renderSelected();
+    poller.stop(); markGap(); renderSelected();
   } else {
     poller.start(Number(refresh.value));
   }

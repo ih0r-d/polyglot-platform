@@ -1,0 +1,164 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<analysisConfiguration>
+  <!-- CDATA preserves exact matching expressions when XML is reformatted. -->
+  <revapi.differences>
+    <differences>
+      <item>
+        <code>java\.annotation\.added</code>
+        <regex>true</regex>
+        <new><![CDATA[class io\.github\.ih0rd\.polyglot\.annotations\.spring\.config\.Polyglot(?:Actuator|Metrics)AutoConfiguration]]></new>
+        <annotation><![CDATA[@org\.springframework\.boot\.context\.properties\.EnableConfigurationProperties\(\{io\.github\.ih0rd\.polyglot\.annotations\.spring\.properties\.PolyglotProperties\.class\}\)]]></annotation>
+        <criticality>documented</criticality>
+        <justification>Registers the existing properties model when optional observability is used without the core
+          auto-configuration. This exact annotation adds no properties or defaults; all Java signatures remain checked.
+        </justification>
+      </item>
+      <item>
+        <code>java.annotation.added</code>
+        <new><![CDATA[method org.springframework.boot.actuate.info.InfoContributor io.github.ih0rd.polyglot.annotations.spring.config.PolyglotActuatorAutoConfiguration::polyglotInfoContributor(io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors, io.github.ih0rd.polyglot.annotations.spring.properties.PolyglotProperties)]]></new>
+        <annotation><![CDATA[@org.springframework.boot.autoconfigure.condition.ConditionalOnBean({io.github.ih0rd.polyglot.annotations.spring.PolyglotExecutors.class})]]></annotation>
+        <criticality>documented</criticality>
+        <justification>Only the info contributor backs off when the global core switch removes its executor facade. Its
+          released descriptor and behavior with an enabled core are preserved. No other conditions are downgraded.
+        </justification>
+      </item>
+      <item>
+        <code>java\.annotation\.attributeAdded</code>
+        <regex>true</regex>
+        <new><![CDATA[class io\.github\.ih0rd\.polyglot\.annotations\.spring\.config\.Polyglot(?:Actuator|Metrics)AutoConfiguration]]></new>
+        <annotationType>org\.springframework\.boot\.autoconfigure\.AutoConfiguration</annotationType>
+        <attribute>after</attribute>
+        <value>\{io\.github\.ih0rd\.polyglot\.annotations\.spring\.config\.PolyglotAutoConfiguration\.class\}</value>
+        <criticality>documented</criticality>
+        <justification>Orders the two optional integrations after their existing core beans. Only adding this exact
+          ordering target is documented; changed values, removals and other attributes remain checked.
+        </justification>
+      </item>
+      <item>
+        <code>java.annotation.attributeAdded</code>
+        <new>class io.github.ih0rd.polyglot.annotations.spring.config.PolyglotMetricsAutoConfiguration</new>
+        <annotationType>org.springframework.boot.autoconfigure.AutoConfiguration</annotationType>
+        <attribute>afterName</attribute>
+        <value><![CDATA[{"org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration"}]]></value>
+        <criticality>documented</criticality>
+        <justification>Waits for Boot's registry definitions before testing for a registry. This exact optional ordering
+          string preserves operation without Actuator; no other annotation or signature differences are downgraded.
+        </justification>
+      </item>
+      <item>
+        <code>java\.annotation\.added</code>
+        <regex>true</regex>
+        <new><![CDATA[class io\.github\.ih0rd\.polyglot\.annotations\.spring\.config\.Polyglot(?:Js|Python)AutoConfiguration]]></new>
+        <annotationType>org\.springframework\.context\.annotation\.Conditional</annotationType>
+        <criticality>documented</criticality>
+        <justification>Adds one global core-enabled condition to the Python and experimental JavaScript
+          auto-configurations while retaining their existing public annotations, methods and language-specific
+          conditions. This makes the documented polyglot.core.enabled=false switch apply consistently. No other
+          annotation changes are downgraded.
+        </justification>
+      </item>
+      <item>
+        <code>java\.annotation\.added</code>
+        <regex>true</regex>
+        <new><![CDATA[parameter void io\.github\.ih0rd\.polyglot\.annotations\.spring\.properties\.PolyglotProperties\.(?:CoreProperties|PythonProperties|JsProperties|MetricsProperties|ActuatorProperties(?:\.(?:InfoProperties|HealthProperties))?)::<init>.*]]></new>
+        <annotationType>org\.springframework\.boot\.context\.properties\.bind\.DefaultValue</annotationType>
+        <criticality>documented</criticality>
+        <justification>Adds only Spring Boot binding-default metadata to existing PolyglotProperties constructor
+          parameters. Constructor descriptors and accessors are unchanged; partial property groups now retain the
+          defaults already declared by the public properties model. Other annotations and property types remain checked.
+        </justification>
+      </item>
+      <item>
+        <code>java.class.externalClassExposedInAPI</code>
+        <new>enum io.github.ih0rd.adapter.context.ContextOwnership</new>
+        <newArchive>io.github.ih0r-d:polyglot-adapter:jar:${project.version}</newArchive>
+        <newArchiveRole>supplementary</newArchiveRole>
+        <criticality>documented</criticality>
+        <justification>Additive ownership enum exposed through new executor overloads; existing signatures and legacy
+          ownership remain unchanged. The adapter is checked separately.
+        </justification>
+      </item>
+      <item>
+        <code>java.class.externalClassExposedInAPI</code>
+        <new>interface org.graalvm.polyglot.Engine.CancellationCallback</new>
+        <newArchive>org.graalvm.polyglot:polyglot:jar:25.0.4.1.1</newArchive>
+        <newArchiveRole>supplementary</newArchiveRole>
+        <criticality>documented</criticality>
+        <justification>Polyglot 25.0.4.1.1 adds Engine.persistCache(CancellationCallback); the callback is newly
+          reachable through existing Context/Engine APIs. No existing member is removed or changed. Other types,
+          difference codes and artifact versions remain checked.
+        </justification>
+      </item>
+      <!-- Revapi reports these existing ambiguities even for unchanged upstream APIs. -->
+      <item>
+        <code>java\.method\.varargOverloadsOnlyDifferInVarargParameter</code>
+        <regex>true</regex>
+        <old><![CDATA[method (io\.micrometer\.core\.instrument\.(?:DistributionSummary\.Builder|distribution\.DistributionStatisticConfig\.Builder)) \1::sla\((?:double|long)\[\]\)|method (io\.micrometer\.core\.instrument\.Tags) \2::(?:and|of)\((?:java\.lang\.String|io\.micrometer\.core\.instrument\.Tag)\[\]\)]]></old>
+        <new><![CDATA[method (io\.micrometer\.core\.instrument\.(?:DistributionSummary\.Builder|distribution\.DistributionStatisticConfig\.Builder)) \1::sla\((?:double|long)\[\]\)|method (io\.micrometer\.core\.instrument\.Tags) \2::(?:and|of)\((?:java\.lang\.String|io\.micrometer\.core\.instrument\.Tag)\[\]\)]]></new>
+        <oldArchive>io\.micrometer:micrometer-core:jar:1\.17\.0</oldArchive>
+        <newArchive>io\.micrometer:micrometer-core:jar:1\.17\.0</newArchive>
+        <criticality>documented</criticality>
+        <justification>Unchanged Micrometer 1.17.0 varargs ambiguities already exist in the published baseline; retain
+          the diagnostic without treating it as a project regression. Other difference codes and dependency versions
+          remain checked.
+        </justification>
+      </item>
+      <item>
+        <code>java\.method\.varargOverloadsOnlyDifferInVarargParameter</code>
+        <regex>true</regex>
+        <old><![CDATA[method org\.springframework\.core\.ResolvableType org\.springframework\.core\.ResolvableType::forClassWithGenerics\(java\.lang\.Class<\?>, (java\.lang\.Class<\?>|org\.springframework\.core\.ResolvableType)\[\]\)]]></old>
+        <new><![CDATA[method org\.springframework\.core\.ResolvableType org\.springframework\.core\.ResolvableType::forClassWithGenerics\(java\.lang\.Class<\?>, (java\.lang\.Class<\?>|org\.springframework\.core\.ResolvableType)\[\]\)]]></new>
+        <oldArchive>org\.springframework:spring-core:jar:7\.0\.8</oldArchive>
+        <newArchive>org\.springframework:spring-core:jar:7\.0\.8</newArchive>
+        <criticality>documented</criticality>
+        <justification>Unchanged Spring Core 7.0.8 overload ambiguity exists in both APIs; only this diagnostic for
+          these pinned members is non-blocking.
+        </justification>
+      </item>
+      <item>
+        <code>java.class.externalClassExposedInAPI</code>
+        <new>interface io.github.ih0rd.adapter.observability.RuntimeObserver</new>
+        <newArchive>io.github.ih0r-d:polyglot-adapter:jar:${project.version}</newArchive>
+        <newArchiveRole>supplementary</newArchiveRole>
+        <criticality>documented</criticality>
+        <justification>Additive optional runtime observation contract reachable through existing executor accessors.
+          Adapter compatibility is checked separately; no released signature is changed. Only this exact newly exposed
+          type is documented.
+        </justification>
+      </item>
+      <item>
+        <code>java.class.externalClassExposedInAPI</code>
+        <new>enum io.github.ih0rd.adapter.observability.RuntimeOperation</new>
+        <newArchive>io.github.ih0r-d:polyglot-adapter:jar:${project.version}</newArchive>
+        <newArchiveRole>supplementary</newArchiveRole>
+        <criticality>documented</criticality>
+        <justification>Additive optional runtime observation contract reachable through existing executor accessors.
+          Adapter compatibility is checked separately; no released signature is changed. Only this exact newly exposed
+          type is documented.
+        </justification>
+      </item>
+      <item>
+        <code>java.class.externalClassExposedInAPI</code>
+        <new>enum io.github.ih0rd.adapter.observability.RuntimeCache</new>
+        <newArchive>io.github.ih0r-d:polyglot-adapter:jar:${project.version}</newArchive>
+        <newArchiveRole>supplementary</newArchiveRole>
+        <criticality>documented</criticality>
+        <justification>Additive optional runtime observation contract reachable through existing executor accessors.
+          Adapter compatibility is checked separately; no released signature is changed. Only this exact newly exposed
+          type is documented.
+        </justification>
+      </item>
+      <item>
+        <code>java.class.externalClassExposedInAPI</code>
+        <new>enum io.github.ih0rd.adapter.observability.InvalidationReason</new>
+        <newArchive>io.github.ih0r-d:polyglot-adapter:jar:${project.version}</newArchive>
+        <newArchiveRole>supplementary</newArchiveRole>
+        <criticality>documented</criticality>
+        <justification>Additive optional runtime observation contract reachable through existing executor accessors.
+          Adapter compatibility is checked separately; no released signature is changed. Only this exact newly exposed
+          type is documented.
+        </justification>
+      </item>
+    </differences>
+  </revapi.differences>
+</analysisConfiguration>
