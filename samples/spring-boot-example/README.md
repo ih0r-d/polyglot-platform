@@ -386,3 +386,38 @@ Library gates remain documented in
   Gate or HTTP demo does not certify native-extension teardown on every JVM.
 - **Native Image:** this task does not validate it. The existing user-owned experimental resource
   hint is untouched. JVM success or an executable JAR is not proof of Spring Native Image support.
+
+## Runtime metrics, contention and reload demo
+
+Use Java 25 and install current reactor artifacts first (`task samples` does this locally).
+The explicit `runtime-metrics-demo` development profile uses the existing RiskApi bean and an
+in-memory override layered over the normal Spring ScriptSource. It exercises two successful reloads,
+one rejected replacement, cache reuse and a real guest failure during startup. The same injected
+client remains in use; original Python source is restored. No reload HTTP endpoint, file watching,
+new Context or manual meter recording is introduced. Ordinary startup is unchanged without this
+profile.
+
+```bash
+./mvnw -f samples/spring-boot-example/pom.xml spring-boot:run \
+  -Dspring-boot.run.profiles=observability,runtime-metrics-demo \
+  -Dspring-boot.run.arguments="--server.port=8545 --polyglot.console.path=/polyglot-console"
+```
+
+Open `http://localhost:8545/polyglot-console/`. In another terminal generate actual NumPy HTTP work:
+
+```bash
+./samples/spring-boot-example/demo.sh load --port 8545 \
+  --duration 120 --interval 2 --requests 12 --errors 2 --size 100000 --concurrency 4
+```
+
+One executor serializes guest access. Concurrency creates real monitor contention; admission time
+includes scheduling/acquisition overhead and is not guest CPU time. Runtime execution includes result
+conversion and lazy work; client total latency includes the Spring wrapper as well. Cache hits count
+actual reuse, misses include reclaimed weak instances, and eviction counts include failed reloads
+whose old entries are restored. See the [runtime metric catalog](../../docs/runtime.md#runtime-operation-metrics).
+
+Console panels read internal, allowlisted meter snapshots and need no HTTP metrics exposure.
+The CLI's separate `metrics` command still uses Actuator HTTP. Means are cumulative in matching
+scopes, MAX is time-window based, and chart gaps are real missing observations. Histograms are
+opt-in; this UI does not estimate percentiles. Keep this localhost demo and Console behind the
+application's existing access policy; do not expose it as an unauthenticated public management API.

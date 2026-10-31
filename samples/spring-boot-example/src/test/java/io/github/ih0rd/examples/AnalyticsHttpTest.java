@@ -65,9 +65,11 @@ class AnalyticsHttpTest {
   @Test
   void servesConsoleAndJavaScriptThroughTheRealHttpServer() throws Exception {
     try (HttpClient http = HttpClient.newHttpClient()) {
-      for (String path :
-          List.of(
-              "/polyglot-console/", "/polyglot-console/assets/js/app.js", "/polyglot-console/assets/css/console.css", "/polyglot-console/data")) {
+      String consolePath =
+          application.getEnvironment().getProperty("polyglot.console.path", "/polyglot-console");
+      for (String suffix :
+          List.of("/", "/assets/js/app.js", "/assets/css/console.css", "/data")) {
+        String path = consolePath + suffix;
         var response =
             http.send(
                 HttpRequest.newBuilder(URI.create(base + path)).GET().build(),
