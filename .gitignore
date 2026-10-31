@@ -9,7 +9,6 @@ pom.xml.next
 release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
-.local
 
 # Flatten plugin
 .flattened-pom.xml
@@ -94,8 +93,4 @@ docs/.venv/
 .dev/sonar.sh
 .dev/sonar.yml
 site/
-
-./.dev/sonar.yml
-./.dev/sonar.sh
-
 AGENTS.md

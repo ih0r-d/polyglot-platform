@@ -6,6 +6,7 @@ The repository currently provides:
 
 - Python runtime execution and experimental JavaScript runtime execution
 - Spring Boot integration for typed clients
+- explicit Python contract reload and optional runtime metrics / developer console
 - Python contract parsing and Java interface generation
 - module-level separation between runtime and build tooling
 
@@ -34,15 +35,15 @@ static Python module/symbol/positional-signature validation with annotation disc
 JMH baseline records invocation, transfer, import and context-startup costs.
 
 The remaining work is compatibility boundary decisions, evidence-driven runtime/lifecycle tests,
-small safe cleanups, and a bounded stabilization review. Internal planning files track proposed
-tasks; they are not product or release guarantees.
+small safe cleanups, and a bounded stabilization review. This public roadmap describes direction,
+not product or release guarantees. Personal planning belongs in the ignored `.local/planning/`.
 
 Deferred:
 
 - JavaScript code generation
 - JavaScript parity work
 - concurrency redesign
-- hot reload or live source replacement semantics
+- automatic file watching and source reload (explicit contract reload is already supported)
 - broad “platform” expansion claims
 
 ## Contribution Guidance

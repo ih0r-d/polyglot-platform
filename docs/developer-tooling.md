@@ -98,6 +98,7 @@ task verify
 task quality
 task samples
 task format
+task console:test
 task docs:serve
 task docs:build
 task docs:clean
@@ -111,9 +112,32 @@ What they do:
 - `task quality`: run the stricter local quality gate
 - `task samples`: install local artifacts and verify maintained samples
 - `task format`: apply Spotless formatting
+- `task console:test`: run Console JavaScript tests with Node.js
 - `task docs:serve`: start the local MkDocs development server
 - `task docs:build`: run a strict local documentation build
 - `task docs:clean`: remove local MkDocs site output
+
+Documentation commands use `mkdocs` on `PATH` when available. Otherwise they create and reuse
+`.local/venv-docs/` with Python 3's `venv`, MkDocs, and Material for MkDocs. Build, serve, and
+release preflight share `.dev/lib/docs.sh`; release preflight retains its tooling refresh step.
+Internet access is required for the initial package installation. Virtual environments must be
+[recreated rather than moved](https://docs.python.org/3/library/venv.html#how-venvs-work).
+Legacy `.venv-docs/` and `docs/.venv/` are no longer used by these commands; verify a build with
+the replacement before removing an old environment, and preserve any custom files first.
+
+Keep private plans and local overrides in ignored `.local/planning/`. Public project direction
+belongs in [Roadmap](roadmap.md). Shared configuration stays tracked in `config/`; local Maven
+settings, credentials, and signing material must remain ignored. Root `AGENTS.md` contains the
+public contributor-agent rules; machine-specific guidance belongs in `.local/planning/`.
+
+The `test`, `verify`, and `quality` tasks also run the Java resolution and docs tooling shell tests.
+They can be run independently without Maven or package downloads:
+
+```bash
+bash .dev/tests/common-test.sh
+bash .dev/tests/docs-test.sh
+task console:test
+```
 
 For static Java-to-Python contract checks, see the opt-in `validate-contracts` goal and its
 `plugin-it` Maven Invoker fixtures in [Code Generation](codegen.md#opt-in-java-to-python-contract-validation).
@@ -308,5 +332,5 @@ task version:bump -- patch
 - Maven Central publishing is manual-only through the GitHub Actions publish workflow.
 - The release preflight and release commands are intentionally separate from normal contributor commands.
 - `task docs:serve` cleans the temporary `site/` output on exit or interruption.
-- `.venv-docs` is preserved across local docs runs for reuse.
+- `.local/venv-docs/` is preserved across local docs runs for reuse.
 - Direct use of `.dev/bin/*` is considered advanced/internal usage for toolkit maintenance and debugging.

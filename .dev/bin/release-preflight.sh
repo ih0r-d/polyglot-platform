@@ -3,8 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
-
-DOCS_VENV="$REPO_ROOT/.venv-docs"
+source "$SCRIPT_DIR/../lib/docs.sh"
 DOCS_CLEAN="${RELEASE_PREFLIGHT_CLEAN_DOCS_VENV:-0}"
 
 cleanup_docs_venv() {
@@ -25,15 +24,7 @@ run_docs_check() {
     return
   fi
 
-  print_info "Preparing docs virtual environment: $DOCS_VENV"
-  if [ ! -x "$DOCS_VENV/bin/python" ]; then
-    python3 -m venv "$DOCS_VENV"
-  fi
-
-  # shellcheck disable=SC1091
-  source "$DOCS_VENV/bin/activate"
-  python -m pip install --upgrade pip
-  python -m pip install mkdocs mkdocs-material
+  ensure_docs_venv refresh
   python -m mkdocs build --strict
 }
 

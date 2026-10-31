@@ -25,18 +25,21 @@ tasks:
     desc: Run tests
     cmds:
       - bash ./.dev/tests/common-test.sh
+      - bash ./.dev/tests/docs-test.sh
       - ./.dev/bin/test.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
   verify:
     desc: Run repository verification
     cmds:
       - bash ./.dev/tests/common-test.sh
+      - bash ./.dev/tests/docs-test.sh
       - ./.dev/bin/verify.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
   quality:
     desc: Run the stricter local quality gate
     cmds:
       - bash ./.dev/tests/common-test.sh
+      - bash ./.dev/tests/docs-test.sh
       - ./.dev/bin/quality.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
 
   format:
@@ -48,6 +51,11 @@ tasks:
     desc: Build the documentation site with strict checks
     cmds:
       - ./.dev/bin/docs-build.sh{{if .CLI_ARGS}} {{.CLI_ARGS}}{{end}}
+
+  console:test:
+    desc: Run the Console frontend tests (requires Node.js)
+    cmds:
+      - node --test runtime/polyglot-spring-boot-console/src/test/js/console-test.js
 
   docs:serve:
     desc: Start the local documentation server

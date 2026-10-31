@@ -23,10 +23,10 @@ Use it together with [`release-process.md`](release-process.md) and
 It is expected to:
 
 - respect an explicit `JAVA_HOME`, otherwise resolve an installed SDKMAN candidate or JDK on `PATH`
-- build docs with a local `.venv-docs/` environment when `mkdocs` is not already installed
+- build docs with a local `.local/venv-docs/` environment when `mkdocs` is not already installed
 - verify the maintained release-path samples after local artifact installation
 
-Use `task release:preflight:clean` only when you explicitly want `.venv-docs/` removed after the run.
+Use `task release:preflight:clean` only when you explicitly want `.local/venv-docs/` removed after the run.
 
 ## `0.5.0` Checklist
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-`polyglot-adapter` is a multi-module Maven repository organized around a runtime adapter for dynamic languages built on top of the GraalVM Polyglot API.
+`polyglot-platform` is a multi-module Maven repository organized around a runtime adapter for dynamic languages built on top of the GraalVM Polyglot API.
 
 The codebase is split into three logical layers:
 
@@ -13,7 +13,8 @@ api
 runtime
   ├─ polyglot-bom
   ├─ polyglot-adapter
-  └─ polyglot-spring-boot-starter
+  ├─ polyglot-spring-boot-starter
+  └─ polyglot-spring-boot-console
 build-tools
   ├─ polyglot-codegen
   └─ polyglot-codegen-maven-plugin
@@ -75,6 +76,11 @@ The runtime layer is the actual GraalVM polyglot integration layer. It adapts Ja
 
 Current fail-fast validation in the Spring starter works by eagerly instantiating discovered client
 beans during startup, not by a separate metadata-only validation pass.
+
+`polyglot-spring-boot-console` is a separate, optional developer console. It packages its own
+frontend assets and exposes an allowlisted read-only API backed by Spring-managed Micrometer
+and Actuator components. The regular starter does not depend on the console, and public Actuator
+HTTP exposure is not required.
 
 `polyglot-bom` is a consumption aid. It aligns runtime module versions with GraalVM dependencies for applications using the adapter.
 

@@ -180,6 +180,9 @@ jobs:
       - name: Test developer Java resolution
         run: bash .dev/tests/common-test.sh
 
+      - name: Test documentation tooling
+        run: bash .dev/tests/docs-test.sh
+
       - name: Spotless formatting check
         run: ./mvnw -B -ntp -pl '!runtime/polyglot-spring-boot-console' spotless:check
 
