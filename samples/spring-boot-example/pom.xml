@@ -15,6 +15,7 @@
     <description>polyglot-springboot-example</description>
     <properties>
         <java.version>25</java.version>
+        <sample.test-output-directory>${project.build.directory}/test-classes</sample.test-output-directory>
         <polyglot.version>0.5.0-SNAPSHOT</polyglot.version>
         <!-- Python packages for GraalPy -->
         <python.package.1>faker==26.0.0</python.package.1>
@@ -47,6 +48,12 @@
         <dependency>
             <groupId>io.github.ih0r-d</groupId>
             <artifactId>polyglot-spring-boot-starter</artifactId>
+        </dependency>
+        <!-- API for the dev-only export predicate; no SDK/exporter in the ordinary runtime. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing</artifactId>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.graalvm.python</groupId>
@@ -86,6 +93,7 @@
     </dependencies>
 
     <build>
+        <testOutputDirectory>${sample.test-output-directory}</testOutputDirectory>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -131,4 +139,58 @@
         </plugins>
     </build>
 
+    <!-- Opt-in consumer demonstration; ordinary sample runtime needs no exporter. -->
+    <profiles>
+        <profile>
+            <id>dev</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-opentelemetry</artifactId>
+                    <!-- Jaeger is trace-only. Keep the sample's existing metrics registry/units. -->
+                    <exclusions>
+                        <exclusion>
+                            <groupId>io.micrometer</groupId>
+                            <artifactId>micrometer-registry-otlp</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>io.opentelemetry</groupId>
+                    <artifactId>opentelemetry-sdk-testing</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <properties>
+                <spring-boot.run.profiles>dev</spring-boot.run.profiles>
+                <sample.test-output-directory>${project.build.directory}/tracing-test-classes</sample.test-output-directory>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>3.6.0</version>
+                        <executions>
+                            <execution>
+                                <id>add-tracing-tests</id>
+                                <phase>generate-test-sources</phase>
+                                <goals><goal>add-test-source</goal></goals>
+                                <configuration>
+                                    <sources><source>src/tracing-test/java</source></sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <configuration>
+                            <classifier>dev</classifier>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

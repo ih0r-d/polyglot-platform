@@ -10,7 +10,7 @@ umask 077
 SAMPLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPOSITORY="$(cd "$SAMPLE_DIR/../.." && pwd)"
 STATE="$SAMPLE_DIR/.local/showcase"
-JAR="$SAMPLE_DIR/target/polyglot-springboot-example-0.0.1-SNAPSHOT.jar"
+JAR="$SAMPLE_DIR/target/polyglot-springboot-example-0.0.1-SNAPSHOT-dev.jar"
 HOST=${DEMO_HOST:-127.0.0.1}
 PORT=${DEMO_PORT:-8080}
 REQUESTS=${DEMO_REQUESTS:-10}
@@ -28,7 +28,7 @@ usage() {
   cat <<'HELP'
 Embedded Python Analytics Showcase
 Usage: ./demo.sh COMMAND [options]
-Commands: help start stop restart status smoke traffic load metrics health console logs demo
+Commands: help start stop restart status smoke traffic load metrics health console traces logs demo
 Options: --port N --host 127.0.0.1|localhost --requests N --errors N
          --concurrency N (1..16) --size N (1..100000) --metrics true|false
          --timeout N (startup seconds, default 120) --console-path /polyglot-console --help
@@ -54,7 +54,7 @@ fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 COMMAND=${1:-help}
 if [ "$COMMAND" = help ] || [ "$COMMAND" = --help ] || [ "$COMMAND" = -h ]; then usage; exit 0; fi
 shift
-case "$COMMAND" in start|stop|restart|status|smoke|traffic|load|metrics|health|console|logs|demo) ;; *) usage >&2; fail "Unknown command: $COMMAND" ;; esac
+case "$COMMAND" in start|stop|restart|status|smoke|traffic|load|metrics|health|console|traces|logs|demo) ;; *) usage >&2; fail "Unknown command: $COMMAND" ;; esac
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --help|-h) usage; exit 0 ;;
@@ -135,7 +135,7 @@ build() {
     printf '=== Building current library and locked Python application ===\n'
     if ! (cd "$REPOSITORY" &&
         ./mvnw -B -ntp -pl runtime/polyglot-spring-boot-console -am install -DskipTests &&
-        ./mvnw -B -ntp -f "$SAMPLE_DIR/pom.xml" package -DskipTests) > "$STATE/build.log" 2>&1; then
+        ./mvnw -B -ntp -f "$SAMPLE_DIR/pom.xml" -Pdev package -DskipTests) > "$STATE/build.log" 2>&1; then
       tail -n 40 "$STATE/build.log" >&2
       fail "Build failed; full diagnostics: $STATE/build.log"
     fi
@@ -173,7 +173,7 @@ start() {
   directory=$(mktemp -d "$STATE/run.XXXXXXXX")
   TOKEN=${directory##*/}
   nohup "$JAVA" --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow \
-    "-Dshowcase.owner=$TOKEN" -jar "$JAR" --spring.profiles.active=observability,console \
+    "-Dshowcase.owner=$TOKEN" -jar "$JAR" --spring.profiles.active=dev \
     "--server.address=$HOST" "--server.port=$PORT" "--polyglot.metrics.enabled=$METRICS" "--polyglot.console.path=$CONSOLE_PATH" \
     > "$directory/app.log" 2>&1 < /dev/null &
   PID=$!
@@ -192,6 +192,11 @@ start() {
   printf 'Ready: %s (PID %s)\nLog: %s/app.log\n' "$BASE" "$PID" "$directory"
   printf 'Actuator: %s/actuator\nInvocation metrics: %s/actuator/metrics/polyglot.client.invocations\n' "$BASE" "$BASE"
   printf 'Experimental console: %s%s/\n' "$BASE" "$CONSOLE_PATH"
+  traces
+}
+traces() {
+  printf 'Jaeger traces: http://127.0.0.1:16686 (service: polyglot-springboot-example)\n'
+  printf 'Start backend: docker compose -f %s/compose.dev.yml up -d\n' "$SAMPLE_DIR"
 }
 # These readers inspect known numeric fields in this sample's JSON, not arbitrary JSON documents.
 http() {
@@ -341,6 +346,7 @@ case "$COMMAND" in
       curl -fsS --max-time 2 "http://$HOST:$RUN_PORT/actuator/health/readiness" || fail "Process is running but not ready"
       printf '\n'
     else fail "No verified managed sample is running"; fi ;;
+  traces) traces ;;
   logs) read_state; [[ "$TOKEN" =~ ^run\.[a-zA-Z0-9]+$ ]] || fail "No managed log path"; tail -n 60 "$STATE/$TOKEN/app.log" ;;
   demo|smoke|traffic|load|metrics|health|console)
     if [ "$COMMAND" = demo ]; then start; fi

@@ -15,6 +15,7 @@ expect_failure() {
 }
 bash "$CLI" help | grep -q 'Embedded Python Analytics'
 bash "$CLI" help | grep -q 'console'
+bash "$CLI" traces | grep -q 'http://127.0.0.1:16686'
 bash "$CLI" load --help | grep -q 'pause seconds'
 sh "$CLI" help | grep -q 'Embedded Python Analytics'
 POSIXLY_CORRECT=1 sh "$CLI" help | grep -q 'Embedded Python Analytics'

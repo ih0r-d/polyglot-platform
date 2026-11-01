@@ -16,6 +16,56 @@ HTTP → Spring validation → annotated Java contract → serialized executor �
 Micrometer Timer + runtime gauges → standard Actuator endpoints
 ```
 
+## Full local development: metrics and traces
+
+Use one `dev` profile for Console, Micrometer/Actuator and OTLP tracing. With JDK 25 selected,
+run from the repository root:
+
+```bash
+# Optional local backend: Jaeger UI + OTLP/HTTP receiver.
+docker compose -f samples/spring-boot-example/compose.dev.yml up -d
+
+# One Maven profile also selects the Spring dev profile.
+./mvnw -f samples/spring-boot-example/pom.xml -Pdev spring-boot:run
+```
+
+Open:
+
+- **Polyglot Console:** <http://localhost:8080/polyglot-console/> — live metrics and runtime state.
+- **Jaeger:** <http://localhost:16686> — select service `polyglot-springboot-example`, click
+  **Find Traces**, then open a trace and expand its `polyglot.invoke` child.
+- **Actuator:** <http://localhost:8080/actuator> — health, info and metrics.
+
+In another terminal, create real successes and failures, with pauses for recording the dashboard:
+
+```bash
+./samples/spring-boot-example/demo.sh load --duration 120 --interval 3 \
+  --requests 10 --errors 2 --concurrency 3 --size 1000
+```
+
+For single requests:
+
+```bash
+curl 'http://localhost:8080/stats/random?n=3'
+curl -X POST 'http://localhost:8080/analytics/failure'
+```
+
+The second call intentionally returns HTTP 500 and produces an ERROR polyglot span. Allow a few
+seconds for batched export, then refresh Jaeger search. No traces means: verify the Jaeger service,
+port 4318, service filter, and search time range; inspect `docker compose -f
+samples/spring-boot-example/compose.dev.yml logs jaeger` and the application logs.
+
+The service and both Jaeger ports bind to loopback. Jaeger uses transient in-memory storage;
+recreating its container loses traces. Stop it with:
+
+```bash
+docker compose -f samples/spring-boot-example/compose.dev.yml down
+```
+
+No Docker is needed for metrics or automated tests. Without Jaeger, Console works, but exporting
+traces reports connection failures. The legacy observability YAML is retained for existing tests
+and local configuration; the documented all-in-one setup uses only `application-dev.properties`.
+
 ## One-command quick start
 
 Prerequisites: Bash, curl, Git and a working **JDK 25+** selected with `JAVA_HOME`, installed
@@ -41,7 +91,7 @@ artifacts locally. Later starts reuse the built JAR unless sample sources or HEA
 The service remains running for inspection; finish with `./samples/spring-boot-example/demo.sh stop`.
 Use the same `--port` (or `DEMO_PORT`) for subsequent HTTP commands when using a custom port.
 
-The opt-in `observability` profile binds to loopback and exposes only health, info and metrics.
+The opt-in `dev` profile binds to loopback and exposes only health, info and metrics.
 No authentication is installed: this is a local demo, not a production deployment template.
 
 ## Run from IntelliJ IDEA
@@ -55,7 +105,8 @@ polyglot-springboot-example → Sources**. Neither `src` nor `src/main` should b
 source root. Unmark those broad roots if present; Maven imports `src/main/java` as Sources
 and `src/test/java` as Tests. Keep the existing test-scoped dependencies in the POM.
 
-Use JDK 25+ for the sample module and Maven runner. Prepare the GraalPy VFS through Maven
+Activate the Maven `dev` profile in IDEA and reload Maven so the OpenTelemetry dependency is
+on the runtime classpath. Use JDK 25+ for the sample module and Maven runner. Prepare the GraalPy VFS through Maven
 before the first IDE launch, from the repository root:
 
 ```bash
@@ -65,10 +116,10 @@ before the first IDE launch, from the repository root:
 Run `io.github.ih0rd.examples.PolyglotSpringbootExampleApplication` with:
 
 - Classpath module: `polyglot-springboot-example`.
-- Program arguments: `--spring.profiles.active=observability`.
+- Program arguments: `--spring.profiles.active=dev`.
 - VM options: `--enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow`.
 
-For a Spring Boot run configuration, setting **Active profiles** to `observability` is
+For a Spring Boot run configuration, setting **Active profiles** to `dev` is
 equivalent to the program argument. These options follow the standard
 [IDEA Spring Boot run configuration](https://www.jetbrains.com/help/idea/run-debug-configuration-spring-boot.html).
 Stop an existing shell-managed demo with `./samples/spring-boot-example/demo.sh stop`
@@ -86,16 +137,15 @@ console UI or MVC wiring. With JDK 25 selected, run from the repository root:
 ```
 
 Open `/polyglot-console/` on the application's current port (the CLI defaults to 8080).
-For Maven or IDEA, enable the local development profiles:
+For Maven or IDEA, enable the local development profile:
 
 ```bash
 ./mvnw -pl runtime/polyglot-spring-boot-console -am install -DskipTests
-./mvnw -f samples/spring-boot-example/pom.xml spring-boot:run \
-  -Dspring-boot.run.profiles=observability,console
+./mvnw -f samples/spring-boot-example/pom.xml -Pdev spring-boot:run
 ```
 
 The new module requires **Java 25**. The existing framework-neutral library retains its Java 21
-baseline. `polyglot.console.enabled` defaults to `false`; the sample development profiles enable it.
+baseline. `polyglot.console.enabled` defaults to `false`; the sample development profile enables it.
 `polyglot.console.path` defaults to `/polyglot-console` and `refresh-interval` to `5s` (allowed 1s–1m).
 For a custom path, use `./demo.sh restart --console-path /ops/console`, then use the same option
 for `./demo.sh console --console-path /ops/console`. The `DEMO_CONSOLE_PATH` environment variable
@@ -355,10 +405,10 @@ measurements must be read from your run; no timing guarantees or Native Image cl
 bash -n samples/spring-boot-example/demo.sh
 bash samples/spring-boot-example/tests/demo-test.sh
 bash samples/spring-boot-example/tests/demo-integration-test.sh
-./mvnw -B -ntp -f samples/spring-boot-example/pom.xml verify
+./mvnw -B -ntp -f samples/spring-boot-example/pom.xml -Pdev verify
 java --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow \
-  -jar samples/spring-boot-example/target/polyglot-springboot-example-0.0.1-SNAPSHOT.jar \
-  --spring.profiles.active=observability
+  -jar samples/spring-boot-example/target/polyglot-springboot-example-0.0.1-SNAPSHOT-dev.jar \
+  --spring.profiles.active=dev
 ```
 
 The sample HTTP tests check numerical
@@ -421,3 +471,25 @@ The CLI's separate `metrics` command still uses Actuator HTTP. Means are cumulat
 scopes, MAX is time-window based, and chart gaps are real missing observations. Histograms are
 opt-in; this UI does not estimate percentiles. Keep this localhost demo and Console behind the
 application's existing access policy; do not expose it as an unauthenticated public management API.
+
+## Dev-profile tracing verification
+
+From the repository root:
+
+```bash
+task samples
+./mvnw -f samples/spring-boot-example/pom.xml -Pdev spring-boot:run
+curl "http://127.0.0.1:8080/stats/random?n=3"
+curl -X POST "http://127.0.0.1:8080/analytics/failure"
+```
+
+This local-only profile exports OTLP/HTTP to `127.0.0.1:4318`. Use Jaeger or Tempo to view the
+HTTP server span and `polyglot.invoke` child. Ordinary sample builds need no collector.
+Run `./mvnw -f samples/spring-boot-example/pom.xml -Pdev test` for isolated HTTP tracing
+verification using an in-memory exporter. See the [tracing guide](../../docs/tracing.md) for
+error sanitization, sampling, lifecycle and Python-side instrumentation limitations.
+
+The sample `dev` profile filters only exported SERVER spans for GET polling of Console and
+Actuator health/info/metrics paths, using Boot's managed `SpanExportingPredicate`. Request metrics
+and business tracing remain enabled; non-GET requests and non-SERVER spans are retained.
+No filtering is installed by the library. Custom console/base/context paths are supported.
