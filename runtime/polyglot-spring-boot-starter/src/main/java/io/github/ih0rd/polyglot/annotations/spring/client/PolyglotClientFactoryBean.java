@@ -21,6 +21,7 @@ import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotCli
 import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotClientClassNotFoundException;
 import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotClientResolutionException;
 import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotInvocationObserver;
+import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotInvocationTracing;
 
 /**
  * {@link FactoryBean} that creates a Spring-managed polyglot client.
@@ -75,7 +76,11 @@ public final class PolyglotClientFactoryBean<T> implements FactoryBean<T>, BeanF
       executor.validateBinding(clientType, convention);
       T client = executor.bind(clientType, convention);
       PolyglotInvocationObserver observer = invocationObserver();
-      return observer == null ? client : observe(client, language, observer);
+      PolyglotInvocationTracing tracing =
+          beanFactory.getBeanProvider(PolyglotInvocationTracing.class).getIfAvailable();
+      return observer == null && tracing == null
+          ? client
+          : observe(client, language, observer, tracing);
     } catch (RuntimeException ex) {
       throw new PolyglotClientBindingException(clientType.getName(), language.id(), ex);
     }
@@ -157,24 +162,29 @@ public final class PolyglotClientFactoryBean<T> implements FactoryBean<T>, BeanF
   }
 
   @SuppressWarnings("unchecked")
-  private T observe(T client, SupportedLanguage language, PolyglotInvocationObserver observer) {
-    InvocationHandler target = Proxy.getInvocationHandler(client);
+  private T observe(
+      T client,
+      SupportedLanguage language,
+      @Nullable PolyglotInvocationObserver observer,
+      @Nullable PolyglotInvocationTracing tracing) {
+    InvocationHandler delegate = Proxy.getInvocationHandler(client);
+    InvocationHandler target = tracing == null ? delegate : tracing.decorate(delegate, language);
     return (T)
         Proxy.newProxyInstance(
             clientType.getClassLoader(),
             new Class<?>[] {clientType},
             (proxy, method, args) -> {
               if (method.getDeclaringClass() == Object.class) {
-                return target.invoke(client, method, args);
+                return delegate.invoke(client, method, args);
               }
-              long startedAt = observer.start();
+              long startedAt = observer == null ? 0 : observer.start();
               boolean failed = true;
               try {
                 Object result = target.invoke(client, method, args);
                 failed = false;
                 return result;
               } finally {
-                observer.recordInvocation(language, failed, startedAt);
+                if (observer != null) observer.recordInvocation(language, failed, startedAt);
               }
             });
   }

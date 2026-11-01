@@ -34,6 +34,7 @@ nav:
   - Public API: public-api.md
   - Stability: stability.md
   - Runtime: runtime.md
+  - Tracing: tracing.md
   - Runtime Semantics: runtime-semantics.md
   - Code Generation: codegen.md
   - Troubleshooting: troubleshooting.md

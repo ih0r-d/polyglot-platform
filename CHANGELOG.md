@@ -5,6 +5,10 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Added
+- Add optional Spring-managed `polyglot.invoke` tracing through Micrometer Tracing, preserving
+  application parents/sampling and existing runtime meters. Sanitize exported errors and keep
+  tracing SDK/exporters application-owned; add a unified sample dev profile, optional local
+  Jaeger Compose backend and collector-free HTTP tests.
 - Compact experimental Console into accessible Overview, Execution, Caching and Reloads tabs;
   retain shared KPIs, language scopes and bounded polling history with collapsed advanced diagnostics.
 - Add optional runtime operation, monitor-admission, active/waiting, cache and reload observations;

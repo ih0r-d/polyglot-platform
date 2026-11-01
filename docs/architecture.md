@@ -72,6 +72,7 @@ The runtime layer is the actual GraalVM polyglot integration layer. It adapts Ja
 - `@EnablePolyglotClients` scanning
 - `PolyglotClientFactoryBean`
 - optional Actuator health/info, executor gauges, and bounded-cardinality client invocation timers
+- optional application-managed Micrometer Tracing for typed client invocations
 - startup warmup, optional script preload, and fail-fast client validation
 
 Current fail-fast validation in the Spring starter works by eagerly instantiating discovered client

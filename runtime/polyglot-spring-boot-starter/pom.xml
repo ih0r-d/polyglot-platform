@@ -54,6 +54,23 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Optional tracing API; application owns the bridge, SDK and exporters. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-testing</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Configuration metadata for PolyglotProperties -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -33,6 +33,7 @@ import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotCli
 import io.github.ih0rd.polyglot.annotations.spring.client.exceptions.PolyglotClientResolutionException;
 import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotInvocationMetrics;
 import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotInvocationObserver;
+import io.github.ih0rd.polyglot.annotations.spring.internal.PolyglotInvocationTracing;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 class PolyglotClientFactoryBeanTest {
@@ -63,6 +64,7 @@ class PolyglotClientFactoryBeanTest {
   @Mock private AutoApi autoProxy;
   @Mock private BeanFactory beanFactory;
   @Mock private ObjectProvider<PolyglotInvocationObserver> invocationObserver;
+  @Mock private ObjectProvider<PolyglotInvocationTracing> invocationTracing;
 
   private AutoCloseable mocks;
 
@@ -241,6 +243,8 @@ class PolyglotClientFactoryBeanTest {
     when(beanFactory.getBeanProvider(PolyglotInvocationObserver.class))
         .thenReturn(invocationObserver);
     when(invocationObserver.getIfAvailable()).thenReturn(null);
+    when(beanFactory.getBeanProvider(PolyglotInvocationTracing.class))
+        .thenReturn(invocationTracing);
     PolyglotClientFactoryBean<T> factory = new PolyglotClientFactoryBean<>(type.getName());
     factory.setBeanFactory(beanFactory);
     return factory;

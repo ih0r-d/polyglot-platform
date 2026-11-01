@@ -320,6 +320,9 @@ Canonical behavior and supported configuration are documented in [`docs/`](docs/
 - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
 - Code of conduct: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
 
+Optional [Polyglot tracing](docs/tracing.md) uses Spring-managed Micrometer Tracing and OTLP
+exporters for individual calls; existing metrics and Console do not require tracing.
+
 ## License
 
 Licensed under the Apache License 2.0.

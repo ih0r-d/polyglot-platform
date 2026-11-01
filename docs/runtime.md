@@ -970,3 +970,9 @@ panels. Charts are session-local, bounded to 120 samples: polling errors, hidden
 and unavailable data break interval continuity. Reconnection establishes a new baseline rather than
 interpolating traffic across a gap. Observed counter decreases or context restarts clear history,
 even when the change happens during a gap.
+
+### Optional distributed tracing
+
+Spring clients can emit sanitized `polyglot.invoke` spans through the application-managed
+Micrometer Tracer without adding or duplicating meters. See [Polyglot Tracing](tracing.md)
+for Boot dependencies, timing/attribute semantics, sampling and the OTLP HTTP sample.
