@@ -291,6 +291,21 @@ Updating dependencies is an explicit maintainer action (not required to run the 
   org.graalvm.python:graalpy-maven-plugin:25.0.4.1.1:lock-packages
 ```
 
+Verify the packaged application from the repository root after `task samples`:
+
+```bash
+bash samples/spring-boot-example/tests/packaged-jar-smoke.sh
+```
+
+The smoke test copies the executable JAR into an isolated directory, starts it on a random
+loopback port from a different working directory with a Java-only PATH, and checks readiness,
+NumPy summary (`mean=28`), native resource extraction and graceful shutdown cleanup. Diagnostics
+remain in `target/packaged-jar-smoke.log`. It does not use the CLI's managed application state.
+Only the tested build platform is covered: NumPy native libraries are platform-specific; build
+and verify separately for each target OS/architecture. Writable temporary storage and native
+access are required. VFS extraction is removed on normal JVM shutdown; abrupt termination may
+leave files behind. Closing a Context alone does not close a caller-owned VFS.
+
 Review lock changes before accepting them. See the official
 [GraalPy build-tool guide](https://www.graalvm.org/python/docs/) and
 [Boot executable JAR launcher](https://docs.spring.io/spring-boot/specification/executable-jar/launching.html).

@@ -52,6 +52,11 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - Add opt-in Maven `validate-contracts` static symbol checks for explicitly selected Java/Python class-export bindings; dynamic or unsupported constructs fail with source diagnostics without executing Python.
 
 ### Fixed
+- Use Java 25 for the full CI security/SBOM reactor while retaining the separate Java 21 baseline
+  lane. Verify packaged Spring Python/NumPy execution outside the repository with no system Python
+  on PATH, and consume committed Python locks in the plain Java and codegen sample builds.
+- Close helper-created Context/VFS resources when context initialization fails, retaining the
+  original failure and suppressed cleanup errors without closing caller-owned Engines.
 - Isolate the macOS Java-launcher shell test from Linux alternatives symlinks, avoiding accidental
   selection of a host JDK 17 in the Java 21 CI job.
 - Restore the `JavaTypeRenderer` string rendering API from v0.4.0 while keeping JavaParser AST

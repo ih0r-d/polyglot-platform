@@ -96,13 +96,6 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>lock-python-packages</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>lock-packages</goal>
-                        </goals>
-                    </execution>
-                    <execution>
                         <id>generate-python-resources</id>
                         <phase>generate-resources</phase>
                         <goals>

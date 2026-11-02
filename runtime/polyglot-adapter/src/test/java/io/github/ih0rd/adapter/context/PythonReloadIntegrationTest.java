@@ -60,7 +60,8 @@ class PythonReloadIntegrationTest {
   }
 
   @Test
-  void reloadPreservesIndependentContractInstanceAndMutableState() {
+  void reloadPreservesIndependentContractInstanceAndMutableState()
+      throws ReflectiveOperationException {
     Map<String, String> scripts = scripts();
     scripts.put(
         "python/independent_api",
@@ -76,11 +77,14 @@ class PythonReloadIntegrationTest {
       IndependentApi independent = executor.bind(IndependentApi.class);
       assertThat(client.next()).isEqualTo(11);
       assertThat(independent.independent()).isEqualTo(1);
+      Object retained = retainInstance(executor, IndependentApi.class);
+      assertThat(retained).isNotNull();
       scripts.put("python/reload_api", script(20));
       executor.reloadContract(ReloadApi.class, Convention.BY_METHOD_NAME);
       assertThat(client.next()).isEqualTo(21);
       assertThat(independent.independent()).isEqualTo(2);
       assertThat(executor.metadata().get("sourceCacheSize")).isEqualTo(2);
+      Reference.reachabilityFence(retained);
     }
   }
 
@@ -92,7 +96,7 @@ class PythonReloadIntegrationTest {
       try (PyExecutor executor = executor(scripts)) {
         ReloadApi client = executor.bind(ReloadApi.class, convention);
         assertThat(client.next()).isEqualTo(11);
-        Object retained = retainInstance(executor);
+        Object retained = retainInstance(executor, ReloadApi.class);
         scripts.remove("python/reload_api");
         assertThatThrownBy(() -> executor.reloadContract(ReloadApi.class, convention))
             .isInstanceOf(ScriptNotFoundException.class)
@@ -415,10 +419,11 @@ class PythonReloadIntegrationTest {
 
   // Pin the existing weak Value only while asserting identity/state across allocation-heavy
   // parsing.
-  private static Object retainInstance(PyExecutor executor) throws ReflectiveOperationException {
+  private static Object retainInstance(PyExecutor executor, Class<?> contract)
+      throws ReflectiveOperationException {
     var field = PyExecutor.class.getDeclaredField("instanceCache");
     field.setAccessible(true);
-    var reference = (WeakReference<?>) ((Map<?, ?>) field.get(executor)).get(ReloadApi.class);
+    var reference = (WeakReference<?>) ((Map<?, ?>) field.get(executor)).get(contract);
     return reference == null ? null : reference.get();
   }
 

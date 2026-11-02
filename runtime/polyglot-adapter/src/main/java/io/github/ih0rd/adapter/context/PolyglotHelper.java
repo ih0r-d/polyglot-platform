@@ -41,25 +41,42 @@ public final class PolyglotHelper {
 
     Objects.requireNonNull(language, "language must not be null");
 
-    Context.Builder builder =
-        switch (language) {
-          case PYTHON -> pythonBuilder(applyRecommendedDefaults);
-          case JS -> jsBuilder(language);
-        };
-
-    if (customizer != null) {
-      customizer.accept(builder);
+    VirtualFileSystem vfs = null;
+    Context context = null;
+    try {
+      Context.Builder builder =
+          switch (language) {
+            case PYTHON -> {
+              vfs =
+                  VirtualFileSystem.newBuilder()
+                      .resourceDirectory("org.graalvm.python.vfs")
+                      .build();
+              yield pythonBuilder(vfs, applyRecommendedDefaults);
+            }
+            case JS -> jsBuilder(language);
+          };
+      if (customizer != null) customizer.accept(builder);
+      context = builder.build();
+      context.initialize(language.id());
+      return context;
+    } catch (RuntimeException | Error failure) {
+      closeAfterFailure(context, failure);
+      closeAfterFailure(vfs, failure);
+      throw failure;
     }
-
-    Context context = builder.build();
-    context.initialize(language.id());
-    return context;
   }
 
-  private static Context.Builder pythonBuilder(boolean applyRecommendedDefaults) {
-    VirtualFileSystem vfs =
-        VirtualFileSystem.newBuilder().resourceDirectory("org.graalvm.python.vfs").build();
+  private static void closeAfterFailure(AutoCloseable resource, Throwable failure) {
+    if (resource == null) return;
+    try {
+      resource.close();
+    } catch (Exception | Error cleanupFailure) {
+      if (cleanupFailure != failure) failure.addSuppressed(cleanupFailure);
+    }
+  }
 
+  private static Context.Builder pythonBuilder(
+      VirtualFileSystem vfs, boolean applyRecommendedDefaults) {
     Context.Builder builder = GraalPyResources.contextBuilder(vfs);
     if (!applyRecommendedDefaults) {
       return builder;

@@ -35,11 +35,11 @@ jobs:
         with:
           fail-on-severity: high
 
-      - name: Set up Java 21
+      - name: Set up Java 25 for the full SBOM reactor
         uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
           cache: maven
 
       - name: Generate CycloneDX aggregate SBOM
@@ -327,6 +327,16 @@ jobs:
         if: matrix.kind == 'maven'
         run: mvn -B -ntp -DskipTests verify
         working-directory: ${{ matrix.path }}
+
+      - name: Verify committed Python lock stayed unchanged
+        if: matrix.kind == 'maven'
+        run: test -s graalpy.lock && git diff --exit-code -- graalpy.lock
+        working-directory: ${{ matrix.path }}
+
+      - name: Smoke test packaged Spring Python application
+        if: matrix.sample == 'spring-boot-example'
+        run: bash tests/packaged-jar-smoke.sh
+        working-directory: samples/spring-boot-example
 
       - name: Build AOT fat JAR
         if: matrix.kind == 'aot-fat-jar'

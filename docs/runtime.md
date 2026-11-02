@@ -45,6 +45,80 @@ For Python, context creation uses `GraalPyResources.contextBuilder(...)` with a 
 > user-supplied scripts. See
 > [`runtime-semantics.md`](runtime-semantics.md#security-contract) for the full security contract.
 
+### Python Modules and Dependency Packaging
+
+`ScriptSource` resolves the entry source used to bind a Java contract. A classpath entry such as
+`python/analytics_api.py` is not automatically an importable Python package or a Python search
+directory. Likewise, clearing a Java source cache does not reload Python's `sys.modules`.
+Use the documented [`reloadContract(...)` semantics](runtime-semantics.md) for bound contracts;
+this does not recursively reload imported dependencies.
+
+For importable application modules, place Python files under
+`src/main/resources/org.graalvm.python.vfs/src/`. GraalPy exposes that directory on its Python
+search path. Declare third-party packages in the GraalPy Maven plugin; its
+`process-graalpy-resources` goal manages the VFS `venv/` and resource metadata. Do not edit the
+generated virtual environment or install CPython wheels into it manually. An explicit
+`python.PythonPath` is another option for externally deployed modules; classpath resource names
+are not filesystem paths.
+
+The Java, codegen and Spring Boot Maven samples consume committed `graalpy.lock` files during
+normal builds. To intentionally update a sample's dependency lock, run from the repository root:
+
+```bash
+./mvnw -f samples/java-maven-example/pom.xml \
+  org.graalvm.python:graalpy-maven-plugin:25.0.4.1.1:lock-packages
+```
+
+Use the corresponding POM for the codegen or Spring Boot sample. Review and commit the resulting
+lock together with any package declaration changes. The plugin checks the lock against declared
+packages and its GraalPy version. Locks pin resolutions; they do not make native wheels
+independent of OS, architecture, ABI or external library requirements. Clean builds may still
+need downloads. See the official [embedding build-tool guide](https://github.com/oracle/graalpython/blob/master/docs/user/Embedding-Build-Tools.md)
+and [native extension requirements](https://github.com/oracle/graalpython/blob/master/docs/user/Embedding-Native-Extensions.md).
+Those guides track upstream development; this repository keeps its plugin and runtime at
+25.0.4.1.1.
+
+#### VFS ownership and resource roots
+
+Verified against the 25.0.4.1.1 embedding sources and real integration tests:
+
+- `Context.close()` does not close a caller-created `VirtualFileSystem`. Close its Contexts first,
+  then close the VFS; VFS closure removes its extracted files.
+- `PolyglotHelper` creates its own VFS. Failed context construction/initialization closes the new
+  resources, preserving the original failure and suppressing cleanup failures. It never closes a
+  caller-supplied Engine. The successful helper path retains GraalPy's JVM shutdown cleanup for
+  VFS extraction; per-Context deletion of that hidden VFS is not guaranteed.
+- Custom VFS roots work with `VirtualFileSystem.Builder.resourceDirectory(...)` and
+  `GraalPyResources.contextBuilder(vfs)`. Match the root in the build plugin and runtime. Use the
+  existing explicit Context ownership constructor when managing the Context and VFS yourself.
+  The default helper uses `org.graalvm.python.vfs`.
+- Multiple resource JARs using the same VFS root are rejected by default. A unique resource root
+  was tested in a real resource JAR; automatic multi-JAR merging and independently packaged
+  dependency environments are not supported by this library's default configuration.
+
+Native extensions such as NumPy need native access and writable extraction storage. The VFS
+creates a temporary extraction directory and a JVM shutdown cleanup hook. Abrupt termination
+can leave temporary files. Runtime/stdlib extraction and explicitly prepared resource bundles
+have separate lifecycles; they are not deleted by closing the application VFS.
+
+#### Executable JAR verification
+
+The Spring Boot sample packages both contract sources and its GraalPy VFS in the executable JAR.
+Its smoke test copies the JAR outside the repository, runs from a separate working directory with
+only Java on `PATH`, performs a real NumPy-backed HTTP call and checks graceful termination and
+VFS extraction cleanup. No system Python installation is needed for that runtime scenario.
+
+```bash
+task samples
+bash samples/spring-boot-example/tests/packaged-jar-smoke.sh
+```
+
+Use JDK 25 for the sample/Console reactor. This deployment check was run on macOS ARM64 with
+Oracle JDK 25 and GraalPy 25.0.4.1.1, using NumPy 2.2.4. Linux CI runs the same smoke test on
+its own build; that is not evidence that the macOS-built JAR runs on Linux. Build and test native
+dependencies for every deployment platform. This JVM check does not establish Native Image
+compatibility or pinned Oracle GraalVM performance.
+
 ### Prepared GraalPy Runtime Resources
 
 GraalVM 25.0.4.1.1 supports preparing runtime resources before application launch with
