@@ -55,10 +55,10 @@ See [console setup and security](docs/runtime.md#optional-experimental-console-j
 
 Current verified repository line:
 
-- repository modules compile against Java 21
+- API, adapter, starter and build-tool modules compile against Java 21; the optional Console requires Java 25
 - repository CI explicitly exercises Java 21 as the minimum baseline
 - runtime modules and maintained sample verification currently run on Java 25 / GraalVM 25.x
-- the repository currently verifies a Spring Boot 4.1.0 starter and maintained sample line
+- the repository currently verifies a Spring Boot 4.1.2 starter and maintained sample line
 
 The pinned GraalVM/GraalPy Maven artifacts are `25.0.4.1.1`. The recorded JMH results are a
 single-machine exploratory baseline, not a CI performance gate or a performance guarantee; see

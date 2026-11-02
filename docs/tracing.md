@@ -21,7 +21,7 @@ Add the existing polyglot starter and Boot's optional OpenTelemetry starter to t
 </dependency>
 ```
 
-Use Spring Boot's dependency management. Boot **4.1.0** manages Micrometer Tracing **1.7.0** and
+Use Spring Boot's dependency management. Boot **4.1.2** manages Micrometer Tracing **1.7.2** and
 OpenTelemetry **1.62.0**. The library only declares an optional Micrometer Tracing API dependency;
 bridges, SDKs, exporters, sampling, propagation, resource attributes and their lifecycle belong to
 the application. Applications without a unique managed `Tracer` receive no tracing decoration.
@@ -38,7 +38,7 @@ management.opentelemetry.tracing.export.otlp.endpoint=http://127.0.0.1:4318/v1/t
 Use appropriate authentication/TLS settings for the deployment through standard Boot exporter
 configuration. Never put collector credentials into Python contracts, span tags, or source control.
 See the official [Boot tracing guide](https://docs.spring.io/spring-boot/reference/actuator/tracing.html),
-[4.1.0 tracing auto-configuration source](https://github.com/spring-projects/spring-boot/tree/v4.1.0/module/spring-boot-micrometer-tracing-opentelemetry),
+[4.1.2 tracing auto-configuration source](https://github.com/spring-projects/spring-boot/tree/v4.1.2/module/spring-boot-micrometer-tracing-opentelemetry),
 and [Micrometer direct tracing API](https://docs.micrometer.io/tracing/reference/api.html).
 The live documentation may describe a newer patch; the dependencies above follow this repository's BOM.
 

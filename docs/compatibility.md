@@ -13,11 +13,11 @@ The current `0.5.x` release-preparation line verifies the following:
 - repository minimum Java version: 21
 - root CI baseline workflow on Java 21
 - root CI runtime workflow on GraalVM JDK 25
-- all modules compiled with `maven.compiler.release=21`
+- API, adapter, starter and build-tool modules compile with `maven.compiler.release=21`; Console uses release 25
 - root enforcer minimum Java version: 21
 - GraalVM dependency line: `25.0.4.1.1`
-- Spring Boot repository dependency-management line: `4.1.0`
-- maintained Spring sample currently aligned to Spring Boot `4.1.0`
+- Spring Boot repository dependency-management line: `4.1.2`
+- maintained Spring sample currently aligned to Spring Boot `4.1.2`
 - maintained sample smoke verification on GraalVM JDK 25 for:
   - `samples/java-maven-example`
   - `samples/java-maven-codegen-example`
@@ -29,7 +29,7 @@ verification lines:
 - Java 21 as the repository minimum compile baseline
 - Java 25 / GraalVM 25.x as the currently exercised runtime and maintained-sample verification line
 
-It now verifies the current Spring Boot 4.1.0 line through the starter tests and the maintained
+It now verifies the current Spring Boot 4.1.2 line through the starter tests and the maintained
 Spring sample.
 
 The repository root records the optional SDKMAN candidate in `.sdkmanrc`. For runtime work,
@@ -42,11 +42,24 @@ See [Java resolution and checks](developer-tooling.md#pinned-oracle-graalvm).
 | Area                                 | Current verified line | Evidence in repository                                              | Notes                                                                       |
 |--------------------------------------|-----------------------|---------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | Maven                                | 3.9+                  | root enforcer and wrapper usage                                     | Release and CI assume the wrapper                                           |
-| Java minimum for repository modules  | 21                    | root `pom.xml`, module POMs, Java 21 CI build                       | The repository contract now uses Java 21 as the minimum baseline            |
+| Java minimum for compatible modules  | 21                    | root `pom.xml`, module POMs, Java 21 CI build                       | The optional Console requires Java 25; the full reactor must use JDK 25     |
 | Java runtime verification line       | 25                    | `.sdkmanrc`, GraalVM 25 CI runtime job, sample verification on 25   | GraalVM 25.x remains the current verified runtime lane                      |
 | GraalVM runtime deps                 | 25.0.4.1.1            | root dependency management, sample POMs, sample workflows           | Current maintained runtime line                                             |
-| Spring Boot starter line             | 4.1.0                 | root dependency management, starter tests, maintained Spring sample | Verified in the current repository line, not a broad historical range claim |
+| Spring Boot starter line             | 4.1.2                 | root dependency management, starter tests, maintained Spring sample | Verified in the current repository line, not a broad historical range claim |
 | Maintained sample smoke verification | Java 25 / GraalVM 25  | `ci.yml`, sample POMs                                               | Samples are verification inputs, not independent support guarantees         |
+
+## Security Dependency Alignment
+
+Spring Boot 4.1.2 manages Spring Framework 7.0.10, including fixes for
+[CVE-2026-47890](https://spring.io/security/cve-2026-47890/) and
+[CVE-2026-47884](https://spring.io/security/cve-2026-47884/). The repository and Spring sample use
+that BOM together; individual Spring Framework artifacts are not overridden.
+
+The codegen Maven plugin manages Maven core's **provided** Guava dependency at 33.7.2-jre for
+[GHSA-xxph-c9ww-hj94](https://github.com/google/guava/security/advisories/GHSA-xxph-c9ww-hj94).
+This does not add Guava to application runtime dependencies or replace Maven's own bundled
+libraries. The Maven Wrapper distribution remains 3.9.14 and bundles Guava 33.5.0-jre; that build
+tool distribution is outside the project dependency SBOM and is not remediated by this override.
 
 ## Oracle Patch Verification
 
@@ -66,7 +79,7 @@ results.
 
 The stabilization path toward `1.0.0` may still aim for:
 
-- broader Spring Boot compatibility claims beyond the currently verified `4.1.0` line
+- broader Spring Boot compatibility claims beyond the currently verified `4.1.2` line
 
 This remains a target only. It should not be described as supported until the repository actually
 verifies it.
@@ -75,7 +88,7 @@ verifies it.
 
 Do not currently claim:
 
-- a broad Spring Boot 4.x compatibility range beyond the currently verified `4.1.0` line
+- a broad Spring Boot 4.x compatibility range beyond the currently verified `4.1.2` line
 - Spring Boot 3.x support
 - support for GraalVM lines other than the currently exercised 25.x line
 - broad runtime verification on Java lines other than the currently exercised 25 line

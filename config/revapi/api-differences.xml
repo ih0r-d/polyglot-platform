@@ -96,11 +96,11 @@
         <old><![CDATA[method (io\.micrometer\.core\.instrument\.(?:DistributionSummary\.Builder|distribution\.DistributionStatisticConfig\.Builder)) \1::sla\((?:double|long)\[\]\)|method (io\.micrometer\.core\.instrument\.Tags) \2::(?:and|of)\((?:java\.lang\.String|io\.micrometer\.core\.instrument\.Tag)\[\]\)]]></old>
         <new><![CDATA[method (io\.micrometer\.core\.instrument\.(?:DistributionSummary\.Builder|distribution\.DistributionStatisticConfig\.Builder)) \1::sla\((?:double|long)\[\]\)|method (io\.micrometer\.core\.instrument\.Tags) \2::(?:and|of)\((?:java\.lang\.String|io\.micrometer\.core\.instrument\.Tag)\[\]\)]]></new>
         <oldArchive>io\.micrometer:micrometer-core:jar:1\.17\.0</oldArchive>
-        <newArchive>io\.micrometer:micrometer-core:jar:1\.17\.0</newArchive>
+        <newArchive>io\.micrometer:micrometer-core:jar:1\.17\.2</newArchive>
         <criticality>documented</criticality>
-        <justification>Unchanged Micrometer 1.17.0 varargs ambiguities already exist in the published baseline; retain
-          the diagnostic without treating it as a project regression. Other difference codes and dependency versions
-          remain checked.
+        <justification>These exact varargs signatures are identical in baseline Micrometer 1.17.0 and Boot 4.1.2's
+          Micrometer 1.17.2, verified with javap. Retain the existing diagnostic without treating it as a project
+          regression. Other members, difference codes and dependency versions remain checked.
         </justification>
       </item>
       <item>
@@ -109,10 +109,11 @@
         <old><![CDATA[method org\.springframework\.core\.ResolvableType org\.springframework\.core\.ResolvableType::forClassWithGenerics\(java\.lang\.Class<\?>, (java\.lang\.Class<\?>|org\.springframework\.core\.ResolvableType)\[\]\)]]></old>
         <new><![CDATA[method org\.springframework\.core\.ResolvableType org\.springframework\.core\.ResolvableType::forClassWithGenerics\(java\.lang\.Class<\?>, (java\.lang\.Class<\?>|org\.springframework\.core\.ResolvableType)\[\]\)]]></new>
         <oldArchive>org\.springframework:spring-core:jar:7\.0\.8</oldArchive>
-        <newArchive>org\.springframework:spring-core:jar:7\.0\.8</newArchive>
+        <newArchive>org\.springframework:spring-core:jar:7\.0\.10</newArchive>
         <criticality>documented</criticality>
-        <justification>Unchanged Spring Core 7.0.8 overload ambiguity exists in both APIs; only this diagnostic for
-          these pinned members is non-blocking.
+        <justification>These exact overload signatures are identical in baseline Spring Core 7.0.8 and Boot 4.1.2's
+          Spring Core 7.0.10, verified with javap. Only this existing diagnostic for these pinned members and artifact
+          versions is non-blocking.
         </justification>
       </item>
       <item>

@@ -52,6 +52,10 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - Add opt-in Maven `validate-contracts` static symbol checks for explicitly selected Java/Python class-export bindings; dynamic or unsupported constructs fail with source diagnostics without executing Python.
 
 ### Fixed
+- Align Spring Boot dependency management and the maintained Spring sample to 4.1.2 (Spring
+  Framework 7.0.10) for CVE-2026-47890 and CVE-2026-47884. Manage Maven core's provided Guava
+  dependency at 33.7.2-jre in the codegen Maven plugin for GHSA-xxph-c9ww-hj94; this does not
+  replace libraries bundled with the user's Maven installation.
 - Use Java 25 for the full CI security/SBOM reactor while retaining the separate Java 21 baseline
   lane. Verify packaged Spring Python/NumPy execution outside the repository with no system Python
   on PATH, and consume committed Python locks in the plain Java and codegen sample builds.

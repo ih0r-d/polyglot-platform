@@ -18,6 +18,17 @@
     <name>Polyglot Codegen Maven Plugin</name>
     <description>Maven plugin for generating Java contracts from polyglot scripts</description>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- Patch Maven core's provided dependency without adding Guava to the plugin runtime. -->
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>33.7.2-jre</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
 
         <!-- Internal modules -->

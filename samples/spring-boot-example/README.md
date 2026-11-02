@@ -274,7 +274,7 @@ traceback, arguments or internal paths. Legacy endpoints retain their existing e
 
 ## Reproducible Python packaging
 
-GraalPy Maven dependencies and plugin stay **25.0.4.1.1**, Spring Boot stays **4.1.0**. The committed
+GraalPy Maven dependencies and plugin stay **25.0.4.1.1**, Spring Boot uses **4.1.2**. The committed
 `graalpy.lock` pins NumPy **2.2.4**, Faker **26.0.0**, tabulate **0.9.0** and transitive dependencies.
 NumPy does the actual numerical work; Faker/tabulate support the preserved legacy examples.
 
