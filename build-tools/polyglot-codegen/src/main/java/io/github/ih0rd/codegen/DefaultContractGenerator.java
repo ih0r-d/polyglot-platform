@@ -17,7 +17,7 @@ import io.github.ih0rd.polyglot.model.parser.ScriptDescriptor;
  * <p>This class is a language-agnostic dispatcher that selects a {@link LanguageParser} based on
  * the script language and delegates the actual parsing work.
  */
-public final class DefaultContractGenerator implements ContractGenerator {
+public final class DefaultContractGenerator implements ContractGenerator, AutoCloseable {
 
   private static final Map<SupportedLanguage, LanguageParser> DEFAULT_PARSERS =
       Map.of(
@@ -25,6 +25,8 @@ public final class DefaultContractGenerator implements ContractGenerator {
           SupportedLanguage.JS, new JsContractParser());
 
   private final Map<SupportedLanguage, LanguageParser> parsers;
+  private final boolean ownsBatch;
+  private boolean closed;
 
   /** Creates a generator with the built-in parser set. */
   public DefaultContractGenerator() {
@@ -32,11 +34,36 @@ public final class DefaultContractGenerator implements ContractGenerator {
   }
 
   DefaultContractGenerator(Map<SupportedLanguage, LanguageParser> parsers) {
+    this(parsers, false);
+  }
+
+  private DefaultContractGenerator(
+      Map<SupportedLanguage, LanguageParser> parsers, boolean ownsBatch) {
     this.parsers = new EnumMap<>(parsers);
+    this.ownsBatch = ownsBatch;
+  }
+
+  /** Opens an isolated lazy Python AST batch; close after processing the build's sources. */
+  public static DefaultContractGenerator openBatch() {
+    return new DefaultContractGenerator(
+        Map.of(
+            SupportedLanguage.PYTHON,
+            PythonContractParser.openBatch(),
+            SupportedLanguage.JS,
+            new JsContractParser()),
+        true);
   }
 
   @Override
-  public ContractModel generate(ScriptDescriptor descriptor, CodegenConfig config) {
+  public synchronized void close() {
+    if (closed) return;
+    closed = true;
+    if (ownsBatch) ((PythonContractParser) parsers.get(SupportedLanguage.PYTHON)).close();
+  }
+
+  @Override
+  public synchronized ContractModel generate(ScriptDescriptor descriptor, CodegenConfig config) {
+    if (closed) throw new IllegalStateException("Contract generator is closed");
     LanguageParser parser = parsers.get(descriptor.language());
 
     if (parser == null) {

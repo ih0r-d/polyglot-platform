@@ -111,12 +111,13 @@ public final class CodegenMain {
   }
 
   private static void run(CliArguments cli) {
-    ContractGenerator generator = new DefaultContractGenerator();
     JavaInterfaceGenerator javaGenerator = new JavaInterfaceGenerator();
 
-    try (Stream<Path> files = Files.list(cli.inputDir())) {
+    try (var generator = DefaultContractGenerator.openBatch();
+        Stream<Path> files = Files.list(cli.inputDir())) {
       files
           .filter(path -> path.toString().endsWith(".py"))
+          .sorted()
           .forEach(path -> processFile(path, cli, generator, javaGenerator));
     } catch (IOException e) {
       throw new UncheckedIOException("Failed to scan input directory: " + cli.inputDir(), e);

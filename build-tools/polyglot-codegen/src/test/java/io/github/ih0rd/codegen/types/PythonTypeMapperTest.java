@@ -3,6 +3,7 @@ package io.github.ih0rd.codegen.types;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
@@ -65,11 +66,13 @@ class PythonTypeMapperTest {
   }
 
   @Test
-  void mapPrimitive_ShouldMapGenericSet() {
-    // Set[float] -> List<Double>
-    PolyType result = mapper.mapPrimitive("Set[float]");
-    assertInstanceOf(PolyList.class, result);
-    assertEquals(PolyPrimitive.FLOAT, ((PolyList) result).elementType());
+  void mapPrimitive_ShouldRejectUnsafeSetMappings() {
+    for (String annotation :
+        new String[] {"set", "Set[float]", "set[int]", "list[set[int]]", "dict[str, set[int]]"}) {
+      var failure =
+          assertThrows(IllegalArgumentException.class, () -> mapper.mapPrimitive(annotation));
+      org.junit.jupiter.api.Assertions.assertTrue(failure.getMessage().contains("Python set"));
+    }
   }
 
   @Test
@@ -86,6 +89,16 @@ class PythonTypeMapperTest {
     PolyType result = mapper.mapPrimitive("Tuple[int, str]");
     assertInstanceOf(PolyList.class, result);
     assertInstanceOf(PolyUnknown.class, ((PolyList) result).elementType());
+  }
+
+  @Test
+  void mapPrimitive_ShouldPreserveLegacyTupleOfMapsAndNestedLists() {
+    assertEquals(
+        new PolyList(new PolyUnknown()),
+        mapper.mapPrimitive("Tuple[Dict[str, int], Dict[str, int]]"));
+    assertEquals(
+        new PolyList(new PolyList(new PolyUnknown())),
+        mapper.mapPrimitive("Tuple[List[Dict[str, int]], List[Dict[str, int]]]"));
   }
 
   @Test
@@ -131,6 +144,8 @@ class PythonTypeMapperTest {
   void mapPrimitive_ShouldHandleUnion() {
     // Union[int, str] -> Unknown
     assertInstanceOf(PolyUnknown.class, mapper.mapPrimitive("Union[int, str]"));
+    assertInstanceOf(PolyUnknown.class, mapper.mapPrimitive("Union[set[int], int]"));
+    assertInstanceOf(PolyUnknown.class, mapper.mapPrimitive("Sequence[set[int]]"));
   }
 
   @Test

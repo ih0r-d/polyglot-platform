@@ -2,7 +2,6 @@ package io.github.ih0rd.codegen.parsers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -243,7 +242,7 @@ class C:
 polyglot.export_value("Api", C)
 class C:
     def m(self) -> int:
-        return "not int" // implementation ignored, signature trusted
+        return "not int" # implementation ignored, signature trusted
 """;
     assertEquals(PolyPrimitive.INT, parse(source).classes().get(0).methods().get(0).returnType());
   }
@@ -492,19 +491,16 @@ class Service (BaseService):
   }
 
   @Test
-  void parseParam_ShouldRejectBlankAndInvalidIdentifiers() throws Exception {
-    PythonContractParser pythonContractParser = new PythonContractParser();
-    var parseParam = PythonContractParser.class.getDeclaredMethod("parseParam", String.class);
-    parseParam.setAccessible(true);
-    var isIdentifier = PythonContractParser.class.getDeclaredMethod("isIdentifier", String.class);
-    isIdentifier.setAccessible(true);
-
-    assertNull(parseParam.invoke(pythonContractParser, "   "));
-    assertNull(parseParam.invoke(pythonContractParser, "1abc: int"));
-    assertNull(parseParam.invoke(pythonContractParser, "ab-c: int"));
-    assertEquals(false, isIdentifier.invoke(parser, ""));
-    assertEquals(false, isIdentifier.invoke(parser, "1abc"));
-    assertEquals(false, isIdentifier.invoke(parser, "ab-c"));
+  void parse_ShouldRejectBlankAndInvalidParameterDeclarations() {
+    for (String parameter : List.of(" ", "1abc: int", "ab-c: int")) {
+      assertThrows(
+          IllegalArgumentException.class,
+          () ->
+              parse(
+                  "class Api:\n    def hello(self, "
+                      + parameter
+                      + ",): pass\npolyglot.export_value('Api', Api)"));
+    }
   }
 
   private PolyType getReturnType(String returnStmt) {
