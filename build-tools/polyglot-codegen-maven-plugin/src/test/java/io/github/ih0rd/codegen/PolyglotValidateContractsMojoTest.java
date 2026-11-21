@@ -109,7 +109,6 @@ class PolyglotValidateContractsMojoTest {
     for (String java :
         List.of(
             "interface GreetingApi extends Parent { String hello(); }",
-            "@PolyglotClient(languages = SupportedLanguage.PYTHON, convention = Convention.BY_METHOD_NAME) interface GreetingApi { String hello(); }",
             "@PolyglotClient(languages = SupportedLanguage.JS) interface GreetingApi { String hello(); }",
             "@PolyglotClient interface GreetingApi { String hello(); }")) {
       var mojo = configured(validPython());
@@ -289,10 +288,6 @@ class PolyglotValidateContractsMojoTest {
   void unsupportedSignaturesNeverPass() throws Exception {
     for (String parameters :
         List.of(
-            "self, *args",
-            "self, **kwargs",
-            "self, *, name",
-            "self, name, /",
             "",
             "self, first=1, second",
             "self, first, first",
@@ -306,7 +301,7 @@ class PolyglotValidateContractsMojoTest {
             "self, value='unterminated")) {
       var mojo = configured(pythonMethod(parameters));
       String message = assertThrows(MojoFailureException.class, mojo::execute).getMessage();
-      assertTrue(message.contains("Unsupported static Python signature"), message);
+      assertTrue(message.contains("UNKNOWN: UNSUPPORTED_SYNTAX"), message);
       assertTrue(message.contains("greeting_api.py:2"), message);
     }
   }
@@ -319,7 +314,7 @@ class PolyglotValidateContractsMojoTest {
     assertTrue(
         assertThrows(MojoFailureException.class, mojo::execute)
             .getMessage()
-            .contains("Unsupported static Python signature"));
+            .contains("UNKNOWN: UNSUPPORTED_SYNTAX"));
   }
 
   @Test
@@ -443,7 +438,6 @@ class PolyglotValidateContractsMojoTest {
         List.of(
             "import io.github.ih0rd.polyglot.annotations.PolyglotClient; @PolyglotClient interface GreetingApi {}",
             "import io.github.ih0rd.polyglot.annotations.PolyglotClient; @PolyglotClient(languages=SupportedLanguage.JS) interface GreetingApi {}",
-            "import io.github.ih0rd.polyglot.annotations.PolyglotClient; @PolyglotClient(languages=SupportedLanguage.PYTHON, convention=Convention.BY_METHOD_NAME) interface GreetingApi {}",
             "import io.github.ih0rd.polyglot.annotations.PolyglotClient; @PolyglotClient(languages=SupportedLanguage.PYTHON) class GreetingApi {}",
             "import io.github.ih0rd.polyglot.annotations.PolyglotClient; class Outer { @PolyglotClient(languages=SupportedLanguage.PYTHON) interface GreetingApi {} }",
             "import io.github.ih0rd.polyglot.annotations.PolyglotClient; @PolyglotClient(languages=SupportedLanguage.PYTHON) interface GreetingApi extends Parent {}")) {

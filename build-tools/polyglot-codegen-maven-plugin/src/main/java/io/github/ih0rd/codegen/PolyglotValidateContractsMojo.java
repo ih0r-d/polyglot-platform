@@ -11,6 +11,8 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
+import io.github.ih0rd.codegen.internal.python.PythonAstSession;
+
 /** Opt-in static validation of selected or source-discovered Java/Python contracts. */
 @Mojo(name = "validate-contracts", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true)
 public final class PolyglotValidateContractsMojo extends AbstractMojo {
@@ -72,16 +74,21 @@ public final class PolyglotValidateContractsMojo extends AbstractMojo {
     if (inputDirectory == null || !inputDirectory.isDirectory()) {
       throw new MojoFailureException("Python inputDirectory is not a directory: " + inputDirectory);
     }
-    for (File contract : selected) {
-      if (contract == null || !contract.isFile()) {
-        throw new MojoFailureException("Java contract source does not exist: " + contract);
-      }
-      try {
-        PythonBindingValidator.validate(contract.toPath(), inputDirectory.toPath());
-      } catch (IllegalArgumentException ex) {
-        throw new MojoFailureException(ex.getMessage(), ex);
-      } catch (IOException ex) {
-        throw new MojoExecutionException("Cannot read contract sources for " + contract, ex);
+    try (var session = new PythonAstSession()) {
+      for (File contract : selected) {
+        if (contract == null || !contract.isFile()) {
+          throw new MojoFailureException("Java contract source does not exist: " + contract);
+        }
+        try {
+          PythonBindingValidator.validate(contract.toPath(), inputDirectory.toPath(), session);
+        } catch (IllegalArgumentException ex) {
+          throw new MojoFailureException(ex.getMessage(), ex);
+        } catch (IOException ex) {
+          throw new MojoExecutionException("Cannot read contract sources for " + contract, ex);
+        } catch (IllegalStateException ex) {
+          throw new MojoExecutionException(
+              "Cannot initialize or execute static GraalPy AST analysis", ex);
+        }
       }
     }
     getLog().info("Python contract validation passed: " + selected.size() + " Java source(s).");

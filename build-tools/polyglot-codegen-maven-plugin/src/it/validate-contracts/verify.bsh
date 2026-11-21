@@ -7,7 +7,7 @@ for (String expected : new String[] {
     "Unsupported static Python contract",
     "SignatureApi.java:2: module 'signature_api', symbol 'SignatureApi.required': Java supplies 1 positional argument(s); Python accepts 2..2",
     "SignatureApi.java:2: module 'signature_api', symbol 'SignatureApi.required': Java supplies 1 positional argument(s); Python accepts 0..0",
-    "Unsupported static Python signature"
+    "UNKNOWN: UNSUPPORTED_SYNTAX"
 }) {
     if (!log.contains(expected)) throw new AssertionError("Missing diagnostic: " + expected);
 }

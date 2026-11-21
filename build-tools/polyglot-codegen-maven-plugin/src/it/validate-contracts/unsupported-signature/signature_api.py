@@ -1,6 +1,6 @@
 import polyglot
 class SignatureApi:
-    def required(self, *args):
+    def required(self, value=make_default()):
         open('business-function-executed', 'w').write('unexpected')
         raise AssertionError('must not execute')
     def optional(self, name='guest'):
