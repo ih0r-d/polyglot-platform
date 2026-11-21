@@ -47,8 +47,14 @@ class PolyglotCodegenMojoTest {
     Path generatedSource = outputDirectory.resolve("com/example/polyglot/MyApi.java");
     assertTrue(Files.exists(generatedSource));
     assertTrue(Files.readString(generatedSource).contains("public interface MyApi"));
+    assertFalse(Files.readString(generatedSource).contains("PolyglotClient"));
     assertEquals(
         outputDirectory.toAbsolutePath().toString(), project.getCompileSourceRoots().get(0));
+    Files.move(
+        script, Files.createDirectory(inputDirectory.resolve("nested")).resolve("prices.py"));
+    setField(mojo, "emitPolyglotClient", true);
+    mojo.execute();
+    assertTrue(Files.readString(generatedSource).contains("script = \"nested/prices\""));
   }
 
   @Test

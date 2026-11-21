@@ -45,6 +45,9 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
   @Parameter(property = "polyglot.codegen.failOnContractDrift", defaultValue = "false")
   private boolean failOnContractDrift;
 
+  @Parameter(property = "polyglot.codegen.emitPolyglotClient", defaultValue = "false")
+  private boolean emitPolyglotClient;
+
   @Override
   public void execute() throws MojoExecutionException {
     CodegenMojoSupport.execute(
@@ -57,7 +60,8 @@ public final class PolyglotCodegenMojo extends AbstractMojo {
             strictMode,
             failOnNoContracts,
             skipUnchanged,
-            failOnContractDrift),
+            failOnContractDrift,
+            emitPolyglotClient),
         getLog(),
         CodegenMojoSupport.Mode.GENERATE);
 

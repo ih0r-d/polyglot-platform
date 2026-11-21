@@ -1,6 +1,10 @@
 package io.github.ih0rd.codegen;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +16,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class MethodNameContractValidationTest {
   @TempDir Path directory;
@@ -156,6 +161,43 @@ class MethodNameContractValidationTest {
     String message = assertThrows(IllegalArgumentException.class, this::validate).getMessage();
     assertTrue(message.contains("UNKNOWN: EXPORT_RESOLUTION"), message);
     assertTrue(message.contains("Missing export 'GreetingApi'"), message);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void explicitScriptReplacesOnlyModuleResolution(boolean bound) throws Exception {
+    configured(
+        bound
+            ? "class GreetingApi:\n    def hello(self): pass\npolyglot.export_value('GreetingApi', GreetingApi)"
+            : "def hello(): pass",
+        "String hello();",
+        bound);
+    Path source = directory.resolve("GreetingApi.java");
+    Files.writeString(
+        source,
+        Files.readString(source)
+            .replace("languages=SupportedLanguage.PYTHON, ", "script=\"contracts/other_name\", "));
+    Path script = Files.createDirectory(directory.resolve("contracts")).resolve("other_name.py");
+    Files.move(directory.resolve("greeting_api.py"), script);
+    assertDoesNotThrow(this::validate);
+
+    Files.delete(script);
+    String missing = assertThrows(IllegalArgumentException.class, this::validate).getMessage();
+    assertTrue(missing.contains("contracts/other_name.py"), missing);
+    assertTrue(missing.contains("INCOMPATIBLE: MISSING_MODULE"), missing);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"\"../unsafe\"", "\"contracts/pricing.py\"", "SCRIPT"})
+  void unsafeOrUnresolvedScriptMappingsAreSourceLocated(String value) throws Exception {
+    configured("def hello(): pass", "String hello();", false);
+    Path source = directory.resolve("GreetingApi.java");
+    Files.writeString(
+        source, Files.readString(source).replace("languages=", "script=" + value + ", languages="));
+    String message = assertThrows(IllegalArgumentException.class, this::validate).getMessage();
+    assertTrue(message.contains("GreetingApi.java:4:"), message);
+    assertTrue(
+        message.contains(value.equals("SCRIPT") ? "UNKNOWN: SCRIPT" : "INVALID: SCRIPT"), message);
   }
 
   private void configured(String python, String methods, boolean bound) throws Exception {

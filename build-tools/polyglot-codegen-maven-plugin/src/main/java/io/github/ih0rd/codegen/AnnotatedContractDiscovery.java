@@ -60,8 +60,7 @@ final class AnnotatedContractDiscovery {
     return contracts;
   }
 
-  private static boolean isClientAnnotation(
-      CompilationUnit unit, AnnotationExpr annotation, Path path) {
+  static boolean isClientAnnotation(CompilationUnit unit, AnnotationExpr annotation, Path path) {
     String name = annotation.getNameAsString();
     if (name.equals(ANNOTATION)) return true;
     if (!name.equals("PolyglotClient")) return false;

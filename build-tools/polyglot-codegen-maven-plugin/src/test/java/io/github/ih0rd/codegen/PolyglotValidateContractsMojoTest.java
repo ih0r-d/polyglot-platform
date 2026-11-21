@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.project.MavenProject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -344,6 +345,57 @@ class PolyglotValidateContractsMojoTest {
   void discoversAnnotatedContractWithoutExplicitList() throws Exception {
     var mojo = discovered(validPython());
     assertDoesNotThrow(mojo::execute);
+  }
+
+  @Test
+  void registeredGeneratedRootsAreOptInAndValidateSharedScriptPerExecution() throws Exception {
+    var mojo = discovered(validPython() + "\n" + validPython().replace("GreetingApi", "OtherApi"));
+    Path generated = Files.createDirectory(directory.resolve("generated"));
+    for (String name : List.of("GreetingApi", "OtherApi")) {
+      Files.writeString(
+          generated.resolve(name + ".java"),
+          """
+          @io.github.ih0rd.polyglot.annotations.PolyglotClient(script = "greeting_api")
+          interface %s { String hello(); }
+          """
+              .formatted(name));
+    }
+    var project = new MavenProject();
+    project.addCompileSourceRoot(generated.toString());
+    project.addCompileSourceRoot(directory.resolve("unmaterialized").toString());
+    set(mojo, "project", project);
+    set(mojo, "sourceDirectory", directory.resolve("absent").toFile());
+    assertTrue(
+        assertThrows(MojoFailureException.class, mojo::execute)
+            .getMessage()
+            .contains("sourceDirectory is not a directory"));
+    set(mojo, "discoverCompileSourceRoots", true);
+    assertDoesNotThrow(mojo::execute);
+    Files.writeString(
+        directory.resolve("greeting_api.py"),
+        validPython()
+            + "\n"
+            + validPython().replace("GreetingApi", "OtherApi").replace("hello", "other"));
+    assertTrue(
+        assertThrows(MojoFailureException.class, mojo::execute)
+            .getMessage()
+            .contains("OtherApi.hello"));
+  }
+
+  @Test
+  void explicitScriptCannotFollowSymlinkOutsideConfiguredRoot() throws Exception {
+    var mojo = configured(validPython());
+    Path python = Files.createDirectory(directory.resolve("python"));
+    Files.createSymbolicLink(python.resolve("other.py"), directory.resolve("greeting_api.py"));
+    set(mojo, "inputDirectory", python.toFile());
+    Files.writeString(
+        directory.resolve("GreetingApi.java"),
+        """
+        @io.github.ih0rd.polyglot.annotations.PolyglotClient(script = "other")
+        interface GreetingApi { String hello(); }
+        """);
+    var failure = assertThrows(MojoFailureException.class, mojo::execute);
+    assertTrue(failure.getMessage().contains("Python script escapes inputDirectory"));
   }
 
   @Test

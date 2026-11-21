@@ -24,7 +24,17 @@ The default Python runtime convention is:
 - Python module name: `forecast_service.py`
 - exported Python value: `ForecastService`
 
-This remains the primary, documented contract model for the project.
+`@PolyglotClient(script = "contracts/pricing")` selects a different script through the configured
+`ScriptSource`. Use a relative slash-separated name without `.py`. Empty values and interfaces
+without the annotation use the default name. Python binding, eager validation and explicit reload
+all use this mapping. `DEFAULT` and `BY_INTERFACE_EXPORT` still select the interface's simple name
+as the export. `BY_METHOD_NAME` still resolves Java method names.
+
+Direct `PyExecutor` operations that take a contract class honor its `script` attribute. The
+caller supplies the binding convention to the executor, or uses its `DEFAULT` overloads.
+Operations that already take a source or script name, such as `evaluate` and `preloadScript`,
+use that input directly. Spring resolves the client language as usual and requires a Python
+executor when `script` is present and nonempty.
 
 ## Source Cache Semantics
 
@@ -88,8 +98,8 @@ export-based convention is unchanged.
 
 ### Explicit reload consistency
 
-`reloadContract(iface, convention)` reloads the logical source derived from the interface name,
-not an arbitrary entry in Python's `sys.modules`. Existing proxies, including Spring clients,
+`reloadContract(iface, convention)` reads the same logical source as binding, including any
+explicit `@PolyglotClient` script mapping. Existing proxies, including Spring clients,
 continue to use the same executor. No bean recreation or Context replacement is required.
 
 Reload is serialized with guest invocation, result conversion and shutdown. An in-flight call

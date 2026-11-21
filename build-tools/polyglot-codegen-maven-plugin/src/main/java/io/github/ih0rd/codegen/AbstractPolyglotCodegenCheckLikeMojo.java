@@ -28,6 +28,9 @@ abstract class AbstractPolyglotCodegenCheckLikeMojo extends AbstractMojo {
   @Parameter(property = "polyglot.codegen.failOnNoContracts", defaultValue = "false")
   private boolean failOnNoContracts;
 
+  @Parameter(property = "polyglot.codegen.emitPolyglotClient", defaultValue = "false")
+  private boolean emitPolyglotClient;
+
   @Override
   public void execute() throws MojoExecutionException {
     CodegenMojoSupport.execute(
@@ -40,7 +43,8 @@ abstract class AbstractPolyglotCodegenCheckLikeMojo extends AbstractMojo {
             strictMode,
             failOnNoContracts,
             false,
-            true),
+            true,
+            emitPolyglotClient),
         getLog(),
         CodegenMojoSupport.Mode.CHECK);
   }

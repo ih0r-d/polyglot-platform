@@ -2,8 +2,10 @@ package io.github.ih0rd.codegen;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -94,6 +96,36 @@ class JavaInterfaceGeneratorTest {
     assertTrue(ast.getInterfaceByName("DebugApi").isPresent());
     assertTrue(
         ast.getInterfaceByName("DebugApi").orElseThrow().getMethodsByName("ping").size() == 1);
+  }
+
+  @Test
+  void generatesAnnotatedSnapshotWithExplicitPythonSource() throws Exception {
+    ContractClass contract =
+        new ContractClass(
+            "PricingApi",
+            List.of(
+                new ContractMethod(
+                    "quote",
+                    List.of(new ContractParam("sku", PolyPrimitive.STRING)),
+                    PolyPrimitive.INT)));
+    try (var golden = getClass().getResourceAsStream("/java-golden/PricingApi.java.expected")) {
+      assertEquals(
+          new String(golden.readAllBytes(), StandardCharsets.UTF_8),
+          generator.generate(contract, "consumer.generated", "contracts/pricing"));
+    }
+    assertFalse(generator.generate(contract, "consumer.generated").contains("@PolyglotClient"));
+    var declaration =
+        generator
+            .generateAst(contract, "consumer.generated", "")
+            .getInterfaceByName("PricingApi")
+            .orElseThrow();
+    assertEquals(
+        "languages",
+        declaration.getAnnotation(0).asNormalAnnotationExpr().getPairs().get(0).getNameAsString());
+    assertEquals(1, declaration.getAnnotation(0).asNormalAnnotationExpr().getPairs().size());
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> generator.generate(contract, "consumer.generated", "../pricing"));
   }
 
   @ParameterizedTest

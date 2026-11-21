@@ -20,12 +20,15 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.proxy.ProxyExecutable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import io.github.ih0rd.adapter.exceptions.BindingException;
 import io.github.ih0rd.adapter.exceptions.ScriptNotFoundException;
 import io.github.ih0rd.adapter.spi.InMemoryScriptSource;
 import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.annotations.PolyglotClient;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
 class PythonReloadIntegrationTest {
@@ -35,6 +38,60 @@ class PythonReloadIntegrationTest {
 
   interface IndependentApi {
     int independent();
+  }
+
+  @PolyglotClient(script = "contracts/pricing")
+  interface MappedPricingApi {
+    int quote();
+  }
+
+  @PolyglotClient(script = "../unsafe")
+  interface UnsafePricingApi {
+    int quote();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Convention.class)
+  void explicitMappingIsUsedForBindingValidationAndReload(Convention convention) {
+    Map<String, String> scripts = new ConcurrentHashMap<>();
+    String key = "python/contracts/pricing";
+    String module =
+        """
+        def quote(): return %d
+        class MappedPricingApi:
+            def quote(self): return %d
+        """;
+    scripts.put(key, module.formatted(1, 1));
+    scripts.put("python/mapped_pricing_api", "raise AssertionError('wrong script')");
+    try (PyExecutor executor = executor(scripts)) {
+      var client = executor.bind(MappedPricingApi.class, convention);
+      assertThat(client.quote()).isEqualTo(1);
+      executor.validateBinding(MappedPricingApi.class, convention);
+      scripts.put(key, module.formatted(2, 2));
+      executor.reloadContract(MappedPricingApi.class, convention);
+      assertThat(client.quote()).isEqualTo(2);
+
+      scripts.remove(key);
+      assertThatThrownBy(() -> executor.reloadContract(MappedPricingApi.class, convention))
+          .isInstanceOf(ScriptNotFoundException.class)
+          .hasMessageContaining("contracts/pricing");
+      executor.invalidateContractCache(MappedPricingApi.class);
+      assertThatThrownBy(() -> executor.validateBinding(MappedPricingApi.class, convention))
+          .isInstanceOf(ScriptNotFoundException.class)
+          .hasMessageContaining("contracts/pricing");
+    }
+  }
+
+  @Test
+  void unsafeMappingsFailBeforeSourceLookup() {
+    try (PyExecutor executor = executor(Map.of())) {
+      assertThatThrownBy(() -> executor.validateBinding(UnsafePricingApi.class))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Invalid logical script name");
+      assertThatThrownBy(() -> executor.reloadContract(UnsafePricingApi.class))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Invalid logical script name");
+    }
   }
 
   @Test

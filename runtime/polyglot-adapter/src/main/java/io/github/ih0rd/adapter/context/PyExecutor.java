@@ -1,7 +1,5 @@
 package io.github.ih0rd.adapter.context;
 
-import static io.github.ih0rd.adapter.utils.StringCaseConverter.camelToSnake;
-
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -27,6 +25,8 @@ import io.github.ih0rd.adapter.observability.RuntimeObserver;
 import io.github.ih0rd.adapter.observability.RuntimeOperation;
 import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.annotations.PolyglotClient;
+import io.github.ih0rd.polyglot.model.config.ScriptNames;
 import io.github.ih0rd.polyglot.model.config.ScriptSource;
 
 /**
@@ -39,7 +39,8 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  * <p>The executor follows the repository's default Python convention:
  *
  * <ul>
- *   <li>script name derived from the Java interface simple name in snake case
+ *   <li>script name from {@link PolyglotClient#script()}, or the interface simple name in snake
+ *       case
  *   <li>exported Python value name equal to the Java interface simple name
  * </ul>
  *
@@ -328,8 +329,13 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
     RuntimeObservation.cache(runtimeObserver(), RuntimeCache.SOURCE, cached != null);
     if (cached != null) return cached;
     return sourceCache.computeIfAbsent(
-        iface,
-        contract -> loadScript(SupportedLanguage.PYTHON, camelToSnake(contract.getSimpleName())));
+        iface, contract -> loadScript(SupportedLanguage.PYTHON, contractScript(contract)));
+  }
+
+  private static String contractScript(Class<?> contract) {
+    PolyglotClient client = contract.getAnnotation(PolyglotClient.class);
+    return ScriptNames.forPythonContract(
+        contract.getSimpleName(), client == null ? "" : client.script());
   }
 
   /** Clears cached Python instances resolved for bound contract types. */
@@ -569,7 +575,7 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   }
 
   private void reloadSingleUnchecked(Class<?> iface, Convention convention) {
-    String module = camelToSnake(iface.getSimpleName());
+    String module = contractScript(iface);
     Source replacement = loadScript(SupportedLanguage.PYTHON, module);
     try {
       context.parse(replacement);

@@ -3,6 +3,8 @@ package io.github.ih0rd.adapter.utils;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
+import io.github.ih0rd.polyglot.model.config.ScriptNames;
+
 /**
  * Utility class for transforming strings between {@code snake_case} and {@code camelCase}.
  *
@@ -63,19 +65,6 @@ public class StringCaseConverter {
    * @return the converted string in {@code snake_case} form
    */
   public static String camelToSnake(String camelCase) {
-    if (camelCase == null || camelCase.isEmpty()) {
-      return camelCase;
-    }
-    StringBuilder result = new StringBuilder();
-    result.append(Character.toLowerCase(camelCase.charAt(0)));
-
-    camelCase
-        .substring(1)
-        .chars()
-        .mapToObj(
-            c -> Character.isUpperCase(c) ? "_" + Character.toLowerCase((char) c) : "" + (char) c)
-        .forEach(result::append);
-
-    return result.toString();
+    return ScriptNames.fromContractName(camelCase);
   }
 }

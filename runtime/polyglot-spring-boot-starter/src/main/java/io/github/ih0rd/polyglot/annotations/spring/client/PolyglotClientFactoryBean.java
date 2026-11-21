@@ -68,6 +68,10 @@ public final class PolyglotClientFactoryBean<T> implements FactoryBean<T>, BeanF
     }
 
     SupportedLanguage language = resolveLanguage(annotation);
+    if (language != SupportedLanguage.PYTHON && !annotation.script().isEmpty()) {
+      throw new PolyglotClientResolutionException(
+          "@PolyglotClient script requires a Python executor for " + clientType.getName());
+    }
     Convention convention = annotation.convention();
     @SuppressWarnings("resource")
     AbstractPolyglotExecutor executor = resolveExecutor(language);

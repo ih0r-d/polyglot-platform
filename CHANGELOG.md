@@ -5,6 +5,10 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Added
+- Support explicit Python script mapping through `@PolyglotClient(script = "contracts/pricing")`
+  for Spring clients and direct Python binding, validation, and reload.
+- Add opt-in `@PolyglotClient` generation and discovery of registered Maven compile source roots
+  so `validate-contracts` can check generated contracts in `process-sources` before compilation.
 - Replace handwritten Python syntax handling with official GraalPy `ast.parse`. Keep contract
   semantics in Java and preserve existing ContractModel/JavaParser generation. Reuse one owned
   interpreter per Maven batch; never import or evaluate application source. Preserve existing

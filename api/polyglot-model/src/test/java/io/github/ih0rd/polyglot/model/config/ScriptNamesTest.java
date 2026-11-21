@@ -1,6 +1,7 @@
 package io.github.ih0rd.polyglot.model.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -12,6 +13,27 @@ class ScriptNamesTest {
   void acceptsSimpleAndNestedLogicalNames() {
     assertEquals("demo", ScriptNames.requireValid("demo"));
     assertEquals("scripts/utils/helper", ScriptNames.requireValid("scripts/utils/helper"));
+  }
+
+  @Test
+  void selectsExplicitOrConventionalPythonNames() {
+    assertEquals("h_t_t_p_api", ScriptNames.forPythonContract("HTTPApi", ""));
+    assertEquals(
+        "contracts/pricing", ScriptNames.forPythonContract("HTTPApi", "contracts/pricing"));
+    assertEquals("", ScriptNames.fromContractName(""));
+    assertNull(ScriptNames.fromContractName(null));
+  }
+
+  @Test
+  void rejectsFileExtensionsAndUnsafeExplicitMappings() {
+    var extension =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> ScriptNames.forPythonContract("PricingApi", "contracts/pricing.py"));
+    assertTrue(extension.getMessage().contains("omit the .py extension"));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> ScriptNames.forPythonContract("PricingApi", "../pricing"));
   }
 
   @Test

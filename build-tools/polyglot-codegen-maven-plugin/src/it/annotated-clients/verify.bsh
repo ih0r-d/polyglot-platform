@@ -1,0 +1,12 @@
+String log = new String(java.nio.file.Files.readAllBytes(new File(basedir, "build.log").toPath()), java.nio.charset.StandardCharsets.UTF_8);
+int rejected = log.indexOf("BUILD FAILURE");
+int validation = log.indexOf(":validate-contracts (validate-before-compile)");
+int compilation = log.indexOf(":compile (default-compile)");
+if (validation < 0 || rejected < validation || compilation < rejected) throw new IllegalStateException("Expected validation failure before compilation");
+for (String expected : new String[] { "contracts/pricing.py:4", "INCOMPATIBLE: POSITIONAL_ARITY", "Python contract validation passed: 1 Java source(s)", "Codegen check passed", "generated file drift" }) {
+    if (!log.contains(expected)) throw new IllegalStateException("Missing diagnostic: " + expected);
+}
+if (!new File(basedir, "target/classes/consumer/Consumer.class").isFile()) throw new IllegalStateException("Consumer did not compile");
+String generated = new String(java.nio.file.Files.readAllBytes(new File(basedir, "target/generated-sources/polyglot/consumer/generated/PricingApi.java").toPath()), java.nio.charset.StandardCharsets.UTF_8);
+if (!generated.contains("@io.github.ih0rd.polyglot.annotations.PolyglotClient") || !generated.contains("script = \"contracts/pricing\"")) throw new IllegalStateException("Missing generated client mapping");
+return true;

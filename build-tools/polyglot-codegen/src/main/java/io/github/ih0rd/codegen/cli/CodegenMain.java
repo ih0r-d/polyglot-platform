@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -53,7 +54,7 @@ public final class CodegenMain {
   public static void main(String[] args) {
     CliArguments cli = parseArguments(args);
     validate(cli);
-    run(cli);
+    run(cli, Arrays.asList(args).contains("--emit-polyglot-client"));
   }
 
   private static CliArguments parseArguments(String[] args) {
@@ -64,6 +65,7 @@ public final class CodegenMain {
                               CodegenMain <inputDir> <outputDir> --package=<basePackage>
                               [--only-included-methods=true|false]
                               [--strict-mode=true|false]
+                              [--emit-polyglot-client]
                             """);
     }
 
@@ -110,7 +112,7 @@ public final class CodegenMain {
     }
   }
 
-  private static void run(CliArguments cli) {
+  private static void run(CliArguments cli, boolean emitPolyglotClient) {
     JavaInterfaceGenerator javaGenerator = new JavaInterfaceGenerator();
 
     try (var generator = DefaultContractGenerator.openBatch();
@@ -118,7 +120,7 @@ public final class CodegenMain {
       files
           .filter(path -> path.toString().endsWith(".py"))
           .sorted()
-          .forEach(path -> processFile(path, cli, generator, javaGenerator));
+          .forEach(path -> processFile(path, cli, generator, javaGenerator, emitPolyglotClient));
     } catch (IOException e) {
       throw new UncheckedIOException("Failed to scan input directory: " + cli.inputDir(), e);
     }
@@ -128,7 +130,8 @@ public final class CodegenMain {
       Path scriptPath,
       CliArguments cli,
       ContractGenerator generator,
-      JavaInterfaceGenerator javaGenerator) {
+      JavaInterfaceGenerator javaGenerator,
+      boolean emitPolyglotClient) {
     String source = readScript(scriptPath);
 
     ScriptDescriptor descriptor =
@@ -149,8 +152,16 @@ public final class CodegenMain {
     }
 
     Path packageDir = preparePackageDirectory(cli);
+    String script =
+        emitPolyglotClient
+            ? descriptor.fileName().substring(0, descriptor.fileName().length() - ".py".length())
+            : null;
     for (ContractClass contract : model.classes()) {
-      writeContract(packageDir, contract, cli.basePackage(), javaGenerator);
+      String javaSource =
+          script == null
+              ? javaGenerator.generate(contract, cli.basePackage())
+              : javaGenerator.generate(contract, cli.basePackage(), script);
+      writeContract(packageDir, contract.name(), javaSource);
     }
   }
 
@@ -172,13 +183,8 @@ public final class CodegenMain {
     }
   }
 
-  private static void writeContract(
-      Path packageDir,
-      ContractClass contract,
-      String basePackage,
-      JavaInterfaceGenerator javaGenerator) {
-    String javaSource = javaGenerator.generate(contract, basePackage);
-    Path outputFile = packageDir.resolve(contract.name() + ".java");
+  private static void writeContract(Path packageDir, String contractName, String javaSource) {
+    Path outputFile = packageDir.resolve(contractName + ".java");
     try {
       Files.writeString(outputFile, javaSource);
     } catch (IOException e) {

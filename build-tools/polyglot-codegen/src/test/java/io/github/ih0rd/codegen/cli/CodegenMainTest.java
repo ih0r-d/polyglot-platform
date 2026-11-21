@@ -1,5 +1,6 @@
 package io.github.ih0rd.codegen.cli;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -38,6 +39,15 @@ class CodegenMainTest {
     Path generatedSource = outputDirectory.resolve("com/example/generated/SampleApi.java");
     assertTrue(Files.exists(generatedSource));
     assertTrue(Files.readString(generatedSource).contains("public interface SampleApi"));
+    assertFalse(Files.readString(generatedSource).contains("PolyglotClient"));
+    CodegenMain.main(
+        new String[] {
+          inputDirectory.toString(),
+          outputDirectory.toString(),
+          "--package=com.example.generated",
+          "--emit-polyglot-client"
+        });
+    assertTrue(Files.readString(generatedSource).contains("script = \"sample\""));
   }
 
   @Test

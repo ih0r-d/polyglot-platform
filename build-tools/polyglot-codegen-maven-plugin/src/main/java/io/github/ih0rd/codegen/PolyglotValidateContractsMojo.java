@@ -2,7 +2,11 @@ package io.github.ih0rd.codegen;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -10,6 +14,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 
 import io.github.ih0rd.codegen.internal.python.PythonAstSession;
 
@@ -27,6 +32,12 @@ public final class PolyglotValidateContractsMojo extends AbstractMojo {
 
   @Parameter(property = "polyglot.codegen.discoverContracts", defaultValue = "false")
   private boolean discoverContracts;
+
+  @Parameter(property = "polyglot.codegen.discoverCompileSourceRoots", defaultValue = "false")
+  private boolean discoverCompileSourceRoots;
+
+  @Parameter(defaultValue = "${project}", readonly = true)
+  private MavenProject project;
 
   @Parameter(defaultValue = "${project.build.sourceDirectory}")
   private File sourceDirectory;
@@ -51,7 +62,7 @@ public final class PolyglotValidateContractsMojo extends AbstractMojo {
         throw new MojoFailureException("Configure sourceDirectory for contract discovery.");
       }
       try {
-        selected = AnnotatedContractDiscovery.discover(sourceDirectory.toPath());
+        selected = discoverSources();
       } catch (IllegalArgumentException ex) {
         throw new MojoFailureException(ex.getMessage(), ex);
       } catch (IOException ex) {
@@ -75,12 +86,13 @@ public final class PolyglotValidateContractsMojo extends AbstractMojo {
       throw new MojoFailureException("Python inputDirectory is not a directory: " + inputDirectory);
     }
     try (var session = new PythonAstSession()) {
+      var validator = new PythonBindingValidator(inputDirectory.toPath(), session);
       for (File contract : selected) {
         if (contract == null || !contract.isFile()) {
           throw new MojoFailureException("Java contract source does not exist: " + contract);
         }
         try {
-          PythonBindingValidator.validate(contract.toPath(), inputDirectory.toPath(), session);
+          validator.validate(contract.toPath());
         } catch (IllegalArgumentException ex) {
           throw new MojoFailureException(ex.getMessage(), ex);
         } catch (IOException ex) {
@@ -92,5 +104,23 @@ public final class PolyglotValidateContractsMojo extends AbstractMojo {
       }
     }
     getLog().info("Python contract validation passed: " + selected.size() + " Java source(s).");
+  }
+
+  private List<File> discoverSources() throws IOException {
+    Path primary = sourceDirectory.toPath().toAbsolutePath().normalize();
+    if (!discoverCompileSourceRoots) return AnnotatedContractDiscovery.discover(primary);
+
+    Set<Path> roots = new LinkedHashSet<>();
+    roots.add(primary);
+    if (project != null) {
+      project.getCompileSourceRoots().stream()
+          .map(root -> Path.of(root).toAbsolutePath().normalize())
+          .forEach(roots::add);
+    }
+    Set<File> sources = new LinkedHashSet<>();
+    for (Path root : roots) {
+      if (!Files.notExists(root)) sources.addAll(AnnotatedContractDiscovery.discover(root));
+    }
+    return List.copyOf(sources);
   }
 }

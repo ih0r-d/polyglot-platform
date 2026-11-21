@@ -23,7 +23,7 @@ import io.github.ih0rd.polyglot.SupportedLanguage;
  *   <li>if multiple languages are specified, client creation fails
  * </ul>
  *
- * <p>Binding currently follows {@link Convention#DEFAULT}.
+ * <p>Binding defaults to {@link Convention#DEFAULT}.
  *
  * <pre>{@code
  * @PolyglotClient(languages = SupportedLanguage.PYTHON)
@@ -64,4 +64,15 @@ public @interface PolyglotClient {
    * @return binding convention used when resolving guest-language members
    */
   Convention convention() default Convention.DEFAULT;
+
+  /**
+   * Selects the Python script by logical name, for example {@code contracts/pricing}.
+   *
+   * <p>Use a relative slash-separated name without the {@code .py} extension. The empty string
+   * derives the script name from the interface. Export and method names follow {@link
+   * #convention()} independently of this setting.
+   *
+   * @return explicit Python script name, or an empty string to use the naming convention
+   */
+  String script() default "";
 }

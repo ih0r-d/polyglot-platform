@@ -11,8 +11,10 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Proxy;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.graalvm.polyglot.Context;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,7 @@ import org.springframework.beans.factory.ObjectProvider;
 
 import io.github.ih0rd.adapter.context.JsExecutor;
 import io.github.ih0rd.adapter.context.PyExecutor;
+import io.github.ih0rd.adapter.spi.InMemoryScriptSource;
 import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.annotations.PolyglotClient;
@@ -51,6 +54,11 @@ class PolyglotClientFactoryBeanTest {
 
   @PolyglotClient(languages = SupportedLanguage.PYTHON, convention = Convention.BY_METHOD_NAME)
   interface MethodConventionApi {}
+
+  @PolyglotClient(script = "contracts/greeting", convention = Convention.BY_METHOD_NAME)
+  interface MappedApi {
+    String greet();
+  }
 
   @PolyglotClient(languages = {SupportedLanguage.PYTHON, SupportedLanguage.JS})
   interface MultiApi {}
@@ -98,6 +106,27 @@ class PolyglotClientFactoryBeanTest {
 
     assertSame(autoProxy, factory.getObject());
     verify(jsExecutor).validateBinding(AutoApi.class, Convention.DEFAULT);
+  }
+
+  @Test
+  void factoryUsesMappedPythonSourceForEagerValidationAndInvocation() {
+    try (var executor =
+        PyExecutor.createWithContext(
+            Context.newBuilder("python").build(),
+            new InMemoryScriptSource(
+                Map.of("python/contracts/greeting", "def greet(): return 'hello'")))) {
+      var client = factory(MappedApi.class, new PolyglotExecutors(executor, null)).getObject();
+      assertEquals("hello", client.greet());
+    }
+  }
+
+  @Test
+  void mappedClientCannotResolveToJavaScript() {
+    var factory = factory(MappedApi.class, new PolyglotExecutors(null, jsExecutor));
+    assertTrue(
+        assertThrows(PolyglotClientResolutionException.class, factory::getObject)
+            .getMessage()
+            .contains("requires a Python executor"));
   }
 
   @Test

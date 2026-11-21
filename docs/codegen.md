@@ -244,6 +244,12 @@ Additional Maven plugin options:
   Skips rewriting generated files when rendered content is unchanged.
 - `failOnContractDrift` (default: `false`)  
   In `polyglot:generate`, switches to drift-check behavior and fails when generated files differ.
+- `emitPolyglotClient` (default: `false`)
+  Adds `@PolyglotClient` with explicit Python language and the script name relative to
+  `inputDirectory`, without `.py`. Point `inputDirectory` at the Python language root, for example
+  `${project.basedir}/src/main/resources/python`, when enabling this option. Use the same option
+  and root with `generate`, `check`, and `doctor`. The compiling project needs
+  `polyglot-annotations` on its compile classpath (the Spring Boot starter already provides it).
 
 DX workflow pattern:
 
@@ -299,6 +305,29 @@ The goal's default phase is `verify`; it writes no files and registers no source
 discovery below is enabled. Generated interfaces
 can be selected by their generated-source paths after the `generate` execution has run.
 
+To fail before Java compilation, explicitly schedule validation in `process-sources`. This phase
+follows `generate-sources` and precedes `compile`. For example, use this execution alongside
+`generate` in a project generating annotated contracts:
+
+```xml
+<execution>
+    <id>validate-python-before-compile</id>
+    <phase>process-sources</phase>
+    <goals><goal>validate-contracts</goal></goals>
+    <configuration>
+        <validateContracts>true</validateContracts>
+        <discoverContracts>true</discoverContracts>
+        <discoverCompileSourceRoots>true</discoverCompileSourceRoots>
+    </configuration>
+</execution>
+```
+
+`discoverCompileSourceRoots` (default `false`) extends annotation discovery to compile roots
+already registered for the current module, including the generator's output. Explicit `contracts`
+still take precedence. Schedule validation after any generator that contributes contracts. A
+validation execution owns one AST session and reuses binding results for the same file and
+convention. Separate Maven goals have independent sessions.
+
 For `interface GreetingApi { String hello(); }`, the expected source is
 `inputDirectory/greeting_api.py`, following the runtime's naming convention:
 
@@ -312,6 +341,12 @@ class GreetingApi:
 polyglot.export_value("GreetingApi", GreetingApi)
 ```
 
+`@PolyglotClient(script = "contracts/pricing")` selects `inputDirectory/contracts/pricing.py`
+while keeping the expected export `GreetingApi` for `DEFAULT` and Java method names for
+`BY_METHOD_NAME`. The source validator accepts a string literal with an explicit Python language
+or with automatic language selection when `script` is nonempty. Spring automatic selection
+still requires exactly one available executor, which must be Python for a mapped client.
+
 Success reports `Python contract validation passed: 1 Java source(s).` Removing `hello`
 fails Maven with a diagnostic such as:
 
@@ -323,8 +358,8 @@ A missing module reports the expected Python file and Java contract. Unsupported
 constructs report a Python file/line and fail, rather than silently validating an uncertain binding.
 
 Validation supports one top-level Java interface per selected source without inheritance.
-An optional `@PolyglotClient` must explicitly select `SupportedLanguage.PYTHON`; AUTO and multiple
-languages cannot be inferred from build-time sources. Plain interfaces selected through `contracts`
+An optional `@PolyglotClient` must select `SupportedLanguage.PYTHON` or provide a nonempty
+Python `script` with automatic language selection. Plain interfaces selected through `contracts`
 retain `DEFAULT`. `convention` may explicitly select `DEFAULT`, `BY_INTERFACE_EXPORT` or
 `BY_METHOD_NAME`. No Spring scanning or application class loading is involved.
 
@@ -463,9 +498,9 @@ or locally shadowed annotation resolution fails as unsupported; use an explicit 
 qualified annotation instead. Java parsing does not require compiled application classes.
 
 Discovered contracts go through the same module, export, method and positional-arity checks as
-explicit contracts. They must explicitly select `SupportedLanguage.PYTHON` and may use
-`DEFAULT`, `BY_INTERFACE_EXPORT` or `BY_METHOD_NAME`. AUTO/multiple-language selection, JS, inherited/nested interfaces
-and other unsupported forms fail rather than being counted as successfully validated.
+explicit contracts. They may use `DEFAULT`, `BY_INTERFACE_EXPORT` or `BY_METHOD_NAME`.
+Automatic language selection without an explicit script, multiple languages, JS, inherited and
+nested interfaces are outside the supported subset.
 
 This is source discovery, not Spring bean discovery: no `ApplicationContext`, GraalVM `Context`,
 application class loading or Python execution is involved. It does not interpret `@EnablePolyglotClients`,
@@ -633,12 +668,16 @@ That is why the build tools follow the same naming conventions and contract mode
 
 ### Generated Interfaces and Spring Binding
 
-Generated Java interfaces are plain interfaces with no framework annotations. To use a generated
-interface with the Spring Boot starter, you must annotate it with `@PolyglotClient` and enable
-client scanning:
+Generated Java interfaces are plain interfaces by default. To register generated interfaces in
+Spring, set Maven `<emitPolyglotClient>true</emitPolyglotClient>` or pass `--emit-polyglot-client`
+to the CLI, then enable client scanning for their package. The Java rendering APIs also accept
+an optional third `String script` argument to generate the Python client annotation. Pass `""`
+to emit the annotation with conventional script naming.
+
+Handwritten contracts can use the same annotation:
 
 ```java
-@PolyglotClient(languages = {SupportedLanguage.PYTHON})
+@PolyglotClient(languages = SupportedLanguage.PYTHON, script = "contracts/forecast")
 public interface ForecastService {
     // generated methods
 }
@@ -650,8 +689,8 @@ public interface ForecastService {
 public class MyApplication { ... }
 ```
 
-The code generator does not add `@PolyglotClient` automatically. That annotation must be present
-on the interface (either hand-written or added after generation) before the Spring starter can
-register the corresponding bean.
+The generated annotation uses `DEFAULT` binding. The Python source must export the value using
+the Java interface's simple name. Put the script under the same logical location in the runtime
+`ScriptSource`.
 
 ![Code generation diagram](assets/codegen-diagram.svg)

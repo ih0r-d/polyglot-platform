@@ -3,6 +3,7 @@ package io.github.ih0rd.codegen;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -11,10 +12,14 @@ import com.github.javaparser.ast.Modifier.Keyword;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.SimpleName;
+import com.github.javaparser.ast.expr.StringLiteralExpr;
 
+import io.github.ih0rd.polyglot.SupportedLanguage;
+import io.github.ih0rd.polyglot.annotations.PolyglotClient;
 import io.github.ih0rd.polyglot.model.ContractClass;
 import io.github.ih0rd.polyglot.model.ContractMethod;
 import io.github.ih0rd.polyglot.model.ContractParam;
+import io.github.ih0rd.polyglot.model.config.ScriptNames;
 
 /**
  * Renders Java interface source files from parsed contracts.
@@ -50,8 +55,22 @@ public final class JavaInterfaceGenerator {
    * @return complete Java source file contents
    */
   public String generate(ContractClass contract, String basePackage) {
+    return renderSource(contract, generateAst(contract, basePackage));
+  }
 
-    CompilationUnit compilationUnit = generateAst(contract, basePackage);
+  /**
+   * Generates a Python client interface with {@link PolyglotClient}.
+   *
+   * @param contract parsed contract
+   * @param basePackage target Java package
+   * @param script logical Python script name, or empty to use the naming convention
+   * @return complete Java source file contents
+   */
+  public String generate(ContractClass contract, String basePackage, String script) {
+    return renderSource(contract, generateAst(contract, basePackage, script));
+  }
+
+  private String renderSource(ContractClass contract, CompilationUnit compilationUnit) {
     ClassOrInterfaceDeclaration javaInterface =
         compilationUnit
             .getInterfaceByName(contract.name())
@@ -60,12 +79,16 @@ public final class JavaInterfaceGenerator {
                     new IllegalStateException(
                         "Generated AST is missing interface: " + contract.name()));
     // Preserve the v0.4.0 layout: a blank line after '{', but none between methods.
-    StringBuilder interfaceBody =
-        new StringBuilder("public interface ")
-            .append(javaInterface.getNameAsString())
-            .append(" {")
-            .append(NL)
-            .append(NL);
+    StringBuilder interfaceBody = new StringBuilder();
+    javaInterface
+        .getAnnotations()
+        .forEach(annotation -> interfaceBody.append(annotation).append(NL));
+    interfaceBody
+        .append("public interface ")
+        .append(javaInterface.getNameAsString())
+        .append(" {")
+        .append(NL)
+        .append(NL);
     for (MethodDeclaration method : javaInterface.getMethods()) {
       interfaceBody.append("    ").append(method).append(NL);
     }
@@ -106,12 +129,38 @@ public final class JavaInterfaceGenerator {
    * @return Java source AST
    */
   public CompilationUnit generateAst(ContractClass contract, String basePackage) {
+    return createAst(contract, basePackage, null);
+  }
+
+  /**
+   * Generates a JavaParser AST for a Python client interface with {@link PolyglotClient}.
+   *
+   * @param contract parsed contract
+   * @param basePackage target Java package
+   * @param script logical Python script name, or empty to use the naming convention
+   * @return annotated Java source AST
+   */
+  public CompilationUnit generateAst(ContractClass contract, String basePackage, String script) {
+    return createAst(contract, basePackage, Objects.requireNonNull(script, "script"));
+  }
+
+  private CompilationUnit createAst(ContractClass contract, String basePackage, String script) {
     validator.validate(contract, basePackage);
 
     CompilationUnit compilationUnit = new CompilationUnit();
     compilationUnit.setPackageDeclaration(basePackage);
     addImports(compilationUnit, contract);
-    renderInterface(compilationUnit, contract);
+    ClassOrInterfaceDeclaration type =
+        compilationUnit.addInterface(contract.name(), Keyword.PUBLIC);
+    if (script != null) {
+      var annotation = type.addAndGetAnnotation(PolyglotClient.class.getName());
+      annotation.addPair("languages", SupportedLanguage.class.getName() + ".PYTHON");
+      if (!script.isEmpty()) {
+        ScriptNames.forPythonContract(contract.name(), script);
+        annotation.addPair("script", new StringLiteralExpr().setString(script));
+      }
+    }
+    contract.methods().forEach(method -> type.addMember(renderMethod(method)));
     return compilationUnit;
   }
 
@@ -145,15 +194,6 @@ public final class JavaInterfaceGenerator {
     }
     for (Class<?> importType : imports) {
       compilationUnit.addImport(importType);
-    }
-  }
-
-  /** Renders one Java interface from the validated contract model. */
-  private void renderInterface(CompilationUnit compilationUnit, ContractClass contract) {
-    ClassOrInterfaceDeclaration type =
-        compilationUnit.addInterface(contract.name(), Keyword.PUBLIC);
-    for (ContractMethod method : contract.methods()) {
-      type.addMember(renderMethod(method));
     }
   }
 

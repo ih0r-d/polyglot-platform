@@ -3,12 +3,49 @@ package io.github.ih0rd.polyglot.model.config;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 
+import io.github.ih0rd.polyglot.SupportedLanguage;
+
 /**
  * Validation utilities for logical script names accepted by {@link ScriptSource} implementations.
  */
 public final class ScriptNames {
 
   private ScriptNames() {}
+
+  /**
+   * Selects an explicit Python script or derives its name from the Java contract's simple name.
+   *
+   * @param contractName Java contract's simple name
+   * @param script explicit logical name, or the empty string to use the naming convention
+   * @return logical Python script name
+   * @throws IllegalArgumentException if the selected name is invalid
+   */
+  public static String forPythonContract(String contractName, String script) {
+    String name = "".equals(script) ? fromContractName(contractName) : script;
+    requireValid(name);
+    if (name.endsWith(SupportedLanguage.PYTHON.ext())) {
+      throw invalid(name, "omit the .py extension");
+    }
+    return name;
+  }
+
+  /**
+   * Converts a Java contract name to the conventional script name, separating each uppercase letter
+   * after the first. Null and empty input are returned unchanged.
+   *
+   * @param contractName Java contract name
+   * @return conventional snake-case script name
+   */
+  public static String fromContractName(String contractName) {
+    if (contractName == null || contractName.isEmpty()) return contractName;
+    StringBuilder name = new StringBuilder(contractName.length());
+    for (int i = 0; i < contractName.length(); i++) {
+      char c = contractName.charAt(i);
+      if (i > 0 && Character.isUpperCase(c)) name.append('_');
+      name.append(Character.toLowerCase(c));
+    }
+    return name.toString();
+  }
 
   /**
    * Validates and returns a logical script name safe for filesystem and resource resolution.

@@ -19,6 +19,8 @@ For the current `0.5.x` release-preparation line:
 ### Core API
 
 - `@PolyglotClient`
+- `@PolyglotClient.script()` optionally selects a Python logical script name. Its empty default
+  preserves existing clients, including interfaces compiled against the earlier annotation.
 - `Convention`
 - `SupportedLanguage`
 - `@ExperimentalApi` as the repository marker for bounded published surface
@@ -55,8 +57,8 @@ by built-in implementations.
 - `check-compatibility` parameters: required explicit `baseline`, `currentDirectory` (default
   `src/main/resources/python`) and `failOnUnknown` (default `true`); see [codegen](codegen.md#python-contract-compatibility)
 - documented plugin parameters and defaults, including `onlyIncludedMethods`, `strictMode`,
-  `failOnNoContracts`, `skipUnchanged`, `failOnContractDrift`, and the opt-in `validateContracts`,
-  `discoverContracts`, `contracts`, `inputDirectory` and `sourceDirectory` settings for Python
+  `failOnNoContracts`, `skipUnchanged`, `failOnContractDrift`, `emitPolyglotClient`, and the opt-in `validateContracts`,
+  `discoverContracts`, `discoverCompileSourceRoots`, `contracts`, `inputDirectory` and `sourceDirectory` settings for Python
   contract validation
 - `validate-contracts` supports explicit Python `DEFAULT`, `BY_INTERFACE_EXPORT` and `BY_METHOD_NAME`;
   confirmed incompatibilities and UNKNOWN static-analysis cases both fail enabled validation.

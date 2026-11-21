@@ -42,7 +42,8 @@ final class CodegenMojoSupport {
       boolean strictMode,
       boolean failOnNoContracts,
       boolean skipUnchanged,
-      boolean failOnContractDrift) {}
+      boolean failOnContractDrift,
+      boolean emitPolyglotClient) {}
 
   record Summary(
       int supportedScripts,
@@ -214,9 +215,20 @@ final class CodegenMojoSupport {
       int skippedUnchanged = 0;
       int drifted = 0;
       List<String> driftMessages = new ArrayList<>();
+      String pythonScript = null;
+      if (settings.emitPolyglotClient() && language == SupportedLanguage.PYTHON) {
+        String relative = settings.inputDirectory().toPath().relativize(script).toString();
+        pythonScript =
+            relative
+                .substring(0, relative.length() - language.ext().length())
+                .replace(File.separatorChar, '/');
+      }
 
       for (ContractClass contract : model.classes()) {
-        String javaSource = javaGenerator.generate(contract, effectivePackage);
+        String javaSource =
+            pythonScript == null
+                ? javaGenerator.generate(contract, effectivePackage)
+                : javaGenerator.generate(contract, effectivePackage, pythonScript);
         Path target =
             context
                 .outputDir()
