@@ -88,6 +88,7 @@ tooling lifecycle notes.
 ## Change Expectations
 
 - Keep public API modules minimal and stable.
+- Import Java types and static members explicitly. Spotless rejects wildcard imports.
 - Do not introduce cyclic module dependencies.
 - Add or update tests for each behavioral change.
 - Update documentation when changing public API, configuration, build flow, or compatibility guarantees.

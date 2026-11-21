@@ -394,6 +394,7 @@
                 <version>${google-java-format.version}</version>
               </googleJavaFormat>
               <removeUnusedImports/>
+              <forbidWildcardImports/>
               <importOrder>
                 <order>java,javax,org,com,,#</order>
               </importOrder>
