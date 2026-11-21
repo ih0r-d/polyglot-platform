@@ -99,7 +99,9 @@ The build-tools layer performs static contract extraction and Java source genera
 
 `polyglot-codegen-maven-plugin` integrates the generator into Maven and registers generated sources during `generate-sources`.
 It also provides opt-in `validate-contracts` checks for existing Java-to-Python bindings. Those
-checks use static source analysis and do not initialize GraalVM or execute Python.
+checks use an isolated build-time GraalPy AST interpreter and never evaluate application modules.
+The shared Java semantic layer feeds generation, binding validation and compatibility reports;
+GraalPy types stay internal to codegen.
 
 Two contributor tools sit outside the runtime layers: the opt-in Revapi Maven profile checks Java
 API compatibility, and the standalone JMH project under `benchmarks/` records invocation and
@@ -199,7 +201,7 @@ The code generation tooling is intentionally separate from runtime execution, bu
 - `polyglot-codegen-maven-plugin` turns those contracts into Java interfaces during the build
 - `polyglot-adapter` binds those interfaces at runtime using the same naming and contract conventions
 
-This separation keeps the build tools independent from GraalVM runtime execution while still producing Java types that fit naturally into the adapter API.
+Build tools use the official GraalPy AST independently of the application adapter and Spring lifecycle. The existing contract model and JavaParser generation still produce Java types for the same runtime binding conventions.
 
 ## How Users Interact With the Runtime Adapter
 

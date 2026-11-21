@@ -110,4 +110,22 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>compatibility</id>
+            <properties><compatibility.scenario>compatible</compatibility.scenario></properties>
+            <build><plugins><plugin>
+                <groupId>io.github.ih0r-d</groupId>
+                <artifactId>polyglot-codegen-maven-plugin</artifactId>
+                <configuration>
+                    <baseline>${project.basedir}/compatibility/baseline</baseline>
+                    <currentDirectory>${project.basedir}/compatibility/${compatibility.scenario}</currentDirectory>
+                </configuration>
+                <executions><execution>
+                    <id>check-python-compatibility</id>
+                    <goals><goal>check-compatibility</goal></goals>
+                </execution></executions>
+            </plugin></plugins></build>
+        </profile>
+    </profiles>
 </project>

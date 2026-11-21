@@ -111,7 +111,6 @@
                         <configuration>
                             <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
                             <localRepositoryPath>${project.build.directory}/it-repository</localRepositoryPath>
-                            <settingsFile>${session.request.userSettingsFile}</settingsFile>
                             <postBuildHookScript>verify</postBuildHookScript>
                             <goals><goal>verify</goal></goals>
                         </configuration>

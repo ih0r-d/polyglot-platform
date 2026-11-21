@@ -1,0 +1,11 @@
+String log = new String(java.nio.file.Files.readAllBytes(new File(basedir, "build.log").toPath()), java.nio.charset.StandardCharsets.UTF_8);
+for (String expected : new String[] {
+    "Python contract compatibility: COMPATIBLE",
+    "BREAKING [FUNCTION_REMOVED] GreetingApi.hello",
+    "BREAKING [POSITIONAL_ARITY] GreetingApi.hello",
+    "UNKNOWN [UNSUPPORTED_SYNTAX]",
+    "Python contract compatibility: UNKNOWN"
+}) {
+    if (!log.contains(expected)) throw new AssertionError("Missing diagnostic: " + expected);
+}
+return true;

@@ -1,0 +1,10 @@
+String log = new String(java.nio.file.Files.readAllBytes(new File(basedir, "build.log").toPath()), java.nio.charset.StandardCharsets.UTF_8);
+for (String expected : new String[] {
+    "Python contract validation passed: 2 Java source(s)", "INCOMPATIBLE: MISSING_FUNCTION",
+    "INCOMPATIBLE: POSITIONAL_ARITY", "INCOMPATIBLE: REQUIRED_KEYWORD", "UNKNOWN: UNSUPPORTED_SYNTAX",
+    "UNKNOWN: EXPORT_RESOLUTION"
+}) {
+    if (!log.contains(expected)) throw new AssertionError("Missing diagnostic: " + expected);
+}
+if (!new File(basedir, "target/classes/consumer/Consumer.class").isFile()) throw new AssertionError("Consumer did not compile");
+return true;

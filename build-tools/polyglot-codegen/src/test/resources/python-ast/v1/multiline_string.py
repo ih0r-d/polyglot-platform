@@ -1,0 +1,4 @@
+text = '''
+def fabricated():
+    pass
+'''

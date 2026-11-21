@@ -126,58 +126,63 @@ final class CodegenMojoSupport {
   private static Summary runGeneration(
       Settings settings, Log log, Mode mode, Path outputRoot, String effectivePackage)
       throws MojoExecutionException {
-    ContractGenerator generator = new DefaultContractGenerator();
-    JavaInterfaceGenerator javaGenerator = new JavaInterfaceGenerator();
+    try (var generator = DefaultContractGenerator.openBatch()) {
+      JavaInterfaceGenerator javaGenerator = new JavaInterfaceGenerator();
 
-    ScriptProcessingContext context =
-        new ScriptProcessingContext(
-            generator, outputRoot, mode == Mode.CHECK || settings.failOnContractDrift());
+      ScriptProcessingContext context =
+          new ScriptProcessingContext(
+              generator, outputRoot, mode == Mode.CHECK || settings.failOnContractDrift());
 
-    SummaryCounters counters = SummaryCounters.empty();
+      SummaryCounters counters = SummaryCounters.empty();
 
-    List<String> driftMessages = new ArrayList<>();
-    List<Path> scriptFiles;
+      List<String> driftMessages = new ArrayList<>();
+      List<Path> scriptFiles;
 
-    try (Stream<Path> files = Files.walk(settings.inputDirectory().toPath())) {
-      scriptFiles =
-          files.filter(Files::isRegularFile).filter(CodegenMojoSupport::isSupported).toList();
-    } catch (IOException e) {
-      throw new MojoExecutionException("Failed scanning input directory", e);
-    }
+      try (Stream<Path> files = Files.walk(settings.inputDirectory().toPath())) {
+        scriptFiles =
+            files
+                .filter(Files::isRegularFile)
+                .filter(CodegenMojoSupport::isSupported)
+                .sorted()
+                .toList();
+      } catch (IOException e) {
+        throw new MojoExecutionException("Failed scanning input directory", e);
+      }
 
-    for (Path script : scriptFiles) {
-      counters = counters.incrementSupportedScripts();
-      ScriptSummary perScript =
-          processScript(script, context, javaGenerator, settings, effectivePackage, log);
+      for (Path script : scriptFiles) {
+        counters = counters.incrementSupportedScripts();
+        ScriptSummary perScript =
+            processScript(script, context, javaGenerator, settings, effectivePackage, log);
 
-      counters = counters.add(perScript);
+        counters = counters.add(perScript);
 
-      if (driftMessages.size() < MAX_DRIFT_MESSAGES) {
-        driftMessages.addAll(perScript.driftMessages());
-        if (driftMessages.size() > MAX_DRIFT_MESSAGES) {
-          driftMessages.subList(MAX_DRIFT_MESSAGES, driftMessages.size()).clear();
+        if (driftMessages.size() < MAX_DRIFT_MESSAGES) {
+          driftMessages.addAll(perScript.driftMessages());
+          if (driftMessages.size() > MAX_DRIFT_MESSAGES) {
+            driftMessages.subList(MAX_DRIFT_MESSAGES, driftMessages.size()).clear();
+          }
         }
       }
-    }
 
-    if (!driftMessages.isEmpty()) {
-      for (String message : driftMessages) {
-        log.warn(message);
+      if (!driftMessages.isEmpty()) {
+        for (String message : driftMessages) {
+          log.warn(message);
+        }
+        if (counters.driftedFiles() > driftMessages.size()) {
+          log.warn(
+              "... and "
+                  + (counters.driftedFiles() - driftMessages.size())
+                  + " more drifted file(s).");
+        }
       }
-      if (counters.driftedFiles() > driftMessages.size()) {
-        log.warn(
-            "... and "
-                + (counters.driftedFiles() - driftMessages.size())
-                + " more drifted file(s).");
-      }
-    }
 
-    return new Summary(
-        counters.supportedScripts(),
-        counters.generatedContracts(),
-        counters.writtenFiles(),
-        counters.skippedUnchangedFiles(),
-        counters.driftedFiles());
+      return new Summary(
+          counters.supportedScripts(),
+          counters.generatedContracts(),
+          counters.writtenFiles(),
+          counters.skippedUnchangedFiles(),
+          counters.driftedFiles());
+    }
   }
 
   private static ScriptSummary processScript(

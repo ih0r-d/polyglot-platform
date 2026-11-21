@@ -6,8 +6,8 @@ The code generation tooling complements the runtime adapter by turning supported
 
 It is build-time tooling, not runtime execution:
 
-- it does not create GraalVM contexts
-- it does not execute guest-language code
+- it uses an isolated GraalPy Context for the official Python `ast` module
+- it never evaluates or imports application Python source
 - it does not depend on the adapter runtime implementation
 
 > Note
@@ -68,11 +68,11 @@ Language parsers convert source syntax into the adapter’s language-neutral con
 - skips private methods by default
 - maps Python type hints into `PolyType`
 
-The Python parser is intentionally lightweight and convention-oriented. It is designed for adapter contracts, not for full Python semantic analysis.
+Python syntax is parsed by GraalPy `ast.parse`. Java code reads detached AST nodes and applies the existing contract conventions; it does not maintain a Python lexer or grammar. Syntax validity alone does not prove binding, conversion or runtime behavior.
 
 #### Class-Style Exports
 
-The parser matches `class` definitions with or without base classes:
+Generation reads `ClassDef` nodes with or without base classes:
 
 ```python
 class ForecastService:          # no base class
@@ -81,7 +81,7 @@ class ForecastService(BaseA, BaseB): # multiple base classes
 class ForecastService (Base):   # space before parentheses
 ```
 
-Only the class name is captured; base class names are ignored by the parser.
+Generation retains the existing declared-method projection. Binding/compatibility checks classify unresolved inheritance and metaclasses as UNKNOWN.
 
 #### Multiple Exports Per File
 
@@ -117,9 +117,24 @@ Supported subset today:
 - top-level Python functions used in exported dictionaries
 - class methods and basic type hints aligned with the repository type model
 
+Generated methods expose fixed positional parameters. Positional-only parameters and defaults are
+supported; `*args`/`**kwargs` may receive an empty tail. Optional keyword-only parameters are omitted
+so Python applies their defaults. Required keyword-only parameters fail generation with a
+source-located error because the runtime supplies positional arguments only. Generation reuses the
+calling metadata reader; nested declarations, strings and comments are not exported class members.
+This remains a contract subset, not a runtime or behavioral validator.
+
+Unannotated methods retain the existing inference rules. In particular, Sphinx `:return:` /
+`:returns:` documentation keeps the released `Object` return type; use a Python return annotation
+to refine it explicitly. Tuple annotations containing maps retain their existing `Object` element
+projection. Unknown generic annotations remain unknown without interpreting their type arguments.
+Standalone executable exports and dynamic export factories cannot define a generated Java interface;
+generation rejects these targets instead of emitting an empty interface. They remain subject to the
+separate binding/compatibility rules, including UNKNOWN for unresolved dynamic targets.
+
 Not promised today:
 
-- full Python parsing fidelity
+- static contract support for every valid Python construct
 - semantic import resolution
 - runtime-equivalent understanding of arbitrary Python constructs
 - JavaScript contract generation
@@ -146,6 +161,55 @@ Current Java rendering behavior is conservative:
 - maps map to `Map<K, V>`
 - unsupported or richer types fall back to `Object`
 
+Python `set`/`Set[...]` annotations, including nested sets, fail generation explicitly. The previous
+set-to-Java-List mapping cannot execute with standard GraalPy conversion; it is not silently changed
+to `Object` or `Set`. Return a Python list/tuple or keep a handwritten Java contract with custom
+conversion. Existing list/tuple generated return types remain unchanged. Compatibility analysis
+continues to report set annotations as UNKNOWN. `validate-contracts` checks binding/arity, not
+actual guest values or conversion safety.
+
+## AST backend and lifecycle
+
+Python analysis now requires the existing managed GraalPy version at build time. The only Python
+source evaluated by the backend is the fixed `import ast` bootstrap. Application text is passed to
+`ast.parse`; its imports, decorators, annotations, defaults and bodies are never evaluated. No
+Python helper resource or serialized metadata protocol is used. Contract semantics and type mappings
+remain in Java, and JavaParser still renders the same interfaces, packages and generated-source layout.
+
+Each Maven generation/validation/compatibility execution owns one lazy Context and Engine for its
+batch. Access and close are synchronized. The Context ignores application Python paths, site hooks
+and environment settings, ignores JVM `polyglot.*` properties (including Maven goal options),
+and has no host, native or application IO access. No process-wide parser
+cache is used. Initialization failures fail the build with the original cause.
+
+Programmatic callers can use `PythonContractParser.openBatch()` or
+`DefaultContractGenerator.openBatch()` in try-with-resources. Released no-arg constructors and
+entry points remain available; one-shot parsing closes its interpreter after each operation.
+AST nodes and GraalPy types remain internal. Syntax errors retain file, line and column; AST
+semantic columns use Python's UTF-8 byte offsets, while SyntaxError offsets retain Python's
+character-column convention. UNKNOWN is never converted to COMPATIBLE because parsing succeeded.
+
+Golden tests compare Java source byte-for-byte against the pre-migration P1-fixed generator,
+including actual sample contracts, alias ordering, type rendering, decorators and inclusion rules.
+
+Measured locally on macOS ARM64 with GraalPy 25.0.4.1.1 (Python 3.12.8), using interpreter
+fallback on OpenJDK 21.0.2 and Oracle HotSpot 25, respectively:
+
+| Measurement (median of three fresh JVMs) | Java 21 | Java 25 |
+| --- | ---: | ---: |
+| First parse, including Context initialization | 1.81 s | 1.39 s |
+| Warm batch of 100 files | 130 ms | 189 ms |
+| Warm throughput | 876 files/s | 833 files/s |
+| Retained heap increase after GC | 47.7 MiB | 47.2 MiB |
+| Whole-process peak RSS | 443 MiB | 428 MiB |
+
+The workload reads 100 files copied cyclically from the eight golden/sample contracts and projects
+their AST into ContractModel, without Java rendering. Each process uses one batch, one thread,
+`-Xms64m -Xmx512m`, 300 warmup parses, then one measured batch and 1,000 throughput parses.
+Heap is measured after GC with the Context still open; RSS includes the entire JVM. These are local
+cost measurements, not a GraalVM distribution benchmark or a performance improvement claim.
+Batch reuse amortizes initialization; the released one-shot entry points still initialize per call.
+
 ## Maven Plugin Usage
 
 The Maven plugin goals are:
@@ -155,6 +219,7 @@ polyglot:generate
 polyglot:check
 polyglot:doctor
 polyglot:validate-contracts
+polyglot:check-compatibility
 ```
 
 Generation defaults:
@@ -198,7 +263,7 @@ For parser limitations, drift failures, and common check/doctor symptoms, see
 ## Opt-In Java-to-Python Contract Validation
 
 `polyglot:validate-contracts` checks explicitly selected Java interface sources against
-Python sources without creating a GraalVM context, importing modules, or executing Python.
+Python sources through an isolated GraalPy AST Context, without importing or evaluating application modules.
 It complements `check`/`doctor`, which compare generated text rather than existing Java bindings.
 The goal is disabled by default, including when configured as an execution.
 
@@ -257,44 +322,105 @@ GreetingApi.java:1: module 'greeting_api', symbol 'GreetingApi.hello': Missing P
 A missing module reports the expected Python file and Java contract. Unsupported Python
 constructs report a Python file/line and fail, rather than silently validating an uncertain binding.
 
-This first version supports one top-level Java interface per selected file without inheritance,
-and the `DEFAULT`/`BY_INTERFACE_EXPORT` class-export convention. An optional `@PolyglotClient`
-annotation must explicitly select `SupportedLanguage.PYTHON`; auto language selection and
-`BY_METHOD_NAME` are not inferred. Selection in `contracts` is sufficient for plain interfaces;
-Spring scanning is not involved.
+Validation supports one top-level Java interface per selected source without inheritance.
+An optional `@PolyglotClient` must explicitly select `SupportedLanguage.PYTHON`; AUTO and multiple
+languages cannot be inferred from build-time sources. Plain interfaces selected through `contracts`
+retain `DEFAULT`. `convention` may explicitly select `DEFAULT`, `BY_INTERFACE_EXPORT` or
+`BY_METHOD_NAME`. No Spring scanning or application class loading is involved.
 
-Python validation reuses `PythonContractParser` behind a conservative static-subset check:
-plain local classes, non-underscore-prefixed methods with single-line signatures, and literal top-level
-`polyglot.export_value("Name", ClassName)` calls after the class declaration. Only
-`import polyglot` is accepted at module level. Inheritance, decorators, special methods
-(including `__init__`), dictionary/factory exports, conditional declarations, rebinding,
-nested declarations, tabs, multiline strings and escaped line continuations are unsupported.
-Method bodies are inspected as source only and never executed.
+The validator reuses `PythonContractParser`, its existing signature metadata reader and
+`ContractModel`. `PythonPositionalSignature` projects the shared metadata into a Java positional
+arity range; the Maven plugin no longer maintains its own Python signature grammar. Generation and
+`check-compatibility` retain their existing behavior, including their distinct expression policies.
 
-For each Java method, validation also checks its declared parameter count against the Python
-instance method's accepted positional range: required parameters through total parameters,
-excluding the implicitly bound first receiver (`self`, or another name). Python defaults make
-parameters optional. Every Java overload is checked independently. Java arrays and Java varargs
-each count as one declared parameter; the runtime does not flatten that array into guest arguments.
+### Binding conventions and positional arguments
 
-For example, `def hello(self, name, count=2):` accepts one or two Java arguments. A zero-argument
-Java declaration fails with Java and Python source locations:
+For `DEFAULT`/`BY_INTERFACE_EXPORT`, select a literal class or dictionary export matching the Java
+interface simple name. Plain instance methods exclude the first bound receiver, regardless of its
+name or annotation. Dictionary-exported functions have no implicit receiver. The expected module
+continues to be the runtime's snake-case interface name under `inputDirectory`.
 
-```text
-GreetingApi.java:2: module 'greeting_api', symbol 'GreetingApi.hello': Java supplies 0 positional argument(s); Python accepts 1..2 (receiver excluded), declared at .../greeting_api.py:2
+For `BY_METHOD_NAME`, the same module naming applies, but a class/interface export is unnecessary:
+
+```java
+@PolyglotClient(languages = SupportedLanguage.PYTHON, convention = Convention.BY_METHOD_NAME)
+interface GreetingApi {
+    String hello(String name);
+    String hello(String name, int count);
+}
 ```
 
-Single-line positional signatures support annotations, trailing commas, and defaults containing
-quoted strings or balanced containers. Default expressions are inspected only to establish
-whether a parameter is optional; their values are never evaluated. `*args`, `**kwargs`, keyword-only
-parameters (`*`), positional-only markers (`/`), lambda defaults, call expressions and formatted string expressions
-in signatures, and parenthesized return annotations are unsupported and fail validation. Missing receivers, duplicate parameters,
-unbalanced signatures and required parameters after defaults also fail conservatively.
+```python
+def hello(name, /, count=1, *, suffix="!"):
+    return (name + suffix) * count
+```
 
-This checks declared symbol existence and positional arity, not Python syntax validity, import
-availability, argument/return types, default-expression success, constructor success, or full runtime
-equivalence. It is not full Python type safety. Dynamic contracts should retain runtime `validateBinding(...)` or Spring fail-fast
-validation. Existing generation, drift checks, runtime and Spring defaults are unchanged.
+Both overloads pass. A parameter named `self` in a top-level function still counts as an ordinary
+Java-supplied argument. For supported literal `polyglot.export_value("hello", implementation)`
+function aliases, executable polyglot exports take precedence over top-level language functions,
+even if the same language function is declared later. Dictionary exports in the module do not hide
+its top-level functions from `BY_METHOD_NAME` validation. Exporting a class as a callable requires
+runtime constructor analysis and remains UNKNOWN.
+
+Every Java overload is checked independently against the accepted positional range:
+
+- Positional-only (`/`) and ordinary parameters both consume Java argument slots.
+- Defaults make positional parameters optional; their values are never evaluated.
+- `*args` gives an unbounded maximum (`*` in diagnostics).
+- Optional keyword-only parameters do not consume positional slots.
+- Required keyword-only parameters are incompatible: Java supplies no keyword arguments.
+- `**kwargs` does not absorb extra positional arguments.
+- Java arrays and Java varargs each supply one declared guest argument; they are not flattened.
+
+Single/multiline signatures, trailing commas, comments, nested annotations and balanced string/container
+or tuple defaults are supported for arity analysis. Escaped quoted defaults retain the existing
+DEFAULT behavior. Default expressions are inspected for optionality, not evaluated for initialization
+success or behavioral compatibility. Calls, lambda expressions and formatted strings in signatures remain UNKNOWN. Parenthesized annotations are interpreted through the official AST. Missing receivers, duplicate parameters, invalid ordering,
+and unbalanced signatures produce UNKNOWN diagnostics rather than a successful check.
+
+### Diagnostics and static limits
+
+Both confirmed incompatibility and uncertainty fail enabled validation; there is no permissive
+UNKNOWN option on `validate-contracts`. Messages retain Java contract/method locations and Python
+module/declaration locations where available, with explicit classifications:
+
+| Classification | Meaning |
+| --- | --- |
+| `INCOMPATIBLE: MISSING_MODULE` | The expected module is absent from the selected source root |
+| `INCOMPATIBLE: MISSING_FUNCTION` | The supported source has no selected callable |
+| `INCOMPATIBLE: POSITIONAL_ARITY` | A declared Java overload supplies an unsupported argument count |
+| `INCOMPATIBLE: REQUIRED_KEYWORD` | Python requires keyword-only arguments Java cannot supply |
+| `UNKNOWN: UNSUPPORTED_SYNTAX` | Static analysis cannot establish the binding/signature |
+| `UNKNOWN: EXPORT_RESOLUTION` | A required literal DEFAULT export is absent; runtime fallback is not checked |
+
+For example:
+
+```text
+GreetingApi.java:5: module 'greeting_api', symbol 'GreetingApi.hello': Java supplies 0 positional argument(s); Python accepts 1..2 (no implicit receiver), declared at .../greeting_api.py:2 [INCOMPATIBLE: POSITIONAL_ARITY]
+```
+
+The runtime also supports DEFAULT lookup in Python language bindings. A missing literal export
+therefore does not, by itself, prove runtime failure: this validator reports UNKNOWN and preserves
+its requirement for an explicit export. UNKNOWN messages recommend an explicit supported declaration
+or runtime `validateBinding(...)`. Missing functions and unsupported syntax are never silently skipped.
+The first failure follows source order; annotation discovery scans Java files in sorted order.
+
+The supported semantic subset is plain local classes/functions, literal exports, static function
+aliases, `polyglot` aliases and supported `typing` imports. Inheritance, decorators,
+constructors/special methods, async/generator invocation, conditional declarations, dynamic/factory
+exports, rebinding and nested declarations remain UNKNOWN for binding validation. Strings, tabs,
+comments, escaped continuations and other syntax are interpreted by the official AST.
+
+Official AST parsing validates Python syntax. Binding validation checks selected symbol existence and positional arity, not
+annotation-to-Java type compatibility, actual return values, import availability, default-expression
+success, constructor success or arbitrary Context binding collisions. Generation's `strictMode`
+controls unknown generated types; it does not prove runtime conversion safety. Keep real runtime
+binding/application tests for dynamic contracts. Runtime module evaluation, caching, reload, lifecycle,
+metrics and tracing behavior are unchanged.
+
+The `method-name-contracts` Maven Invoker fixture compiles real DEFAULT and BY_METHOD_NAME Java
+interfaces and a consumer, then exercises valid defaults, export precedence, missing functions,
+arity errors, required keywords and UNKNOWN syntax. It runs with the existing `plugin-it` profile.
 
 ### Annotation Discovery for Spring Boot Projects
 
@@ -337,8 +463,8 @@ or locally shadowed annotation resolution fails as unsupported; use an explicit 
 qualified annotation instead. Java parsing does not require compiled application classes.
 
 Discovered contracts go through the same module, export, method and positional-arity checks as
-explicit contracts. They must explicitly select `SupportedLanguage.PYTHON` and use
-`DEFAULT`/`BY_INTERFACE_EXPORT`. AUTO/multiple-language selection, JS, inherited/nested interfaces
+explicit contracts. They must explicitly select `SupportedLanguage.PYTHON` and may use
+`DEFAULT`, `BY_INTERFACE_EXPORT` or `BY_METHOD_NAME`. AUTO/multiple-language selection, JS, inherited/nested interfaces
 and other unsupported forms fail rather than being counted as successfully validated.
 
 This is source discovery, not Spring bean discovery: no `ApplicationContext`, GraalVM `Context`,
@@ -360,6 +486,138 @@ The packaged-plugin integration fixtures use the Apache Maven Invoker Plugin onl
 ```bash
 ./mvnw -B -ntp -Pplugin-it -pl build-tools/polyglot-codegen-maven-plugin -am verify
 ```
+
+The fixtures use Maven's default settings discovery. To pass alternate settings explicitly, add
+`-Dinvoker.settingsFile=/absolute/path/to/settings.xml`; the file must exist.
+
+## Python Contract Compatibility
+
+`check-compatibility` compares an explicitly selected baseline Python contract with current sources.
+It checks whether existing **Java positional calls** and reliably mapped Java contract types are
+preserved. It never imports or executes application Python and has no Spring or Git dependency. It uses the managed GraalPy dependency for AST parsing.
+This complements `validate-contracts` (selected Java interfaces against current Python) and `check`
+(generated-text drift). It does not prove full Python API or runtime behavioral compatibility.
+
+```xml
+<plugin>
+    <groupId>io.github.ih0r-d</groupId>
+    <artifactId>polyglot-codegen-maven-plugin</artifactId>
+    <version>0.5.0-SNAPSHOT</version>
+    <executions>
+        <execution>
+            <id>python-compatibility</id>
+            <goals><goal>check-compatibility</goal></goals>
+            <configuration>
+                <baseline>${project.basedir}/contracts/baseline</baseline>
+                <currentDirectory>${project.basedir}/src/main/resources/python</currentDirectory>
+                <failOnUnknown>true</failOnUnknown>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+The goal runs in `verify` when configured as an execution; existing builds do not acquire an execution
+automatically. Run `./mvnw verify` in CI with the committed baseline available. Direct invocation:
+
+```bash
+./mvnw polyglot:check-compatibility \
+  -Dpolyglot.codegen.baseline=contracts/baseline \
+  -Dpolyglot.codegen.currentDirectory=src/main/resources/python
+```
+
+`baseline` is required and has no default: select a reviewed snapshot from the released Java-facing
+contract. The checker never chooses HEAD, checks out revisions, resolves artifacts or accesses the
+network. A directory selects `.py` files recursively and matches their relative paths, including
+nested modules. A `.py` baseline file selects only its basename under `currentDirectory`.
+`currentDirectory` defaults to `${project.basedir}/src/main/resources/python` and must exist.
+Missing/empty baselines and baselines containing no Java-facing functions fail configuration.
+Missing current counterparts are BREAKING. Additional modules and functions are allowed, but
+unsupported syntax in the selected current sources is still reported.
+
+### Outcomes and Java calling rules
+
+| Outcome | Meaning and build policy |
+| --- | --- |
+| `COMPATIBLE` | No break or uncertainty found within the supported static rules |
+| `BREAKING` | A baseline callable/module disappeared, a Java call is no longer accepted, argument slots changed, or reliably mapped Java types differ; always fails |
+| `UNKNOWN` | Unsupported syntax or insufficient static evidence; fails by default |
+
+Set `-Dpolyglot.codegen.failOnUnknown=false` to report UNKNOWN as warnings without failing for
+uncertainty. This never converts UNKNOWN into COMPATIBLE and never suppresses a BREAKING failure.
+A report containing both has aggregate outcome BREAKING and retains all findings. Diagnostics are
+sorted by file, line, symbol, category and explanation. Removed symbols point to the baseline;
+other changes point to the current declaration. For example:
+
+```text
+greeting_api.py:2: BREAKING [POSITIONAL_ARITY] GreetingApi.hello: Java positional range narrowed from 1..1 to 2..2. **kwargs does not accept positional arguments.
+```
+
+The checker uses the same official AST and Java semantic metadata as generation, with separate calling
+metadata. Neither the released `ContractModel` nor generated Java signatures change.
+For modules with literal exports it compares those exported members, excluding implementation
+helpers. Without exports it compares public top-level functions for `BY_METHOD_NAME` use.
+Select roots containing the intended contracts rather than arbitrary application Python files.
+Class-export receivers are implicitly bound and excluded regardless of their name. Dictionary
+exports retain their function's full signature. Aliases are compared by exported Java member name.
+
+Supported rules:
+
+- Function removal/rename and module removal are BREAKING. Function additions are compatible.
+- Every baseline accepted positional arity must remain accepted. New required positional parameters,
+  removing defaults that raise the minimum arity, removing positional slots, and removing `*args`
+  that lowers the maximum arity are BREAKING. Trailing optional parameters, relaxed requirements
+  and adding `*args` can be compatible.
+- `/` and ordinary parameters both accept Java's positional arguments. Changing between those two
+  conventions is compatible. Moving a positional parameter to keyword-only can narrow accepted
+  arities. New required keyword-only parameters are BREAKING because Java supplies no keywords.
+  A baseline already requiring keywords is UNKNOWN, since it was not a supported Java binding.
+- Optional keyword-only parameters and `**kwargs` do not add positional slots. Adding/removing
+  `**kwargs` alone is compatible. This is not a guarantee for Python keyword callers.
+- Moving a retained named parameter to another positional slot is BREAKING. A rename at the same
+  slot is allowed. When a previously explicit parameter becomes captured by `*args`, value routing
+  is UNKNOWN even when the argument count remains accepted.
+- Changed defaults for retained positional/keyword-only parameters are UNKNOWN; the tool does not
+  infer business semantics. Removing a positional default can independently be BREAKING by arity.
+  Unchanged scalar literals (`None`, booleans, simple numbers and strings) are supported. Richer
+  default expressions, including containers and calls, are UNKNOWN and never evaluated.
+- Type comparison reuses `PythonTypeMapper`. Fully known `int`, `float`, `str`, `bool`, nested
+  `list[T]`/`List[T]`, and `dict[K,V]`/`Dict[K,V]` are compared invariantly for positional arguments,
+  `*args` and return values. Equal mappings are compatible; different mappings are BREAKING for
+  the generated Java contract. These are not claims that Python enforces annotations at runtime.
+  Adding/removing annotations is UNKNOWN. Missing annotations on both sides leave only structural
+  checks. `Any`, unions, nullable `Optional`, forward references, aliases, sets, tuples and unknown
+  generic leaves are UNKNOWN, even when unchanged; lossy mappings do not establish compatibility.
+
+### Syntax and static limitations
+
+The supported subset is plain module functions, plain local classes with instance methods, literal
+class/dictionary exports after their targets, balanced single/multiline signatures, comments,
+positional-only/keyword-only markers, defaults, `*args` and `**kwargs`. The AST reader resolves literal exports and function aliases. Dynamic imports, decorators, async/generator invocation and rebinding remain UNKNOWN.
+Types outside the reliable subset still produce UNKNOWN. Underscore-prefixed functions are excluded.
+
+Decorators, async/generator functions, inheritance, special methods (including constructors),
+conditional declarations, arbitrary module imports/statements, rebinding and dynamic exports remain
+UNKNOWN. Malformed syntax is reported by the official parser with file/line/column diagnostics;
+duplicate definitions/parameters/exports remain semantic diagnostics. Opaque modules are not compared
+for removals. Other modules are still checked. Escaped strings, multiline strings and modern body
+syntax are parsed without executing them.
+
+Function bodies are outside the comparison. This is not a full Python syntax/type checker: imports,
+constructor execution, host conversion values, exceptions, side effects, return values, default
+evaluation, global mutations and runtime body behavior are not validated. Body-only changes can
+remain COMPATIBLE under this structural definition. Keep runtime binding checks and application
+tests. Python calling conventions follow the official
+[function definition rules](https://docs.python.org/3/reference/compound_stmts.html#function-definitions).
+
+The [Maven consumer example](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/java-maven-codegen-example)
+contains passing evolution, removed function, newly required argument and explicit UNKNOWN scenarios.
+Packaged-goal success/failure is also exercised by the `plugin-it` Invoker profile above.
+
+Programmatic build integrations can use `new PythonCompatibilityChecker().compare(baseline,
+currentDirectory)` from `io.github.ih0rd.codegen.compatibility`, returning an immutable
+`CompatibilityReport`. `CompatibilityDiagnostic` exposes file, line, symbol, outcome, category and
+explanation, plus `format()` for build logs. Parser metadata is internal and is not an extension SPI.
 
 ## Relationship to Runtime Execution
 

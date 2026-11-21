@@ -1,0 +1,20 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>contract.compatibility.it</groupId>
+    <artifactId>check-compatibility</artifactId>
+    <version>1</version>
+    <packaging>pom</packaging>
+    <properties><scenario>compatible</scenario></properties>
+    <build><plugins><plugin>
+        <groupId>io.github.ih0r-d</groupId>
+        <artifactId>polyglot-codegen-maven-plugin</artifactId>
+        <version>@project.version@</version>
+        <configuration>
+            <baseline>${project.basedir}/baseline</baseline>
+            <currentDirectory>${project.basedir}/${scenario}</currentDirectory>
+        </configuration>
+        <executions><execution><goals><goal>check-compatibility</goal></goals></execution></executions>
+    </plugin></plugins></build>
+</project>

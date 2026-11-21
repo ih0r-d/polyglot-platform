@@ -48,11 +48,20 @@ by built-in implementations.
 ### Build-Time API
 
 - `polyglot-codegen-maven-plugin` goals:
-  `generate`, `check`, `doctor`, `validate-contracts`
+  `generate`, `check`, `doctor`, `validate-contracts`, `check-compatibility`
+- `PythonCompatibilityChecker.compare(Path, Path)`, immutable `CompatibilityReport`,
+  `CompatibilityDiagnostic` (including categories and `format()`) and `CompatibilityOutcome`;
+  `PythonContract` and parser metadata are implementation details, not an extension SPI
+- `check-compatibility` parameters: required explicit `baseline`, `currentDirectory` (default
+  `src/main/resources/python`) and `failOnUnknown` (default `true`); see [codegen](codegen.md#python-contract-compatibility)
 - documented plugin parameters and defaults, including `onlyIncludedMethods`, `strictMode`,
   `failOnNoContracts`, `skipUnchanged`, `failOnContractDrift`, and the opt-in `validateContracts`,
   `discoverContracts`, `contracts`, `inputDirectory` and `sourceDirectory` settings for Python
   contract validation
+- `validate-contracts` supports explicit Python `DEFAULT`, `BY_INTERFACE_EXPORT` and `BY_METHOD_NAME`;
+  confirmed incompatibilities and UNKNOWN static-analysis cases both fail enabled validation.
+  Its default phase, opt-in switches and generated-source behavior are unchanged. Shared binding
+  signature metadata remains internal, without changing released portable model constructors.
 
 ## Module Boundaries
 
@@ -67,8 +76,8 @@ recommendations requiring maintainer approval, not newly established guarantees.
 | `polyglot-model` | Shared `ContractModel`, `ContractClass`, `ContractMethod`, `ContractParam`, `PolyType` variants, `CodegenConfig`, `ScriptDescriptor`; `ScriptSource` and `LanguageParser` SPI | `ScriptNames` is a validation helper, not an extension point; model values do not imply a stable serialized format |
 | `polyglot-adapter` | `PyExecutor`, `ContextOwnership`, documented runtime exceptions; `PolyglotHelper.newContext(...)`; classpath, filesystem, in-memory and composite `ScriptSource` implementations | `JsExecutor` is experimental; executor base-class extension and utility implementation details are internal |
 | `polyglot-spring-boot-starter` | `@EnablePolyglotClients`, `PolyglotExecutors`, `PolyglotProperties` configuration, documented actuator/metrics integration; `PolyglotContextCustomizer` SPI and `SpringResourceScriptSource` | JavaScript paths are experimental; Spring wiring classes are implementation details |
-| `polyglot-codegen` | Documented Python generation workflow and CLI invocation; Java entry-point decisions below are pending | Parser, validator, mapper and rendering helpers are not automatically supported because they are public |
-| `polyglot-codegen-maven-plugin` | `generate`, `check`, `doctor` goals, documented parameters/defaults and generated-source registration | Mojo classes, support classes and `model` records are implementation details, not Java extension APIs |
+| `polyglot-codegen` | Documented Python generation workflow, CLI invocation, `PythonCompatibilityChecker` and its report types; other Java entry-point decisions below are pending | Parser metadata, validators, mappers and rendering helpers are not automatically supported because they are public |
+| `polyglot-codegen-maven-plugin` | `generate`, `check`, `doctor`, `validate-contracts`, `check-compatibility` goals, documented parameters/defaults and generated-source registration | Mojo classes, support classes and `model` records are implementation details, not Java extension APIs |
 | `polyglot-bom` | Documented dependency alignment for consumers | No Java API; parent POMs and samples are build/reference inputs |
 
 ### Runtime Calls And Extension Points
@@ -97,7 +106,17 @@ make their constructors, lifecycle hooks or inheritance supported extension poin
 boundary remains pending below. Documented properties, defaults, facade calls and operational behavior
 remain user-facing independently of those implementation classes.
 
+The AST migration retains released constructors and method signatures. `PythonContractParser` and
+`DefaultContractGenerator` add explicit `openBatch()`/`close()` lifecycle support. Their no-arg
+one-shot entry points still clean up automatically. `codegen.internal.python` is implementation
+code, not an extension API; no GraalPy `Value` or AST type appears in portable contract APIs.
+
 ### Pending Java API Decisions
+
+Python generation now rejects required keyword-only parameters and unsafe set-to-List annotations
+rather than emitting uncallable methods. Optional keyword-only parameters are omitted. These are
+intentional correctness changes to affected generated contracts; valid positional/list/tuple
+contracts and released Java signatures remain unchanged. See [codegen limitations](codegen.md).
 
 These decisions need explicit maintainer approval before a supported Java API allowlist is finalized.
 Existing consumers and release notes must be considered; an internal recommendation does not erase

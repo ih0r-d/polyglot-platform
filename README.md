@@ -186,7 +186,7 @@ beans and resolves their Python bindings during startup. It does not call bound 
 but loading a Python module and constructing its exported class can run initialization code. Set
 `polyglot.core.fail-fast=false` to defer validation for clients that are not otherwise eagerly
 requested. This runtime check is distinct from the opt-in Maven `validate-contracts` goal, which
-statically checks a supported Python source subset without starting GraalVM or executing Python.
+statically checks contracts through GraalPy `ast.parse`, without importing or executing application Python.
 See [runtime semantics](docs/runtime-semantics.md#fail-fast-semantics),
 [code generation and validation](docs/codegen.md#opt-in-java-to-python-contract-validation), and
 [troubleshooting](docs/troubleshooting.md#preload-and-fail-fast-startup-failures).
@@ -307,6 +307,7 @@ building them from this repository checkout.
 
 - `samples/java-maven-example`: framework-neutral runtime API with `FileSystemScriptSource`
 - `samples/java-maven-codegen-example`: code generation plus runtime binding
+  and [reproducible Python compatibility checks](samples/java-maven-codegen-example/README.md)
 - `samples/spring-boot-example`: Spring Boot starter, `@PolyglotClient`, actuator, and metrics
 - `samples/java-python-aot-adapter`: fat JAR and native-image packaging for a Python-backed contract
 - `samples/polyglot-ai-demo`: multi-contract Python runtime pipeline using handwritten Java interfaces

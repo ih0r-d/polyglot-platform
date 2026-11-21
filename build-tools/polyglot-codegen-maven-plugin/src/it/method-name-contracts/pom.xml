@@ -1,0 +1,26 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>contract.validation.it</groupId><artifactId>method-name-contracts</artifactId><version>1</version>
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <python.sources>valid</python.sources>
+    </properties>
+    <dependencies><dependency>
+        <groupId>io.github.ih0r-d</groupId><artifactId>polyglot-annotations</artifactId><version>@project.version@</version>
+    </dependency></dependencies>
+    <build><plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.15.0</version>
+        </plugin>
+        <plugin>
+            <groupId>io.github.ih0r-d</groupId><artifactId>polyglot-codegen-maven-plugin</artifactId><version>@project.version@</version>
+            <configuration>
+                <validateContracts>true</validateContracts><discoverContracts>true</discoverContracts>
+                <inputDirectory>${project.basedir}/${python.sources}</inputDirectory>
+            </configuration>
+            <executions><execution><goals><goal>validate-contracts</goal></goals></execution></executions>
+        </plugin>
+    </plugins></build>
+</project>

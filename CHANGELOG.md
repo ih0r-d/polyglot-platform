@@ -5,6 +5,19 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 ## [Unreleased]
 
 ### Added
+- Replace handwritten Python syntax handling with official GraalPy `ast.parse`. Keep contract
+  semantics in Java and preserve existing ContractModel/JavaParser generation. Reuse one owned
+  interpreter per Maven batch; never import or evaluate application source. Preserve existing
+  entry points, add explicit batch lifecycle, and verify generated-source parity with goldens.
+  Retain tuple/map and documented-return projections; reject unsupported export targets instead
+  of emitting empty interfaces.
+- Reuse codegen signature metadata in Maven `validate-contracts`, supporting Python
+  `BY_METHOD_NAME`, executable export aliases, positional-only/variadic parameters and defaults.
+  Distinguish confirmed binding/arity incompatibilities from UNKNOWN static analysis, retaining
+  DEFAULT validation and generated Java output. Add compiled Maven consumer scenarios.
+- Add static Python contract compatibility reports and the opt-in Maven `check-compatibility`
+  goal with explicit file/directory baselines, positional Java binding checks, conservative
+  mapped-type checks and configurable UNKNOWN failures. Include reproducible consumer scenarios.
 - Add optional Spring-managed `polyglot.invoke` tracing through Micrometer Tracing, preserving
   application parents/sampling and existing runtime meters. Sanitize exported errors and keep
   tracing SDK/exporters application-owned; add a unified sample dev profile, optional local
@@ -49,9 +62,16 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - Document and integration-test opt-in caller-managed Python Engine sharing through existing APIs, including Spring shutdown ordering; add repeated Context creation JMH comparisons without changing runtime defaults.
 - Add opt-in annotation-based source discovery to Maven `validate-contracts`, reusing existing Python checks while preserving explicit contract lists and disabled defaults.
 - Extend opt-in Maven `validate-contracts` checks to positional argument counts, accounting for bound instance receivers and Python defaults, with conservative errors for unsupported signatures.
-- Add opt-in Maven `validate-contracts` static symbol checks for explicitly selected Java/Python class-export bindings; dynamic or unsupported constructs fail with source diagnostics without executing Python.
+- Add opt-in Maven `validate-contracts` static symbol checks for explicitly selected Java/Python class-export bindings; dynamic or unsupported constructs fail with source diagnostics without executing application Python.
 
 ### Fixed
+- Report ambiguous function/class/import rebinding as UNKNOWN in every static Python parsing mode.
+- Reuse calling metadata for generation: reject required keyword-only parameters, omit optional
+  keyword-only parameters, and preserve positional defaults and variadic acceptance. Prevent nested
+  declarations, strings, comments and `default` statements from becoming fabricated Java methods.
+- Reject unsafe Python set-to-Java-List generation, including nested set annotations, instead of
+  silently changing generated return types. Retain list/tuple mappings and verify actual GraalPy
+  collection conversions through Java clients.
 - Align Spring Boot dependency management and the maintained Spring sample to 4.1.2 (Spring
   Framework 7.0.10) for CVE-2026-47890 and CVE-2026-47884. Manage Maven core's provided Guava
   dependency at 33.7.2-jre in the codegen Maven plugin for GHSA-xxph-c9ww-hj94; this does not

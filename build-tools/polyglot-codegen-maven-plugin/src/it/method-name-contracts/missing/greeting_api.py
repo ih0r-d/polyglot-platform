@@ -1,0 +1,2 @@
+def other(name):
+    pass
