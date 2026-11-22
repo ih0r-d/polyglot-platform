@@ -16,8 +16,6 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
-import io.github.ih0rd.codegen.internal.python.PythonAstSession;
-
 /** Opt-in static validation of selected or source-discovered Java/Python contracts. */
 @Mojo(name = "validate-contracts", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true)
 public final class PolyglotValidateContractsMojo extends AbstractMojo {
@@ -85,8 +83,8 @@ public final class PolyglotValidateContractsMojo extends AbstractMojo {
     if (inputDirectory == null || !inputDirectory.isDirectory()) {
       throw new MojoFailureException("Python inputDirectory is not a directory: " + inputDirectory);
     }
-    try (var session = new PythonAstSession()) {
-      var validator = new PythonBindingValidator(inputDirectory.toPath(), session);
+    try (var batch = DefaultContractGenerator.openBatch()) {
+      var validator = new PythonBindingValidator(inputDirectory.toPath(), batch);
       for (File contract : selected) {
         if (contract == null || !contract.isFile()) {
           throw new MojoFailureException("Java contract source does not exist: " + contract);

@@ -151,11 +151,12 @@ class PolyglotValidateContractsMojoTest {
   }
 
   @Test
-  void publicStaticMethodsRemainRequiredLikeRuntimeValidation() throws Exception {
+  void staticJavaMethodsDoNotRequirePythonBindings() throws Exception {
     var mojo = configured(validPython());
-    Files.writeString(
-        directory.resolve("GreetingApi.java"),
-        "interface GreetingApi { static String missing() { return null; } }");
+    javaMethods("static String version() { return \"java\"; } String hello();");
+    assertDoesNotThrow(mojo::execute);
+
+    javaMethods("static String version() { return \"java\"; } String missing();");
     assertTrue(
         assertThrows(MojoFailureException.class, mojo::execute)
             .getMessage()

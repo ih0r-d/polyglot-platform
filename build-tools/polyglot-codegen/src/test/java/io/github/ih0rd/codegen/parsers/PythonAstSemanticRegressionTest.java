@@ -23,6 +23,66 @@ import io.github.ih0rd.polyglot.model.types.PolyUnknown;
 
 class PythonAstSemanticRegressionTest {
   @Test
+  void reassignedExportTargetsDoNotGenerateTheOriginalCallable() {
+    try (var parser = PythonContractParser.openBatch()) {
+      for (String reassignment :
+          List.of("f = 42", "f: int = 42", "f, other = (42, 1)", "del f", "f = factory()")) {
+        var script =
+            script(
+                "def f() -> int: pass\n"
+                    + reassignment
+                    + "\npolyglot.export_value('Api', {'f': f})");
+        var failure =
+            assertThrows(
+                IllegalArgumentException.class,
+                () -> parser.parse(script, new CodegenConfig(false)));
+        assertTrue(failure.getMessage().contains("api.py: line 3, column 1"), reassignment);
+        var compatibility = parser.parseCompatibility(script);
+        assertFalse(compatibility.complete(), reassignment);
+        assertFalse(compatibility.functions().containsKey("Api.f"), reassignment);
+      }
+
+      var capturedAlias =
+          script(
+              "def f() -> int: pass\nalias = f\nf = 42\npolyglot.export_value('Api', {'f': alias})");
+      assertEquals(
+          "f",
+          parser
+              .parse(capturedAlias, new CodegenConfig(false))
+              .classes()
+              .getFirst()
+              .methods()
+              .getFirst()
+              .name());
+    }
+  }
+
+  @Test
+  void anonymousSourceRetainsSyntaxErrorLocations() {
+    try (var parser = PythonContractParser.openBatch()) {
+      var valid =
+          new ScriptDescriptor(
+              SupportedLanguage.PYTHON,
+              "def f() -> int: pass\npolyglot.export_value('Api', {'f': f})",
+              null);
+      assertEquals(
+          "Api", parser.parse(valid, new CodegenConfig(false)).classes().getFirst().name());
+
+      var invalid =
+          new ScriptDescriptor(SupportedLanguage.PYTHON, "# anonymous\ndef f(:\n    pass", null);
+      var diagnostic = parser.parseCompatibility(invalid).diagnostics().getFirst();
+      assertEquals("<python>", diagnostic.file());
+      assertEquals(2, diagnostic.line());
+      assertTrue(diagnostic.explanation().contains("column 6:"), diagnostic.explanation());
+      var failure =
+          assertThrows(
+              IllegalArgumentException.class,
+              () -> parser.parse(invalid, new CodegenConfig(false)));
+      assertTrue(failure.getMessage().contains("<python>:2:"));
+    }
+  }
+
+  @Test
   void importedExportAliasesResolveClassAliasesAndVariadicReceivers() {
     var script =
         script(

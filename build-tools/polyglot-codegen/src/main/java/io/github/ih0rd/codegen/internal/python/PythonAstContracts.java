@@ -17,6 +17,7 @@ import io.github.ih0rd.codegen.compatibility.PythonContract.Function;
 import io.github.ih0rd.codegen.compatibility.PythonContract.Kind;
 import io.github.ih0rd.codegen.compatibility.PythonContract.Parameter;
 import io.github.ih0rd.codegen.internal.python.PythonAstSession.Node;
+import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.model.ContractClass;
 import io.github.ih0rd.polyglot.model.ContractMethod;
 import io.github.ih0rd.polyglot.model.ContractModel;
@@ -36,16 +37,36 @@ public final class PythonAstContracts {
     }
   }
 
-  public static Binding bindings(PythonAstSession session, ScriptDescriptor script, String mode) {
+  public static Binding bindings(
+      PythonAstSession session, ScriptDescriptor script, Convention convention) {
+    Mode mode = convention == Convention.BY_METHOD_NAME ? Mode.METHOD_BINDING : Mode.EXPORT_BINDING;
     return new Analysis(session, script, mode).bindings();
+  }
+
+  public static PythonContract compatibility(PythonAstSession session, ScriptDescriptor script) {
+    return new Analysis(session, script, Mode.COMPATIBILITY).bindings().contract();
   }
 
   public static ContractModel generate(
       PythonAstSession session, ScriptDescriptor script, CodegenConfig config) {
-    return new Analysis(session, script, "generate").generate(config);
+    return new Analysis(session, script, Mode.GENERATION).generate(config);
   }
 
-  private record Declaration(String kind, Node node) {}
+  private enum Mode {
+    GENERATION,
+    COMPATIBILITY,
+    EXPORT_BINDING,
+    METHOD_BINDING
+  }
+
+  private enum DefinitionKind {
+    CLASS,
+    FUNCTION,
+    IMPORT,
+    UNRESOLVED
+  }
+
+  private record Declaration(DefinitionKind kind, Node node) {}
 
   private record Signature(Function function, Node declaration, boolean bound) {}
 
@@ -60,8 +81,8 @@ public final class PythonAstContracts {
   private static final class Analysis {
     private static final Set<String> TYPING =
         Set.of("Any", "List", "Dict", "Optional", "Union", "Tuple", "Set");
-    private final ScriptDescriptor script;
-    private final String mode;
+    private final String sourceName;
+    private final Mode mode;
     private final Map<String, Signature> functions = new LinkedHashMap<>();
     private final Map<String, Map<String, Signature>> classes = new LinkedHashMap<>();
     private final Map<String, Declaration> definitions = new LinkedHashMap<>();
@@ -69,9 +90,10 @@ public final class PythonAstContracts {
     private final List<Export> exports = new ArrayList<>();
     private final List<CompatibilityDiagnostic> issues = new ArrayList<>();
     private boolean syntaxError;
+    private CompatibilityDiagnostic generationIssue;
 
-    Analysis(PythonAstSession session, ScriptDescriptor script, String mode) {
-      this.script = script;
+    Analysis(PythonAstSession session, ScriptDescriptor script, Mode mode) {
+      sourceName = PythonAstSession.sourceName(script.fileName());
       this.mode = mode;
       var parsed = session.module(script.source(), script.fileName());
       if (parsed.error() != null) {
@@ -79,7 +101,7 @@ public final class PythonAstContracts {
         var error = parsed.error();
         issues.add(
             new CompatibilityDiagnostic(
-                script.fileName(),
+                sourceName,
                 error.line(),
                 "<module>",
                 CompatibilityOutcome.UNKNOWN,
@@ -97,7 +119,7 @@ public final class PythonAstContracts {
           for (Node member : node.nodes("body"))
             if (member.is("FunctionDef", "AsyncFunctionDef")) {
               if (methods.containsKey(member.string("name")))
-                issue(member, "duplicate function declaration");
+                generationIssue(member, "duplicate function declaration");
               methods.put(member.string("name"), signature(member, true));
             }
           classes.put(node.string("name"), methods);
@@ -162,7 +184,11 @@ public final class PythonAstContracts {
     private void statement(Node node) {
       if (node.is("FunctionDef", "AsyncFunctionDef", "ClassDef")) {
         String name = node.string("name");
-        define(name, new Declaration(node.is("ClassDef") ? "class" : "function", node), node);
+        define(
+            name,
+            new Declaration(
+                node.is("ClassDef") ? DefinitionKind.CLASS : DefinitionKind.FUNCTION, node),
+            node);
         if (node.is("ClassDef")) {
           if (!node.nodes("bases").isEmpty()
               || !node.nodes("keywords").isEmpty()
@@ -181,19 +207,47 @@ public final class PythonAstContracts {
           }
         } else signatureIssues(node);
       } else if (node.is("Import", "ImportFrom")) importStatement(node);
-      else if (node.is("Assign")
-          && node.nodes("targets").size() == 1
-          && node.nodes("targets").getFirst().is("Name")
-          && node.node("value").is("Name")
-          && definitions.containsKey(node.node("value").string("id"))
-          && !definitions.get(node.node("value").string("id")).kind().equals("import")) {
-        define(
-            node.nodes("targets").getFirst().string("id"),
-            definitions.get(node.node("value").string("id")),
-            node);
-      } else if (exportCall(node) != null) export(node, exportCall(node));
-      else if (!node.is("Pass") && !docstring(node))
+      else if (node.is("Assign", "AnnAssign", "AugAssign", "Delete")) assignment(node);
+      else {
+        Node call = exportCall(node);
+        if (call != null) export(node, call);
+        else if (!node.is("Pass") && !docstring(node))
+          issue(node, "unsupported dynamic module statement or rebinding");
+      }
+    }
+
+    private void assignment(Node node) {
+      Node value = node.node("value");
+      List<Node> targets =
+          node.is("Assign", "Delete") ? node.nodes("targets") : List.of(node.node("target"));
+      // An annotation without a value does not assign a name.
+      if (node.is("AnnAssign") && value.is("")) {
         issue(node, "unsupported dynamic module statement or rebinding");
+        return;
+      }
+      Declaration origin = value.is("Name") ? definitions.get(value.string("id")) : null;
+      if (node.is("Assign")
+          && targets.size() == 1
+          && targets.getFirst().is("Name")
+          && origin != null
+          && (origin.kind() == DefinitionKind.FUNCTION || origin.kind() == DefinitionKind.CLASS)) {
+        define(targets.getFirst().string("id"), origin, node);
+        return;
+      }
+      targets.stream()
+          .flatMap(Analysis::assignmentNames)
+          .forEach(
+              name -> {
+                definitions.put(name, new Declaration(DefinitionKind.UNRESOLVED, node));
+                imports.remove(name);
+              });
+      issue(node, "unsupported dynamic module statement or rebinding");
+    }
+
+    private static Stream<String> assignmentNames(Node target) {
+      if (target.is("Name")) return Stream.of(target.string("id"));
+      if (target.is("Starred")) return assignmentNames(target.node("value"));
+      return target.nodes("elts").stream().flatMap(Analysis::assignmentNames);
     }
 
     private void importStatement(Node node) {
@@ -214,9 +268,9 @@ public final class PythonAstContracts {
         safe &= known;
         boolean sameImport =
             definitions.containsKey(local)
-                && definitions.get(local).kind().equals("import")
+                && definitions.get(local).kind() == DefinitionKind.IMPORT
                 && target.equals(imports.get(local));
-        if (!sameImport) define(local, new Declaration("import", node), node);
+        if (!sameImport) define(local, new Declaration(DefinitionKind.IMPORT, node), node);
         imports.put(local, target);
       }
       if (!safe) issue(node, "dynamic import requires runtime resolution");
@@ -229,7 +283,8 @@ public final class PythonAstContracts {
           && function.string("attr").equals("export_value")
           && function.node("value").is("Name")) {
         String owner = function.node("value").string("id");
-        if (imports.getOrDefault(owner, owner).equals("polyglot")) return call;
+        if ("polyglot".equals(imports.get(owner))
+            || (owner.equals("polyglot") && !definitions.containsKey(owner))) return call;
       }
       return function.is("Name")
               && "polyglot.export_value".equals(imports.get(function.string("id")))
@@ -255,11 +310,11 @@ public final class PythonAstContracts {
       boolean invalid = false;
       if (target.is("Name")) {
         Declaration declaration = definitions.get(target.string("id"));
-        if (declaration != null && declaration.kind().equals("function"))
+        if (declaration != null && declaration.kind() == DefinitionKind.FUNCTION)
           callable = functions.get(declaration.node().string("name"));
-        else if (declaration != null && declaration.kind().equals("class"))
+        else if (declaration != null && declaration.kind() == DefinitionKind.CLASS)
           members.putAll(classes.get(declaration.node().string("name")));
-        else if (classes.containsKey(target.string("id"))) {
+        else if (declaration == null && classes.containsKey(target.string("id"))) {
           members.putAll(classes.get(target.string("id")));
           issue(site, "export target must be a previously declared local class");
         } else invalid = true;
@@ -273,13 +328,13 @@ public final class PythonAstContracts {
             continue;
           }
           Declaration declaration = definitions.get(value.string("id"));
-          String original =
-              declaration != null && declaration.kind().equals("function")
-                  ? declaration.node().string("name")
-                  : value.string("id");
-          if (declaration == null)
+          Signature signature = null;
+          if (declaration == null) {
             issue(site, "dictionary target must be a previously declared function");
-          Signature signature = functions.get(original);
+            signature = functions.get(value.string("id"));
+          } else if (declaration.kind() == DefinitionKind.FUNCTION) {
+            signature = functions.get(declaration.node().string("name"));
+          }
           if (members.containsKey(key.string("value")))
             issue(site, "duplicate dictionary export entry");
           if (signature == null) invalid = true;
@@ -291,8 +346,10 @@ public final class PythonAstContracts {
     }
 
     private void define(String name, Declaration declaration, Node site) {
-      if (definitions.containsKey(name))
-        issue(site, "declaration or import rebinds a contract name: " + name);
+      Declaration previous = definitions.get(name);
+      if (previous != null && previous.kind() != DefinitionKind.UNRESOLVED)
+        generationIssue(site, "declaration or import rebinds a contract name: " + name);
+      imports.remove(name);
       definitions.put(name, declaration);
     }
 
@@ -309,8 +366,7 @@ public final class PythonAstContracts {
         issue(
             node,
             "async, generator, decorators, dynamic signature expressions or type parameters need runtime validation");
-      if (!mode.equals("generate")
-          && !mode.equals("compatibility")
+      if ((mode == Mode.EXPORT_BINDING || mode == Mode.METHOD_BINDING)
           && body(node).anyMatch(n -> n.is("FunctionDef", "AsyncFunctionDef", "ClassDef")))
         issue(node, "nested declarations remain outside static binding validation");
     }
@@ -343,10 +399,10 @@ public final class PythonAstContracts {
 
     private Binding bindings() {
       Map<String, Function> projected = new LinkedHashMap<>();
-      if (mode.equals("BY_METHOD_NAME")) {
+      if (mode == Mode.METHOD_BINDING) {
         definitions.forEach(
             (name, definition) -> {
-              if (definition.kind().equals("function") && !name.startsWith("_"))
+              if (definition.kind() == DefinitionKind.FUNCTION && !name.startsWith("_"))
                 put(projected, name, functions.get(definition.node().string("name")));
             });
         for (Export export : exports) {
@@ -373,7 +429,10 @@ public final class PythonAstContracts {
       } else
         functions.forEach(
             (name, signature) -> {
-              if (!name.startsWith("_")) put(projected, name, signature);
+              Declaration declaration = definitions.get(name);
+              if (declaration != null
+                  && declaration.kind() == DefinitionKind.FUNCTION
+                  && !name.startsWith("_")) put(projected, name, signature);
             });
       issues.sort(
           Comparator.comparingInt(CompatibilityDiagnostic::line)
@@ -400,16 +459,7 @@ public final class PythonAstContracts {
         if (syntaxError) throw invalid(issues.getFirst());
         throw new IllegalStateException("No polyglot.export_value found");
       }
-      issues.stream()
-          .filter(
-              i ->
-                  i.explanation().contains("rebinds")
-                      || i.explanation().contains("duplicate function declaration"))
-          .findFirst()
-          .ifPresent(
-              i -> {
-                throw invalid(i);
-              });
+      if (generationIssue != null) throw invalid(generationIssue);
       List<ContractClass> result = new ArrayList<>();
       Set<String> names = new HashSet<>();
       for (Export export : exports) {
@@ -467,7 +517,7 @@ public final class PythonAstContracts {
             methods.add(new ContractMethod(entry.getKey(), parameters, returns));
           } catch (IllegalArgumentException failure) {
             throw new IllegalArgumentException(
-                script.fileName()
+                sourceName
                     + ": line "
                     + declaration.line()
                     + ", column "
@@ -499,28 +549,29 @@ public final class PythonAstContracts {
           .orElse(new PolyUnknown());
     }
 
-    private void issue(Node node, String explanation) {
+    private CompatibilityDiagnostic issue(Node node, String explanation) {
       String symbol = node.string("name");
       if (symbol.isEmpty()) symbol = "<module>";
-      issues.add(
+      var diagnostic =
           new CompatibilityDiagnostic(
-              script.fileName(),
+              sourceName,
               node.line(),
               symbol,
               CompatibilityOutcome.UNKNOWN,
               CompatibilityDiagnostic.Category.UNSUPPORTED_SYNTAX,
-              "column " + node.column() + ": " + explanation));
+              "column " + node.column() + ": " + explanation);
+      issues.add(diagnostic);
+      return diagnostic;
+    }
+
+    private void generationIssue(Node node, String explanation) {
+      var diagnostic = issue(node, explanation);
+      if (generationIssue == null) generationIssue = diagnostic;
     }
 
     private IllegalArgumentException invalid(Node node, String message) {
       return new IllegalArgumentException(
-          script.fileName()
-              + ": line "
-              + node.line()
-              + ", column "
-              + node.column()
-              + ": "
-              + message);
+          sourceName + ": line " + node.line() + ", column " + node.column() + ": " + message);
     }
 
     private IllegalArgumentException invalid(CompatibilityDiagnostic issue) {

@@ -150,12 +150,10 @@ public final class PythonCompatibilityChecker {
         Path path = entry.getValue();
         contracts.put(
             entry.getKey(),
-            PythonAstContracts.bindings(
-                    session,
-                    new ScriptDescriptor(
-                        SupportedLanguage.PYTHON, Files.readString(path), path.toString()),
-                    "compatibility")
-                .contract());
+            PythonAstContracts.compatibility(
+                session,
+                new ScriptDescriptor(
+                    SupportedLanguage.PYTHON, Files.readString(path), path.toString())));
       }
       return contracts;
     }

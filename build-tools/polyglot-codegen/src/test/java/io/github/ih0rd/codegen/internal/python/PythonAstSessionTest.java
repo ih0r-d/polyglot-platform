@@ -119,8 +119,7 @@ class PythonAstSessionTest {
                       node.is("FunctionDef")
                           && node.nodes("body").stream()
                               .anyMatch(child -> child.is("FunctionDef"))));
-      var contract =
-          PythonAstContracts.bindings(session, script(source), "compatibility").contract();
+      var contract = PythonAstContracts.compatibility(session, script(source));
       assertTrue(contract.complete(), contract.diagnostics().toString());
       assertEquals(Set.of("Api.hello"), contract.functions().keySet());
       var function = contract.functions().get("Api.hello");

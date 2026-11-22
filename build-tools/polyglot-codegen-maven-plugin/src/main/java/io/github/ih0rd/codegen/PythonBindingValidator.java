@@ -13,8 +13,6 @@ import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.MemberValuePair;
 
 import io.github.ih0rd.codegen.compatibility.PythonContract;
-import io.github.ih0rd.codegen.internal.python.PythonAstContracts;
-import io.github.ih0rd.codegen.internal.python.PythonAstSession;
 import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.config.ScriptNames;
@@ -27,17 +25,17 @@ final class PythonBindingValidator {
   private record BindingKey(Path script, Convention convention) {}
 
   private final Path pythonDirectory;
-  private final PythonAstSession session;
-  private final Map<BindingKey, PythonAstContracts.Binding> bindings = new HashMap<>();
+  private final DefaultContractGenerator batch;
+  private final Map<BindingKey, DefaultContractGenerator.PythonBinding> bindings = new HashMap<>();
 
-  PythonBindingValidator(Path pythonDirectory, PythonAstSession session) {
+  PythonBindingValidator(Path pythonDirectory, DefaultContractGenerator batch) {
     this.pythonDirectory = pythonDirectory;
-    this.session = session;
+    this.batch = batch;
   }
 
   static void validate(Path javaSource, Path pythonDirectory) throws IOException {
-    try (var session = new PythonAstSession()) {
-      new PythonBindingValidator(pythonDirectory, session).validate(javaSource);
+    try (var batch = DefaultContractGenerator.openBatch()) {
+      new PythonBindingValidator(pythonDirectory, batch).validate(javaSource);
     }
   }
 
@@ -97,7 +95,7 @@ final class PythonBindingValidator {
       var descriptor =
           new ScriptDescriptor(
               SupportedLanguage.PYTHON, Files.readString(realScript), python.toString());
-      analysis = PythonAstContracts.bindings(session, descriptor, convention.name());
+      analysis = batch.analyzePythonBindings(descriptor, convention);
       bindings.put(bindingKey, analysis);
     }
     PythonContract binding = analysis.contract();
@@ -122,7 +120,7 @@ final class PythonBindingValidator {
               + ":1 [UNKNOWN: EXPORT_RESOLUTION]. Runtime language-binding fallback is outside this static check.");
     }
     for (var method : type.getMethods()) {
-      if (method.isPrivate()) continue;
+      if (method.isPrivate() || method.isStatic()) continue;
       String symbol = method.getNameAsString();
       String methodLocation =
           javaSource

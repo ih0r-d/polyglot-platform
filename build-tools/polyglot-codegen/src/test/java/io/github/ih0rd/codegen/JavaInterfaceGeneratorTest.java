@@ -5,20 +5,34 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayOutputStream;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
+import javax.tools.ToolProvider;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.github.javaparser.ast.CompilationUnit;
 
+import io.github.ih0rd.codegen.parsers.PythonContractParser;
+import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.ContractClass;
 import io.github.ih0rd.polyglot.model.ContractMethod;
 import io.github.ih0rd.polyglot.model.ContractParam;
+import io.github.ih0rd.polyglot.model.config.CodegenConfig;
+import io.github.ih0rd.polyglot.model.parser.ScriptDescriptor;
 import io.github.ih0rd.polyglot.model.types.PolyList;
 import io.github.ih0rd.polyglot.model.types.PolyMap;
 import io.github.ih0rd.polyglot.model.types.PolyPrimitive;
@@ -27,6 +41,52 @@ import io.github.ih0rd.polyglot.model.types.PolyUnknown;
 class JavaInterfaceGeneratorTest {
 
   private final JavaInterfaceGenerator generator = new JavaInterfaceGenerator();
+
+  @Test
+  void compilesWhenPythonExportNamesShadowJavaTypes(@TempDir Path directory) throws Exception {
+    var script =
+        new ScriptDescriptor(
+            SupportedLanguage.PYTHON,
+            """
+        def items(value: list[str]) -> list[int]: pass
+        def label() -> str: pass
+        polyglot.export_value('List', {'items': items})
+        polyglot.export_value('String', {'label': label})
+        polyglot.export_value('Api', {'label': label})
+        """,
+            "api.py");
+    try (var parser = PythonContractParser.openBatch()) {
+      var contracts = parser.parse(script, new CodegenConfig(false)).classes();
+      var compilerArgs = new ArrayList<>(List.of("--release", "21", "-d", directory.toString()));
+      assertTrue(
+          generator.generate(contracts.get(0), "example").contains("java.util.List<Integer>"));
+      assertTrue(generator.generate(contracts.get(1), "example").contains("java.lang.String"));
+      for (var contract : contracts) {
+        String generated =
+            generator.generate(contract, "example", null, Set.of("List", "String", "Api"));
+        assertFalse(generated.contains("import java.util.List;"));
+        compilerArgs.add(
+            Files.writeString(directory.resolve(contract.name() + ".java"), generated).toString());
+      }
+      var errors = new ByteArrayOutputStream();
+      assertEquals(
+          0,
+          ToolProvider.getSystemJavaCompiler()
+              .run(null, null, errors, compilerArgs.toArray(String[]::new)),
+          errors.toString(StandardCharsets.UTF_8));
+      try (var loader = new URLClassLoader(new URL[] {directory.toUri().toURL()})) {
+        var items = loader.loadClass("example.List").getMethod("items", List.class);
+        assertEquals(
+            "java.util.List<java.lang.Integer>", items.getGenericReturnType().getTypeName());
+        assertEquals(
+            "java.util.List<java.lang.String>", items.getGenericParameterTypes()[0].getTypeName());
+        assertEquals(
+            String.class, loader.loadClass("example.String").getMethod("label").getReturnType());
+        assertEquals(
+            String.class, loader.loadClass("example.Api").getMethod("label").getReturnType());
+      }
+    }
+  }
 
   @Test
   void generate_ShouldRenderSimpleInterface() {

@@ -1,5 +1,6 @@
 package io.github.ih0rd.codegen.parsers;
 
+import java.util.Objects;
 import java.util.function.Function;
 
 import io.github.ih0rd.codegen.compatibility.PythonContract;
@@ -51,15 +52,13 @@ public final class PythonContractParser implements LanguageParser, AutoCloseable
 
   /** Reads AST-derived calling metadata with conservative compatibility semantics. */
   public PythonContract parseCompatibility(ScriptDescriptor script) {
-    return using(
-        session -> PythonAstContracts.bindings(session, script, "compatibility").contract());
+    return using(session -> PythonAstContracts.compatibility(session, script));
   }
 
   /** Reads AST-derived positional binding metadata for the selected runtime convention. */
   public PythonContract parseBindings(ScriptDescriptor script, Convention convention) {
-    java.util.Objects.requireNonNull(convention, "convention");
-    return using(
-        session -> PythonAstContracts.bindings(session, script, convention.name()).contract());
+    Objects.requireNonNull(convention, "convention");
+    return using(session -> PythonAstContracts.bindings(session, script, convention).contract());
   }
 
   @Override

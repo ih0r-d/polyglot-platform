@@ -37,7 +37,7 @@ public final class JavaContractValidator {
     }
   }
 
-  private void validatePackageName(String basePackage) {
+  static void validatePackageName(String basePackage) {
     if (basePackage == null || basePackage.isBlank()) {
       throw new JavaContractValidationException(
           "Invalid Java package name: value must not be blank");
@@ -100,7 +100,7 @@ public final class JavaContractValidator {
     }
   }
 
-  private void validateIdentifier(String value, String context) {
+  private static void validateIdentifier(String value, String context) {
     if (value == null || value.isBlank()) {
       throw new JavaContractValidationException("Invalid Java identifier for " + context);
     }

@@ -43,25 +43,31 @@ public final class JavaTypeRenderer {
    * @return JavaParser type node
    */
   Type renderAst(PolyType type) {
+    return renderAst(type, Set.of());
+  }
+
+  Type renderAst(PolyType type, Set<String> localTypeNames) {
     if (type instanceof PolyPrimitive primitive) {
       return switch (primitive) {
-        case INT -> classType(Integer.class);
-        case FLOAT -> classType(Double.class);
-        case STRING -> classType(String.class);
-        case BOOLEAN -> classType(Boolean.class);
+        case INT -> classType(Integer.class, localTypeNames);
+        case FLOAT -> classType(Double.class, localTypeNames);
+        case STRING -> classType(String.class, localTypeNames);
+        case BOOLEAN -> classType(Boolean.class, localTypeNames);
       };
     }
 
     if (type instanceof PolyList list) {
-      return classType(List.class).setTypeArguments(renderAst(list.elementType()));
+      return classType(List.class, localTypeNames)
+          .setTypeArguments(renderAst(list.elementType(), localTypeNames));
     }
 
     if (type instanceof PolyMap map) {
-      return classType(Map.class)
-          .setTypeArguments(renderAst(map.keyType()), renderAst(map.valueType()));
+      return classType(Map.class, localTypeNames)
+          .setTypeArguments(
+              renderAst(map.keyType(), localTypeNames), renderAst(map.valueType(), localTypeNames));
     }
 
-    return classType(Object.class);
+    return classType(Object.class, localTypeNames);
   }
 
   /**
@@ -97,7 +103,13 @@ public final class JavaTypeRenderer {
     imports.clear();
   }
 
-  private static ClassOrInterfaceType classType(Class<?> type) {
-    return new ClassOrInterfaceType(null, type.getSimpleName());
+  private static ClassOrInterfaceType classType(Class<?> type, Set<String> localTypeNames) {
+    ClassOrInterfaceType scope = null;
+    if (localTypeNames.contains(type.getSimpleName())) {
+      for (String segment : type.getPackageName().split("\\.")) {
+        scope = new ClassOrInterfaceType(scope, segment);
+      }
+    }
+    return new ClassOrInterfaceType(scope, type.getSimpleName());
   }
 }

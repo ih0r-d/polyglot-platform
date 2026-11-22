@@ -2,9 +2,14 @@ package io.github.ih0rd.codegen;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Set;
 
+import io.github.ih0rd.codegen.compatibility.PythonContract;
+import io.github.ih0rd.codegen.internal.python.PythonAstContracts;
+import io.github.ih0rd.codegen.internal.python.PythonAstSession;
 import io.github.ih0rd.codegen.parsers.JsContractParser;
 import io.github.ih0rd.codegen.parsers.PythonContractParser;
+import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.model.ContractModel;
 import io.github.ih0rd.polyglot.model.config.CodegenConfig;
@@ -25,8 +30,10 @@ public final class DefaultContractGenerator implements ContractGenerator, AutoCl
           SupportedLanguage.JS, new JsContractParser());
 
   private final Map<SupportedLanguage, LanguageParser> parsers;
-  private final boolean ownsBatch;
+  private final PythonAstSession batch;
   private boolean closed;
+
+  record PythonBinding(PythonContract contract, Set<String> exports) {}
 
   /** Creates a generator with the built-in parser set. */
   public DefaultContractGenerator() {
@@ -34,36 +41,39 @@ public final class DefaultContractGenerator implements ContractGenerator, AutoCl
   }
 
   DefaultContractGenerator(Map<SupportedLanguage, LanguageParser> parsers) {
-    this(parsers, false);
+    this(parsers, null);
   }
 
   private DefaultContractGenerator(
-      Map<SupportedLanguage, LanguageParser> parsers, boolean ownsBatch) {
+      Map<SupportedLanguage, LanguageParser> parsers, PythonAstSession batch) {
     this.parsers = new EnumMap<>(parsers);
-    this.ownsBatch = ownsBatch;
+    this.batch = batch;
   }
 
   /** Opens an isolated lazy Python AST batch; close after processing the build's sources. */
   public static DefaultContractGenerator openBatch() {
-    return new DefaultContractGenerator(
-        Map.of(
-            SupportedLanguage.PYTHON,
-            PythonContractParser.openBatch(),
-            SupportedLanguage.JS,
-            new JsContractParser()),
-        true);
+    return new DefaultContractGenerator(DEFAULT_PARSERS, new PythonAstSession());
   }
 
   @Override
   public synchronized void close() {
     if (closed) return;
     closed = true;
-    if (ownsBatch) ((PythonContractParser) parsers.get(SupportedLanguage.PYTHON)).close();
+    if (batch != null) batch.close();
+  }
+
+  synchronized PythonBinding analyzePythonBindings(ScriptDescriptor script, Convention convention) {
+    if (closed || batch == null)
+      throw new IllegalStateException("Python contract batch is not open");
+    var binding = PythonAstContracts.bindings(batch, script, convention);
+    return new PythonBinding(binding.contract(), binding.exports());
   }
 
   @Override
   public synchronized ContractModel generate(ScriptDescriptor descriptor, CodegenConfig config) {
     if (closed) throw new IllegalStateException("Contract generator is closed");
+    if (batch != null && descriptor.language() == SupportedLanguage.PYTHON)
+      return PythonAstContracts.generate(batch, descriptor, config);
     LanguageParser parser = parsers.get(descriptor.language());
 
     if (parser == null) {

@@ -104,7 +104,11 @@ public final class PythonAstSession implements AutoCloseable {
   }
 
   synchronized Parsed module(String source, String file) {
-    return parse(source, file, "exec");
+    return parse(source, sourceName(file), "exec");
+  }
+
+  static String sourceName(String file) {
+    return file == null ? "<python>" : file;
   }
 
   synchronized Parsed expression(String source) {
