@@ -1,6 +1,8 @@
 package io.github.ih0rd.adapter.context;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -14,7 +16,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.graalvm.polyglot.Context;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
+import io.github.ih0rd.adapter.exceptions.BindingException;
 import io.github.ih0rd.adapter.spi.InMemoryScriptSource;
 import io.github.ih0rd.polyglot.Convention;
 import io.github.ih0rd.polyglot.SupportedLanguage;
@@ -23,6 +28,67 @@ class PyExecutorRealContextIntegrationTest {
 
   interface GreetingApi {
     String hello(String name);
+  }
+
+  interface StaticMemberApi {
+    static String version() {
+      return "java";
+    }
+
+    String greet();
+  }
+
+  @Test
+  void proxyObjectMethodsUseProxyIdentityWithoutResolvingAScript() {
+    try (PyExecutor executor = createExecutor(Map.of())) {
+      var client = executor.bind(GreetingApi.class);
+      var other = executor.bind(GreetingApi.class);
+      assertTrue(client.equals(client));
+      assertFalse(client.equals(null));
+      assertFalse(client.equals(other));
+      assertFalse(other.equals(client));
+      assertFalse(client.equals(executor));
+      assertFalse(executor.equals(client));
+      assertEquals(System.identityHashCode(client), client.hashCode());
+      assertEquals(client.hashCode(), client.hashCode());
+      assertEquals(executor.toString(), client.toString());
+      assertEquals(0, executor.metadata().get("sourceCacheSize"));
+    }
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Convention.class,
+      names = {"DEFAULT", "BY_METHOD_NAME"})
+  void bindingRequiresInstanceMethodsOnly(Convention convention) {
+    Map<String, String> scripts = new ConcurrentHashMap<>();
+    scripts.put(
+        "python/static_member_api",
+        """
+        import polyglot
+        def greet(): return "python"
+        polyglot.export_value("StaticMemberApi", {"greet": greet})
+        """);
+    try (PyExecutor executor = createExecutor(scripts)) {
+      executor.validateBinding(StaticMemberApi.class, convention);
+      assertEquals("java", StaticMemberApi.version());
+      assertEquals("python", executor.bind(StaticMemberApi.class, convention).greet());
+    }
+
+    scripts.put(
+        "python/static_member_api",
+        """
+        import polyglot
+        def version(): return "python"
+        polyglot.export_value("StaticMemberApi", {"version": version})
+        """);
+    try (PyExecutor executor = createExecutor(scripts)) {
+      var failure =
+          assertThrows(
+              BindingException.class,
+              () -> executor.validateBinding(StaticMemberApi.class, convention));
+      assertTrue(failure.getMessage().contains("greet"), failure.getMessage());
+    }
   }
 
   interface MethodNameApi {

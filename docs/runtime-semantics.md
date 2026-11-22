@@ -143,6 +143,9 @@ checks or reload-version checks are added to ordinary cached invocations.
 
 - Executor access to the underlying GraalVM `Context` is serialized.
 - The current runtime model optimizes for safety of a shared executor instance.
+- Each executor has its own monitor. Callers sharing a context across executors or accessing it
+  directly must coordinate those operations themselves. Raw `Value` objects and guest-backed views
+  stay attached to the open context. Using them after the executor returns is outside its monitor.
 - It does not provide high-throughput parallel execution on one shared context.
 - It does not provide multi-version source isolation.
 

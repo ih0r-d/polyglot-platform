@@ -1,6 +1,7 @@
 package io.github.ih0rd.polyglot.annotations.spring.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -117,6 +118,37 @@ class PolyglotClientFactoryBeanTest {
                 Map.of("python/contracts/greeting", "def greet(): return 'hello'")))) {
       var client = factory(MappedApi.class, new PolyglotExecutors(executor, null)).getObject();
       assertEquals("hello", client.greet());
+    }
+  }
+
+  @Test
+  void observedClientsUseTheirOwnIdentity() {
+    var registry = new SimpleMeterRegistry();
+    try (var executor =
+        PyExecutor.createWithContext(
+            Context.newBuilder("python").build(),
+            new InMemoryScriptSource(
+                Map.of("python/contracts/greeting", "def greet(): return 'hello'")))) {
+      var factory = factory(MappedApi.class, new PolyglotExecutors(executor, null));
+      when(invocationObserver.getIfAvailable()).thenReturn(new PolyglotInvocationMetrics(registry));
+      var client = factory.getObject();
+      var other = factory.getObject();
+      assertTrue(client.equals(client));
+      assertFalse(client.equals(other));
+      assertFalse(other.equals(client));
+      assertFalse(client.equals(executor));
+      assertEquals(System.identityHashCode(client), client.hashCode());
+      assertEquals(executor.toString(), client.toString());
+      assertEquals("hello", client.greet());
+      assertEquals(
+          1,
+          registry
+              .get("polyglot.client.invocations")
+              .tags("language", "python", "outcome", "success")
+              .timer()
+              .count());
+    } finally {
+      registry.close();
     }
   }
 

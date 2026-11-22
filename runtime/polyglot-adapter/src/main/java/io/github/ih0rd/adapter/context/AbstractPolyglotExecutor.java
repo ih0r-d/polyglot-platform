@@ -3,6 +3,7 @@ package io.github.ih0rd.adapter.context;
 import java.io.IOException;
 import java.io.Reader;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -44,9 +45,8 @@ import io.github.ih0rd.polyglot.model.config.ScriptSource;
  * <p>This type is part of the runtime implementation and is not intended as a stable third-party
  * subclassing surface.
  *
- * <p>Executor instances serialize access to the underlying {@link Context}. This makes the shared
- * starter-managed singleton executors safer for concurrent application use, but does not provide
- * any hot-reload or multi-version source isolation semantics.
+ * <p>Each executor serializes its own access to the underlying {@link Context}. Callers sharing a
+ * context across executors or using it directly must coordinate those accesses themselves.
  */
 public abstract class AbstractPolyglotExecutor implements AutoCloseable {
 
@@ -161,7 +161,10 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
   /**
    * Evaluates inline guest-language code in this context.
    *
-   * <p>This method exists mainly for lightweight warmup and compatibility scenarios.
+   * <p>This method exists mainly for lightweight warmup and compatibility scenarios. The returned
+   * value stays attached to the context. Any later access to it, including conversion or access
+   * through a guest-backed Java view, is outside this executor's synchronization. Coordinate such
+   * access with other context operations and use the value only while the context is open.
    *
    * @param code guest-language source code
    * @return evaluation result
@@ -220,7 +223,12 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
             new Class<?>[] {iface},
             (proxy, method, args) -> {
               if (method.getDeclaringClass() == Object.class) {
-                return method.invoke(this, args);
+                return switch (method.getName()) {
+                  case "equals" -> proxy == args[0];
+                  case "hashCode" -> System.identityHashCode(proxy);
+                  case "toString" -> toString();
+                  default -> throw new IllegalStateException("Unexpected Object method: " + method);
+                };
               }
               String methodName = method.getName();
               Object[] safeArgs = (args != null ? args : new Object[0]);
@@ -313,14 +321,17 @@ public abstract class AbstractPolyglotExecutor implements AutoCloseable {
   }
 
   /**
-   * Returns the contract methods declared by the interface, excluding {@link Object} methods.
+   * Returns public instance methods of the contract, including inherited interface methods.
    *
    * @param iface contract interface type
    * @return contract methods eligible for binding and validation
    */
   protected final Method[] contractMethods(Class<?> iface) {
     return java.util.Arrays.stream(iface.getMethods())
-        .filter(method -> method.getDeclaringClass() != Object.class)
+        .filter(
+            method ->
+                method.getDeclaringClass() != Object.class
+                    && !Modifier.isStatic(method.getModifiers()))
         .toArray(Method[]::new);
   }
 

@@ -9,6 +9,7 @@ import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
+import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.util.ClassUtils;
@@ -58,6 +59,7 @@ public final class PolyglotClientRegistrar implements ImportBeanDefinitionRegist
     scanner.addIncludeFilter(new AnnotationTypeFilter(PolyglotClient.class));
 
     var classLoader = resolveClassLoader();
+    scanner.setResourceLoader(new DefaultResourceLoader(classLoader));
 
     for (String basePackage : basePackages) {
       for (var candidate : scanner.findCandidateComponents(basePackage)) {
@@ -66,11 +68,11 @@ public final class PolyglotClientRegistrar implements ImportBeanDefinitionRegist
           continue;
         }
 
-        validateClientType(className, classLoader);
+        Class<?> clientType = validateClientType(className, classLoader);
 
         var definition =
             BeanDefinitionBuilder.genericBeanDefinition(PolyglotClientFactoryBean.class)
-                .addConstructorArgValue(className)
+                .addConstructorArgValue(clientType)
                 .getBeanDefinition();
 
         registry.registerBeanDefinition(className, definition);
@@ -112,12 +114,13 @@ public final class PolyglotClientRegistrar implements ImportBeanDefinitionRegist
   }
 
   /**
-   * Validates that the discovered type is a valid polyglot client interface.
+   * Loads the client interface using the scanner's class loader.
    *
    * @param className fully qualified class name
    * @param classLoader class loader used to load the type
+   * @return the validated client type
    */
-  private void validateClientType(String className, ClassLoader classLoader) {
+  private Class<?> validateClientType(String className, ClassLoader classLoader) {
     Class<?> type;
     try {
       type = ClassUtils.forName(className, classLoader);
@@ -133,5 +136,6 @@ public final class PolyglotClientRegistrar implements ImportBeanDefinitionRegist
     if (type.isAnnotation()) {
       throw new InvalidPolyglotClientTypeException(className);
     }
+    return type;
   }
 }

@@ -174,9 +174,10 @@ public final class PyExecutor extends AbstractPolyglotExecutor {
   /**
    * Creates a Python executor with a caller-provided context and explicit lifecycle ownership.
    *
-   * <p>Use {@link ContextOwnership#BORROWED} when the context is shared or closed by caller-managed
-   * infrastructure. Use {@link ContextOwnership#OWNED_BY_EXECUTOR} when closing this executor
-   * should also close the supplied context.
+   * <p>With {@link ContextOwnership#BORROWED}, the caller closes the context after all its users
+   * finish. With {@link ContextOwnership#OWNED_BY_EXECUTOR}, closing the executor also closes the
+   * supplied context. The executor's monitor serializes only operations through this instance. The
+   * caller must coordinate access when sharing the context or using it directly.
    *
    * @param context GraalPy context supplied by the caller
    * @param scriptSource script source implementation

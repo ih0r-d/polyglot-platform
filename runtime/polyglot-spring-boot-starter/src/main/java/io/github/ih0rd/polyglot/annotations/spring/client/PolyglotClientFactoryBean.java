@@ -45,10 +45,18 @@ public final class PolyglotClientFactoryBean<T> implements FactoryBean<T>, BeanF
    * @param className fully qualified name of the client interface
    * @throws PolyglotClientClassNotFoundException if the class cannot be loaded
    */
-  @SuppressWarnings("unchecked")
   public PolyglotClientFactoryBean(String className) {
+    this(loadType(className));
+  }
+
+  PolyglotClientFactoryBean(Class<T> clientType) {
+    this.clientType = clientType;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <T> Class<T> loadType(String className) {
     try {
-      this.clientType = (Class<T>) Class.forName(className);
+      return (Class<T>) Class.forName(className);
     } catch (ClassNotFoundException e) {
       throw new PolyglotClientClassNotFoundException(className, e);
     }
@@ -179,7 +187,7 @@ public final class PolyglotClientFactoryBean<T> implements FactoryBean<T>, BeanF
             new Class<?>[] {clientType},
             (proxy, method, args) -> {
               if (method.getDeclaringClass() == Object.class) {
-                return delegate.invoke(client, method, args);
+                return delegate.invoke(proxy, method, args);
               }
               long startedAt = observer == null ? 0 : observer.start();
               boolean failed = true;
