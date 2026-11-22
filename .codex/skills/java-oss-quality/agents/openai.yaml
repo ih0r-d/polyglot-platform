@@ -1,0 +1,4 @@
+interface:
+  display_name: "Java OSS Quality"
+  short_description: "Strict Java open-source code quality review and safe cleanup"
+  default_prompt: "Use $java-oss-quality to review the relevant Java code for naming, cohesion, public API contracts, Javadoc, generated-source quality, and unnecessary complexity. Report evidence and do not modify files unless explicitly requested."
