@@ -3,6 +3,7 @@ package io.github.ih0rd.codegen;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
 import java.nio.file.Files;
@@ -11,12 +12,69 @@ import java.nio.file.attribute.FileTime;
 import java.util.Map;
 
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.logging.SystemStreamLog;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class PolyglotCodegenCheckMojoTest {
 
   @TempDir Path tempDir;
+
+  @Test
+  void staleOutputsAndHandwrittenFilesRemainIntact() throws Exception {
+    Path scripts = Files.createDirectory(tempDir.resolve("scripts"));
+    Path output = tempDir.resolve("generated");
+    Path script = scripts.resolve("api.py");
+    String activeExport =
+        """
+        def ping() -> int: return 1
+        polyglot.export_value('ActiveApi', {'ping': ping})
+        """;
+    Files.writeString(
+        script, activeExport + "polyglot.export_value('RetiredApi', {'ping': ping})\n");
+    var settings =
+        new CodegenMojoSupport.Settings(
+            scripts.toFile(),
+            output.toFile(),
+            "example",
+            "example",
+            false,
+            true,
+            false,
+            true,
+            false,
+            false);
+    var log = new SystemStreamLog();
+    CodegenMojoSupport.execute(settings, log, CodegenMojoSupport.Mode.GENERATE);
+
+    Path userSource = output.resolve("example/CustomApi.java");
+    String userCode = "package example; public interface CustomApi {}";
+    Files.writeString(userSource, userCode);
+    CodegenMojoSupport.execute(settings, log, CodegenMojoSupport.Mode.CHECK);
+    Path retired = output.resolve("example/RetiredApi.java");
+    String editedRetired = Files.readString(retired) + "// local edit\n";
+    Files.writeString(retired, editedRetired);
+    Files.writeString(script, activeExport);
+    for (var mode : CodegenMojoSupport.Mode.values()) {
+      var failure =
+          assertThrows(
+              MojoExecutionException.class, () -> CodegenMojoSupport.execute(settings, log, mode));
+      assertTrue(
+          failure.getMessage().contains("1 stale generated Java source"), failure.getMessage());
+      assertEquals(editedRetired, Files.readString(retired));
+      assertEquals(userCode, Files.readString(userSource));
+    }
+
+    Files.delete(retired);
+    Files.writeString(
+        script, activeExport + "polyglot.export_value('CustomApi', {'ping': ping})\n");
+    var failure =
+        assertThrows(
+            MojoExecutionException.class,
+            () -> CodegenMojoSupport.execute(settings, log, CodegenMojoSupport.Mode.GENERATE));
+    assertTrue(failure.getMessage().contains("Refusing to overwrite"));
+    assertEquals(userCode, Files.readString(userSource));
+  }
 
   @Test
   void checkPassesWhenGeneratedSourcesAreUpToDate() throws Exception {

@@ -6,6 +6,7 @@
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <python.sources>valid</python.sources>
+        <generated.directory>${project.build.directory}/generated-sources/polyglot</generated.directory>
     </properties>
     <build><plugins>
         <plugin>
@@ -15,6 +16,7 @@
             <groupId>io.github.ih0r-d</groupId><artifactId>polyglot-codegen-maven-plugin</artifactId><version>@project.version@</version>
             <configuration>
                 <inputDirectory>${project.basedir}/${python.sources}</inputDirectory>
+                <outputDirectory>${generated.directory}</outputDirectory>
                 <basePackage>consumer.generated</basePackage><strictMode>true</strictMode>
             </configuration>
             <executions><execution><goals><goal>generate</goal></goals></execution></executions>

@@ -1,8 +1,15 @@
 String log = new String(java.nio.file.Files.readAllBytes(new File(basedir, "build.log").toPath()), java.nio.charset.StandardCharsets.UTF_8);
-for (String expected : new String[] { "keyword-only", "Python set" }) {
+for (String expected : new String[] {
+    "keyword-only", "Python set", "stale generated Java source", "RetiredApi.java",
+    "Generated Java path collision", "first.py", "second.py"
+}) {
     if (!log.contains(expected)) throw new AssertionError("Missing diagnostic: " + expected);
 }
 if (!new File(basedir, "target/classes/consumer/Consumer.class").isFile()) throw new AssertionError("Consumer did not compile");
 String generated = new String(java.nio.file.Files.readAllBytes(new File(basedir, "target/generated-sources/polyglot/consumer/generated/Api.java").toPath()), java.nio.charset.StandardCharsets.UTF_8);
 if (!generated.contains("hello(String name)") || generated.contains("ault(") || generated.contains("nested(") || generated.contains("from_docstring(")) throw new AssertionError("Incorrect generated methods");
+if (!new File(basedir, "target/generated-sources/polyglot/consumer/generated/RetiredApi.java").isFile())
+    throw new AssertionError("Stale generated source was removed");
+if (new File(basedir, "target/collision/consumer/generated/FirstApi.java").exists())
+    throw new AssertionError("Collision was discovered after generation had written a file");
 return true;

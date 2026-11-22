@@ -69,6 +69,12 @@ All notable changes to **polyglot-adapter** (GraalVM polyglot adapter) will be d
 - Add opt-in Maven `validate-contracts` static symbol checks for explicitly selected Java/Python class-export bindings; dynamic or unsupported constructs fail with source diagnostics without executing application Python.
 
 ### Fixed
+- Resolve Java type names that collide with generated interfaces and handle anonymous Python
+  sources. Reject exported targets whose original callable has been rebound. Detect conflicting
+  and stale Maven generation outputs while preserving handwritten sources.
+- Keep Java proxy equality and hashing identity-based through Spring observability wrappers.
+  Exclude static Java interface methods from binding validation and retain the resolved Spring
+  client class across class loaders. Build the codegen plugin during the Spring demo bootstrap.
 - Report ambiguous function/class/import rebinding as UNKNOWN in every static Python parsing mode.
 - Reuse calling metadata for generation: reject required keyword-only parameters, omit optional
   keyword-only parameters, and preserve positional defaults and variadic acceptance. Prevent nested

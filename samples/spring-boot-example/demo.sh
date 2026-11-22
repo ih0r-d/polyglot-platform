@@ -134,7 +134,7 @@ build() {
       [ -n "$(find "$SAMPLE_DIR/src" "$SAMPLE_DIR/pom.xml" "$SAMPLE_DIR/graalpy.lock" -type f -newer "$JAR" -print -quit)" ]; then
     printf '=== Building current library and locked Python application ===\n'
     if ! (cd "$REPOSITORY" &&
-        ./mvnw -B -ntp -pl runtime/polyglot-spring-boot-console -am install -DskipTests &&
+        ./mvnw -B -ntp -pl runtime/polyglot-bom,runtime/polyglot-spring-boot-console,build-tools/polyglot-codegen-maven-plugin -am install -DskipTests &&
         ./mvnw -B -ntp -f "$SAMPLE_DIR/pom.xml" -Pdev package -DskipTests) > "$STATE/build.log" 2>&1; then
       tail -n 40 "$STATE/build.log" >&2
       fail "Build failed; full diagnostics: $STATE/build.log"
@@ -172,10 +172,12 @@ start() {
   local directory deadline
   directory=$(mktemp -d "$STATE/run.XXXXXXXX")
   TOKEN=${directory##*/}
-  nohup "$JAVA" --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow \
-    "-Dshowcase.owner=$TOKEN" -jar "$JAR" --spring.profiles.active=dev \
-    "--server.address=$HOST" "--server.port=$PORT" "--polyglot.metrics.enabled=$METRICS" "--polyglot.console.path=$CONSOLE_PATH" \
-    > "$directory/app.log" 2>&1 < /dev/null &
+  (
+    trap '' HUP
+    exec "$JAVA" --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow \
+      "-Dshowcase.owner=$TOKEN" -jar "$JAR" --spring.profiles.active=dev \
+      "--server.address=$HOST" "--server.port=$PORT" "--polyglot.metrics.enabled=$METRICS" "--polyglot.console.path=$CONSOLE_PATH"
+  ) > "$directory/app.log" 2>&1 < /dev/null &
   PID=$!
   STARTED=$(ps -p "$PID" -o lstart= | sed 's/^ *//')
   printf '%s|%s|%s|%s\n' "$PID" "$TOKEN" "$PORT" "$STARTED" > "$STATE/pid"

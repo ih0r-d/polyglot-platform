@@ -139,10 +139,13 @@ If necessary, select an existing JDK explicitly, without changing SDKMAN setting
 JAVA_HOME=/absolute/path/to/jdk25 ./samples/spring-boot-example/demo.sh demo --port 8085
 ```
 
-First start installs current reactor artifacts and builds the sample with the root Maven Wrapper.
+First start installs the BOM, Console and codegen plugin reactor artifacts, then builds the sample
+with the root Maven Wrapper.
 It needs network access for missing Maven/Python packages, can take several minutes, and caches
 artifacts locally. Later starts reuse the built JAR unless sample sources or HEAD changed.
 The service remains running for inspection; finish with `./samples/spring-boot-example/demo.sh stop`.
+To test the first start with an empty Maven local repository, run
+`bash samples/spring-boot-example/tests/demo-bootstrap-smoke.sh` from a clean checkout.
 Use the same `--port` (or `DEMO_PORT`) for subsequent HTTP commands when using a custom port.
 
 The opt-in `dev` profile binds to loopback and exposes only health, info and metrics.
@@ -194,7 +197,7 @@ Open `/polyglot-console/` on the application's current port (the CLI defaults to
 For Maven or IDEA, enable the local development profile:
 
 ```bash
-./mvnw -pl runtime/polyglot-spring-boot-console -am install -DskipTests
+./mvnw -pl runtime/polyglot-bom,runtime/polyglot-spring-boot-console,build-tools/polyglot-codegen-maven-plugin -am install -DskipTests
 ./mvnw -f samples/spring-boot-example/pom.xml -Pdev spring-boot:run
 ```
 

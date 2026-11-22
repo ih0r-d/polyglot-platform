@@ -263,6 +263,13 @@ Recommended policy:
 - use `polyglot:check` in CI to detect drift without rewriting files
 - treat `polyglot:doctor` as a local diagnostic convenience, not as a separate behavior contract
 
+Each generation execution owns the configured Java package under its output directory. Use separate
+output directories or packages for independent executions. When two scripts export the same Java
+interface name, generation reports both inputs before writing sources. If an export is removed or
+renamed, generation and checking report stale files bearing the codegen header. Review and remove
+those files before regenerating. With the default `target/generated-sources` location, a clean build
+also clears stale output. Files without the codegen header are preserved.
+
 For parser limitations, drift failures, and common check/doctor symptoms, see
 [`troubleshooting.md`](troubleshooting.md).
 
