@@ -16,6 +16,60 @@ HTTP → Spring validation → annotated Java contract → serialized executor �
 Micrometer Timer + runtime gauges → standard Actuator endpoints
 ```
 
+## Python-first pricing client
+
+The pricing example starts at [`src/main/polyglot/contracts/pricing.py`](src/main/polyglot/contracts/pricing.py).
+Maven uses GraalPy AST to generate `PricingApi` with `@PolyglotClient(script = "contracts/pricing")`
+and then validates both pricing contracts in `process-sources`, before `javac`. The dedicated
+source root keeps generation separate from the sample's existing dynamic analytics scripts.
+Maven packages it as `python/contracts/pricing.py`, under the starter's existing resource root.
+
+From the repository root with **JDK 25**, run:
+
+```bash
+./mvnw -DskipTests install
+./mvnw -f samples/spring-boot-example/pom.xml clean test '-Dtest=AnalyticsHttpTest#servesGeneratedPricingQuote'
+```
+
+Inspect `samples/spring-boot-example/target/generated-sources/polyglot/io/github/ih0rd/examples/generated/PricingApi.java`.
+The interface preserves the Python names `unit_price_cents` and `quantity`. Spring discovers it
+through the existing `@EnablePolyglotClients`. `DEFAULT` resolves the `PricingApi` dictionary
+export. The handwritten `DeliveryEstimateApi` uses `BY_METHOD_NAME` to call the module's `estimate`
+function directly. The existing context customizer copies that Python dictionary into a Java
+`DeliveryEstimate` record during conversion. The generator produces the interface; the sample owns
+the DTOs.
+
+To try the endpoint interactively:
+
+```bash
+./mvnw -f samples/spring-boot-example/pom.xml -DskipTests package
+java --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow \
+  -jar samples/spring-boot-example/target/polyglot-springboot-example-0.0.1-SNAPSHOT.jar \
+  --server.address=127.0.0.1 --server.port=8085
+```
+
+In another terminal:
+
+```bash
+curl -fsS 'http://localhost:8085/pricing/quote?unitPriceCents=1250&quantity=12&destination=local'
+```
+
+Expected JSON: `{"totalCents":13500,"delivery":{"days":2,"serviceLevel":"domestic"}}`.
+
+Try two expected build failures. The fixture adds one required positional parameter to `quote`.
+The legacy scripts directory omits the explicitly mapped pricing module.
+
+```bash
+./mvnw -f samples/spring-boot-example/pom.xml clean compile \
+  "-Dpricing.validation.sources=$PWD/samples/spring-boot-example/src/test/pricing-contracts/incompatible"
+./mvnw -f samples/spring-boot-example/pom.xml clean compile \
+  "-Dpricing.validation.sources=$PWD/samples/spring-boot-example/src/main/resources/python"
+```
+
+Expect `INCOMPATIBLE: POSITIONAL_ARITY` and `INCOMPATIBLE: MISSING_MODULE`, respectively, from
+`validate-pricing-contracts`. Neither build reaches Java compilation. The override affects only
+validation. Run the original build command to return to the working example.
+
 ## Full local development: metrics and traces
 
 Use one `dev` profile for Console, Micrometer/Actuator and OTLP tracing. With JDK 25 selected,

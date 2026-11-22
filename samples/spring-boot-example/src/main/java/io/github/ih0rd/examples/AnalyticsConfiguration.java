@@ -9,12 +9,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import io.github.ih0rd.examples.dto.AnalyticsSummary;
+import io.github.ih0rd.examples.dto.DeliveryEstimate;
 import io.github.ih0rd.examples.dto.RiskAssessment;
 import io.github.ih0rd.examples.dto.RollingResult;
 import io.github.ih0rd.polyglot.SupportedLanguage;
 import io.github.ih0rd.polyglot.annotations.spring.context.PolyglotContextCustomizer;
 
-/** Copies the new analytics results under the executor lock, preserving legacy Map conversions. */
+/** Copies typed results under the executor lock, preserving legacy Map conversions. */
 @Configuration(proxyBeanMethods = false)
 public class AnalyticsConfiguration {
   @Bean
@@ -49,6 +50,14 @@ public class AnalyticsConfiguration {
                         value.getHashValue("anomalyCount").asInt(),
                         number(value, "riskScore"),
                         number(value, "qualityScore")))
+            .targetTypeMapping(
+                Value.class,
+                DeliveryEstimate.class,
+                Value::hasHashEntries,
+                value ->
+                    new DeliveryEstimate(
+                        value.getHashValue("days").asInt(),
+                        value.getHashValue("serviceLevel").asString()))
             .build();
     return (language, builder) -> {
       if (language == SupportedLanguage.PYTHON) {

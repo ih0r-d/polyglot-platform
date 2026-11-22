@@ -509,11 +509,10 @@ scanned; tests and additional generated-source roots are not implicitly included
 `sourceDirectory` to a narrower source directory when needed. All Python subset restrictions above
 continue to apply.
 
-The maintained Spring sample already uses explicit Python `@PolyglotClient` annotations, but its
-Python implementations use imports, constructors and docstrings outside the current static subset.
-This feature does not enable validation in that sample or change its runtime behavior. Spring
-startup fail-fast remains the runtime check for such contracts; discovery does not widen the
-Python parser's capabilities.
+The [Spring pricing example](https://github.com/ih0r-d/polyglot-platform/tree/main/samples/spring-boot-example#python-first-pricing-client)
+generates an annotated client and validates its pricing contracts in `process-sources`. It selects
+only contracts within the static subset. The legacy analytics scripts still use Spring startup
+validation for their dynamic contracts.
 
 The packaged-plugin integration fixtures use the Apache Maven Invoker Plugin only in the
 `plugin-it` profile, with an isolated repository and cloned fixtures:

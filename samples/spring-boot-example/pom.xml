@@ -17,6 +17,8 @@
         <java.version>25</java.version>
         <sample.test-output-directory>${project.build.directory}/test-classes</sample.test-output-directory>
         <polyglot.version>0.5.0-SNAPSHOT</polyglot.version>
+        <pricing.sources>${project.basedir}/src/main/polyglot</pricing.sources>
+        <pricing.validation.sources>${pricing.sources}</pricing.validation.sources>
         <!-- Python packages for GraalPy -->
         <python.package.1>faker==26.0.0</python.package.1>
         <python.package.2>tabulate==0.9.0</python.package.2>
@@ -95,6 +97,53 @@
     <build>
         <testOutputDirectory>${sample.test-output-directory}</testOutputDirectory>
         <plugins>
+            <plugin>
+                <groupId>io.github.ih0r-d</groupId>
+                <artifactId>polyglot-codegen-maven-plugin</artifactId>
+                <version>${polyglot.version}</version>
+                <executions>
+                    <execution>
+                        <id>generate-pricing-client</id>
+                        <goals><goal>generate</goal></goals>
+                        <configuration>
+                            <inputDirectory>${pricing.sources}</inputDirectory>
+                            <basePackage>io.github.ih0rd.examples.generated</basePackage>
+                            <emitPolyglotClient>true</emitPolyglotClient>
+                            <strictMode>true</strictMode>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>validate-pricing-contracts</id>
+                        <phase>process-sources</phase>
+                        <goals><goal>validate-contracts</goal></goals>
+                        <configuration>
+                            <inputDirectory>${pricing.validation.sources}</inputDirectory>
+                            <validateContracts>true</validateContracts>
+                            <contracts>
+                                <contract>${project.build.directory}/generated-sources/polyglot/io/github/ih0rd/examples/generated/PricingApi.java</contract>
+                                <contract>${project.build.sourceDirectory}/io/github/ih0rd/examples/contracts/DeliveryEstimateApi.java</contract>
+                            </contracts>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>package-pricing-script</id>
+                        <phase>process-resources</phase>
+                        <goals><goal>copy-resources</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/python</outputDirectory>
+                            <resources>
+                                <resource><directory>${pricing.sources}</directory></resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

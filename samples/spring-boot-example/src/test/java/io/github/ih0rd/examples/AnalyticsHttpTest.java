@@ -7,10 +7,14 @@ import com.google.gson.JsonParser;
 import io.github.ih0rd.adapter.context.PyExecutor;
 import io.github.ih0rd.adapter.exceptions.InvocationException;
 import io.github.ih0rd.examples.contracts.AnalyticsApi;
+import io.github.ih0rd.examples.contracts.DeliveryEstimateApi;
 import io.github.ih0rd.examples.contracts.RiskApi;
 import io.github.ih0rd.examples.dto.AnalyticsSummary;
 import io.github.ih0rd.examples.dto.RiskAssessment;
 import io.github.ih0rd.examples.dto.RollingResult;
+import io.github.ih0rd.examples.generated.PricingApi;
+import io.github.ih0rd.polyglot.Convention;
+import io.github.ih0rd.polyglot.annotations.PolyglotClient;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -60,6 +64,43 @@ class AnalyticsHttpTest {
       // All result containers are ordinary detached Java values, safe after shutdown too.
       assertThat(detached.mean()).isEqualTo(3.0);
     }
+  }
+
+  @Test
+  void servesGeneratedPricingQuote() throws Exception {
+    var pricing = PricingApi.class.getAnnotation(PolyglotClient.class);
+    var delivery = DeliveryEstimateApi.class.getAnnotation(PolyglotClient.class);
+    assertThat(pricing.script()).isEqualTo("contracts/pricing");
+    assertThat(pricing.convention()).isEqualTo(Convention.DEFAULT);
+    assertThat(delivery.script()).isEqualTo(pricing.script());
+    assertThat(delivery.convention()).isEqualTo(Convention.BY_METHOD_NAME);
+
+    try (HttpClient http = HttpClient.newHttpClient()) {
+      var local = pricingQuote(http, 12, "local");
+      assertThat(local.statusCode()).isEqualTo(200);
+      var quote = JsonParser.parseString(local.body()).getAsJsonObject();
+      assertThat(quote.get("totalCents").getAsInt()).isEqualTo(13500);
+      assertThat(quote.getAsJsonObject("delivery").get("days").getAsInt()).isEqualTo(2);
+      assertThat(quote.getAsJsonObject("delivery").get("serviceLevel").getAsString())
+          .isEqualTo("domestic");
+
+      var international = pricingQuote(http, 3, "international");
+      assertThat(international.statusCode()).isEqualTo(200);
+      var standardQuote = JsonParser.parseString(international.body()).getAsJsonObject();
+      assertThat(standardQuote.get("totalCents").getAsInt()).isEqualTo(3750);
+      assertThat(standardQuote.getAsJsonObject("delivery").get("days").getAsInt()).isEqualTo(5);
+      assertThat(pricingQuote(http, 0, "local").statusCode()).isEqualTo(400);
+    }
+  }
+
+  private HttpResponse<String> pricingQuote(HttpClient http, int quantity, String destination)
+      throws IOException, InterruptedException {
+    var uri =
+        URI.create(
+            base + "/pricing/quote?unitPriceCents=1250&quantity=" + quantity
+                + "&destination=" + destination);
+    return http.send(
+        HttpRequest.newBuilder(uri).GET().build(), HttpResponse.BodyHandlers.ofString());
   }
 
   @Test
